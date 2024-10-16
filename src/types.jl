@@ -27,22 +27,20 @@ function Base.show(io::IO, t::AbstractAgent)
     print(io, t.name, " (Tools: ", length(t.tool_map), ")")
 end
 
+Base.@kwdef mutable struct Session
+    messages::Vector = PT.AbstractMessage[]
+    agent::Union{Agent, Nothing} = nothing
+    context::Dict{Symbol, Any} = Dict{Symbol, Any}()
+end
+function Base.show(io::IO, t::Session)
+    agent_str = isnothing(t.agent) ? "None" : t.agent.name
+    print(io, "Session (Messages: ", length(t.messages), ", Agent: ", agent_str, ")")
+end
+
+"Response from a single turn of an agent."
 Base.@kwdef struct Response
-    messages::Vector = PT.AbstractChatMessage[]
+    messages::Vector = PT.AbstractMessage[]
     agent::Union{Agent, Nothing} = nothing
-    context_variables::Dict = Dict()
+    context::Dict{Symbol, Any} = Dict{Symbol, Any}()
 end
-
-"""
-Encapsulates the possible return values for an agent function.
-
-Attributes:
-    value (str): The result value as a string.
-    agent (Agent): The agent instance, if applicable.
-    context_variables (dict): A dictionary of context variables.
-"""
-Base.@kwdef struct Result
-    value::String = ""
-    agent::Union{Agent, Nothing} = nothing
-    context_variables::Dict = Dict()
-end
+Base.show(io::IO, t::Response) = dump(io, t; maxdepth = 1)

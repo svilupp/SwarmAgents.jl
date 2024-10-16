@@ -47,13 +47,17 @@ add_tools!(triage_agent, [transfer_to_sales, transfer_to_refunds])
 add_tools!(sales_agent, transfer_back_to_triage)
 add_tools!(refunds_agent, transfer_back_to_triage)
 
+# # Run the process manually
+
 current_agent = triage_agent
 conv = PT.create_template(;
     user = "I want to buy a bee.", system = current_agent.instructions)
 num_iter = 0
 while true && num_iter <= 10
     conv = PT.aitools(conv; model = "gpt4o",
-        tools = collect(values(current_agent.tool_map)), return_all = true, verbose = false)
+        tools = collect(values(current_agent.tool_map)),
+        name_user = "User", name_assistant = replace(current_agent.name, " " => "_"),
+        return_all = true, verbose = false)
     # Print assistant response
     !isnothing(PT.last_output(conv)) && @info ">> Assistant: $(PT.last_output(conv))"
     # Terminate if no further tool calls
@@ -67,7 +71,6 @@ while true && num_iter <= 10
             current_agent = output
             popfirst!(conv)
             pushfirst!(conv, PT.SystemMessage(current_agent.instructions))
-            # output = "Transferred to $(current_agent.name). Adopt the persona immediately."
             output = JSON3.write(Dict(:assistant => current_agent.name))
         end
         tool.content = output
@@ -76,3 +79,9 @@ while true && num_iter <= 10
     end
     num_iter += 1
 end
+
+# # Simpler API
+# Initialize a session with the user message
+sess = Session("I want to buy a bee.", triage_agent)
+# Run a full turn until tools are depleted
+run_full_turn!(sess)
