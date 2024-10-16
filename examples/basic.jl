@@ -1,63 +1,88 @@
 using Swarm
 using PromptingTools
 const PT = PromptingTools
+using JSON3
 using Dates
-# from swarm import Swarm, Agent
 
-# client = Swarm()
+# # Example 1: Date manipulation and Bday wishes
 
-# english_agent = Agent(
-#     name="English Agent",
-#     instructions="You only speak English.",
-# )
-
-# spanish_agent = Agent(
-#     name="Spanish Agent",
-#     instructions="You only speak Spanish.",
-# )
-
-# def transfer_to_spanish_agent():
-#     """Transfer spanish speaking users immediately."""
-#     return spanish_agent
-
-# english_agent.functions.append(transfer_to_spanish_agent)
-
-# messages = [{"role": "user", "content": "Hola. ¿Como estás?"}]
-# response = client.run(agent=english_agent, messages=messages)
-
-# print(response.messages[-1]["content"])
-
-english_agent = Agent(name = "English Agent", instructions = "You only speak English.")
-spanish_agent = Agent(name = "Spanish Agent", instructions = "You only speak Spanish.")
-
-struct TransferToSpanishAgent <: AbstractTool end
-function (t::TransferToSpanishAgent)()
-    return spanish_agent
-end
-push!(english_agent.functions, TransferToSpanishAgent)
-
-struct TellDate <: AbstractTool end
-function (t::TellDate)()
+"""
+Returns the current date.
+"""
+function tell_date()
     return "The date is $(Dates.today())"
 end
-push!(english_agent.functions, TellDate)
 
-struct TellTime <: AbstractTool end
-function (t::TellTime)()
-    return "The time is $(Dates.now())"
+"Returns the current time"
+function tell_time()
+    return "The time is $(Dates.format(Dates.now(), "HH:MM:SS"))"
 end
-push!(english_agent.functions, TellTime)
 
-struct TransferToEnglishAgent <: AbstractTool end
-function (t::TransferToEnglishAgent)()
-    return english_agent
+"""
+Returns a happy birthday message.
+"""
+function wish_happy_birthday(name::String, age::Int)
+    return "Wish should be: Happy $(age)th birthday, $(name)!"
 end
-push!(spanish_agent.functions, TransferToEnglishAgent)
 
-schema, datastructtype = PT.function_call_signature(TransferToSpanishAgent; strict = false)
-schema, datastructtype = PT.function_call_signature(TellTime; strict = false)
+## Run full turn (until tool calls are exhausted)
+tool_map = PT.tool_call_signature([tell_date, tell_time, wish_happy_birthday])
+conv = "Hello, my cousin Joe was born on $(Dates.today() - Year(10)). Is there anything I should know?"
+num_iter = 0
+while true && num_iter <= 10
+    conv = aitools(conv;
+        tools = collect(values(tool_map)), return_all = true, verbose = false)
+    # Print assistant response
+    !isnothing(PT.last_output(conv)) && @info ">> Assistant: $(PT.last_output(conv))"
+    # Terminate if no further tool calls
+    isempty(conv[end].tool_calls) && break
+    for tool in conv[end].tool_calls
+        name, args = tool.name, tool.args
+        @info "Tool Request: $name, args: $args"
+        tool.content = PT.execute_tool(tool_map[name], args)
+        @info ">> Tool Output: $(tool.content)"
+        push!(conv, tool)
+    end
+    num_iter += 1
+end
 
-msg = aiextract("Hello, what is the time?"; return_type = [TellTime, TellDate])
-msg.content
+# # Example 2: Routing to other agents
 
-## TODO: fix empty init 
+english_agent = Agent(name = "English Agent",
+    instructions = "You only speak English.")
+spanish_agent = Agent(name = "Spanish Agent",
+    instructions = "You only speak Spanish.")
+
+"""Transfer spanish speaking users immediately."""
+transfer_to_spanish_agent() = spanish_agent
+add_tools!(english_agent, transfer_to_spanish_agent)
+
+current_agent = english_agent
+conv = PT.create_template(;
+    user = "Hola. ¿Como estás?", system = current_agent.instructions)
+num_iter = 0
+while true && num_iter <= 5
+    conv = PT.aitools(conv;
+        tools = collect(values(current_agent.tool_map)), return_all = true, verbose = false,
+        name_assistant = replace(current_agent.name, " " => "_"))
+    # Print assistant response
+    !isnothing(PT.last_output(conv)) && @info ">> Assistant: $(PT.last_output(conv))"
+    # Terminate if no further tool calls
+    isempty(conv[end].tool_calls) && break
+    for tool in conv[end].tool_calls
+        name, args = tool.name, tool.args
+        @info "Tool Request: $name, args: $args"
+        output = PT.execute_tool(current_agent.tool_map[name], args)
+        ## Changing the agent
+        if isabstractagent(output)
+            current_agent = output
+            popfirst!(conv)
+            pushfirst!(conv, PT.SystemMessage(current_agent.instructions))
+            output = "Transferred to $(current_agent.name). Adopt the persona immediately."
+        end
+        tool.content = output
+        @info ">> Tool Output: $(tool.content)"
+        push!(conv, tool)
+    end
+    num_iter += 1
+end

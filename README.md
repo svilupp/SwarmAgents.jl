@@ -23,5 +23,7 @@ using Pkg
 Pkg.add(; url = "https://github.com/svilupp/Swarm.jl")
 ```
 
+This package requires an [experimental branch of PromptingTools.jl](https://github.com/svilupp/PromptingTools.jl/tree/update-tools).
+
 ## Usage
 More detailed examples and use cases will be provided in future releases. Users can refer to automatic documentation for current functionalities.
