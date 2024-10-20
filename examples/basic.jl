@@ -1,3 +1,7 @@
+# # Basic Example
+# Shows how to run low-level multi-turn tool calls.
+
+## Imports
 using Swarm
 using PromptingTools
 const PT = PromptingTools
@@ -56,6 +60,8 @@ spanish_agent = Agent(name = "Spanish Agent",
 """Transfer spanish speaking users immediately."""
 transfer_to_spanish_agent() = spanish_agent
 add_tools!(english_agent, transfer_to_spanish_agent)
+transfer_to_english_agent() = english_agent
+add_tools!(spanish_agent, transfer_to_english_agent)
 
 current_agent = english_agent
 conv = PT.create_template(;
@@ -86,3 +92,11 @@ while true && num_iter <= 5
     end
     num_iter += 1
 end
+
+# # Simpler API with a Session
+# Initialize a session to hold the state and allow repeated turns
+sess = Session(english_agent)
+# Run a full turn until tools are depleted
+run_full_turn!(sess, "Hola. ¿Como estás?")
+# Run another turn
+run_full_turn!(sess, "What do you mean?")

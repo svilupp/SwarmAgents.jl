@@ -4,6 +4,7 @@ using JSON3
 using PromptingTools
 const PT = PromptingTools
 using PromptingTools: AbstractTool, isabstracttool, Tool
+using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 
 export Agent, Session, Response, isabstractagent
 include("types.jl")

@@ -1,8 +1,14 @@
+# # Triage Agent Example
+
+# Necessary imports
 using Swarm
 using PromptingTools
 const PT = PromptingTools
 using JSON3
 using Dates
+
+# # Define the tools
+# Let's define some tools that the agents can use.
 
 """
 Refund an item. Make sure you have the item_id of the form item_... Ask for user confirmation before processing the refund.
@@ -20,6 +26,10 @@ function apply_discount()
     return "Applied discount of 11%"
 end
 
+# # Define the agents
+# Instructions are very important! They give the agent its "purpose" and "personality".
+# Also, instructions are the way to define ROUTINES for the agent (procedures to follow).
+
 triage_agent = Agent(
     name = "Triage Agent",
     instructions = "Determine which agent is best suited to handle the user's request, and transfer the conversation to that agent."
@@ -34,6 +44,7 @@ refunds_agent = Agent(
     tool_map = PT.tool_call_signature([process_refund, apply_discount])
 )
 
+## Enable agents to hand-off to other agents
 """
 Call this function if a user is asking about a topic that is not handled by the current agent.
 """
@@ -43,11 +54,12 @@ transfer_to_sales() = sales_agent
 
 transfer_to_refunds() = refunds_agent
 
+# Add the tools to the agents
 add_tools!(triage_agent, [transfer_to_sales, transfer_to_refunds])
 add_tools!(sales_agent, transfer_back_to_triage)
 add_tools!(refunds_agent, transfer_back_to_triage)
 
-# # Run the process manually
+# # Option 1: Run the process manually
 
 current_agent = triage_agent
 conv = PT.create_template(;
@@ -65,10 +77,11 @@ while true && num_iter <= 10
     for tool in conv[end].tool_calls
         name, args = tool.name, tool.args
         @info "Tool Request: $name, args: $args"
-        output = PT.execute_tool(current_agent.tool_map[name], args)
+        output = PT.execute_tool(current_agent.tool_map, tool)
         ## Changing the agent
         if isabstractagent(output)
             current_agent = output
+            ## Swap the SystemMessage = instructions with the current agent's instructions
             popfirst!(conv)
             pushfirst!(conv, PT.SystemMessage(current_agent.instructions))
             output = JSON3.write(Dict(:assistant => current_agent.name))
@@ -80,8 +93,11 @@ while true && num_iter <= 10
     num_iter += 1
 end
 
-# # Simpler API
-# Initialize a session with the user message
-sess = Session("I want to buy a bee.", triage_agent)
+# # Simpler API with Session
+# Initialize a session to hold the state and allow repeated turns
+sess = Session(triage_agent)
 # Run a full turn until tools are depleted
-run_full_turn!(sess)
+run_full_turn!(sess, "I want to buy a bee.")
+
+# Follow-ups
+run_full_turn!(sess, "I bought one and it stung me! Refund me!")
