@@ -72,6 +72,6 @@ jobs:
         shell: julia --project=docs --color=yes {0}
         run: |
           using Documenter: DocMeta, doctest
-          using Swarm
-          DocMeta.setdocmeta!(Swarm, :DocTestSetup, :(using Swarm); recursive=true)
-          doctest(Swarm)
+          using SwarmAgents
+          DocMeta.setdocmeta!(SwarmAgents, :DocTestSetup, :(using SwarmAgents); recursive=true)
+          doctest(SwarmAgents)

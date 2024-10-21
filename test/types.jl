@@ -1,4 +1,5 @@
-using Swarm: Agent, Session, Response, scrub_agent_name, update_model, add_tools!, Tool
+using SwarmAgents: Agent, Session, Response, scrub_agent_name, update_model, add_tools!,
+                   Tool
 
 @testset "scrub_agent_name, update_model" begin
     agent = Agent(name = "Test Agent", model = "gpt-3.5-turbo")

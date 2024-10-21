@@ -1,15 +1,15 @@
 ```@meta
-CurrentModule = Swarm
+CurrentModule = SwarmAgents
 ```
 
-# Swarm.jl
+# SwarmAgents.jl
 
 # ⚠️ Experimental Package ⚠️
 
-**WARNING:** Swarm.jl is currently in an experimental stage and is under active development. Features, APIs, and functionalities may change without notice. Use at your own risk.
+**WARNING:** SwarmAgents.jl is currently in an experimental stage and is under active development. Features, APIs, and functionalities may change without notice. Use at your own risk.
 
 ## Overview
-Swarm.jl is a very opinionated translation of OpenAI's Swarm package. This Julia implementation leverages PromptingTools.jl to enable support for multiple LLM providers and tool calling functionalities.
+SwarmAgents.jl is a very opinionated translation of OpenAI's Swarm package. This Julia implementation leverages PromptingTools.jl to enable support for multiple LLM providers and tool calling functionalities.
 
 ## Key Features
 - Integration with various LLM providers through PromptingTools.jl.
@@ -23,7 +23,7 @@ Swarm.jl is a very opinionated translation of OpenAI's Swarm package. This Julia
 
 ```julia
 using Pkg
-Pkg.add(; url = "https://github.com/svilupp/Swarm.jl")
+Pkg.add(; url = "https://github.com/svilupp/SwarmAgents.jl")
 ```
 
 ## Key Concepts

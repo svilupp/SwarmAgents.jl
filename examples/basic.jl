@@ -2,7 +2,7 @@
 # Shows how to run low-level multi-turn tool calls.
 
 ## Imports
-using Swarm
+using SwarmAgents
 using PromptingTools
 const PT = PromptingTools
 using JSON3

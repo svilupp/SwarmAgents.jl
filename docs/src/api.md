@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = Swarm
+CurrentModule = SwarmAgents
 ```
 
 # API Reference
 
-API Reference for [Swarm](https://github.com/svilupp/Swarm.jl).
+API Reference for [SwarmAgents](https://github.com/svilupp/SwarmAgents.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [Swarm]
+Modules = [SwarmAgents]
 ```

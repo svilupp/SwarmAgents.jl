@@ -1,5 +1,5 @@
-name = "Swarm"
-uuid = "ed106096-debd-45ae-ae1e-fdafa47f671c"
+name = "SwarmAgents"
+uuid = "6fce2c4d-9d52-4112-b2c3-c0b80c6b8436"
 authors = ["J S <49557684+svilupp@users.noreply.github.com> and contributors"]
 version = "0.1.0"
 

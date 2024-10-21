@@ -1,4 +1,4 @@
-module Swarm
+module SwarmAgents
 
 using JSON3
 using PromptingTools
