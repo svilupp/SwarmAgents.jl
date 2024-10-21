@@ -1,7 +1,7 @@
-using Swarm: Agent, Tool, add_tools!, handle_tool_calls!, update_system_message!,
-             run_full_turn, run_full_turn!, Session, Response
+using SwarmAgents: Agent, Tool, add_tools!, handle_tool_calls!, update_system_message!,
+                   run_full_turn, run_full_turn!, Session, Response
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                      ToolMessage
+                      ToolMessage, TestEchoOpenAISchema
 
 func1() = nothing
 func5() = "test"
@@ -51,21 +51,41 @@ end
     no_change_history = update_system_message!(history, nothing)
     @test no_change_history == history
 end
-# Test run_full_turn and run_full_turn!
-@testset "run_full_turn and run_full_turn!" begin
-    agent = Agent(name = "TestAgent", instructions = "You are a test agent.")
-    add_tools!(agent, Tool(identity))
+@testset "run_full_turn,run_full_turn!" begin
+    response1 = Dict(
+        :id => "123",
+        :choices => [
+            Dict(
+            :message => Dict(:content => "test",
+                :tool_calls => [
+                    Dict(:id => "123",
+                    :function => Dict(
+                        :name => "func1",
+                        :arguments => JSON3.write(Dict())))
+                ]),
+            :finish_reason => "tool_calls")
+        ],
+        :usage => Dict(:total_tokens => 20, :prompt_tokens => 15, :completion_tokens => 5)
+    )
+    schema = TestEchoOpenAISchema(; response = response1, status = 200)
+    PT.register_model!(; name = "mocktools", schema)
+
+    agent = Agent(
+        name = "TestAgent", instructions = "You are a test agent.", model = "mocktools")
+    add_tools!(agent, Tool(func1))
     messages = AbstractMessage[PT.UserMessage("Hello")]
     context = Dict{Symbol, Any}()
 
-    response = run_full_turn(agent, messages, context)
+    response = run_full_turn(agent, messages, context; max_turns = 1)
     @test response isa Response
     @test !isempty(response.messages)
+    @test response.messages[end].name == "func1"
 
     session = Session(agent)
     updated_session = run_full_turn!(session, "Hello")
     @test length(updated_session.messages) > 1
     @test updated_session.agent === agent
+    @test updated_session.messages[end].name == "func1"
 end
 
 @testset "Session constructor" begin

@@ -1,14 +1,14 @@
-using Swarm
+using SwarmAgents
 using Documenter
 
-DocMeta.setdocmeta!(Swarm, :DocTestSetup, :(using Swarm); recursive = true)
+DocMeta.setdocmeta!(SwarmAgents, :DocTestSetup, :(using SwarmAgents); recursive = true)
 
 makedocs(;
-    modules = [Swarm],
+    modules = [SwarmAgents],
     authors = "J S <49557684+svilupp@users.noreply.github.com> and contributors",
-    sitename = "Swarm.jl",
+    sitename = "SwarmAgents.jl",
     format = Documenter.HTML(;
-        canonical = "https://svilupp.github.io/Swarm.jl",
+        canonical = "https://svilupp.github.io/SwarmAgents.jl",
         edit_link = "main",
         assets = String[]
     ),
@@ -19,6 +19,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo = "github.com/svilupp/Swarm.jl",
+    repo = "github.com/svilupp/SwarmAgents.jl",
     devbranch = "main"
 )

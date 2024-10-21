@@ -1,3 +1,3 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-Swarm = "ed106096-debd-45ae-ae1e-fdafa47f671c"
+SwarmAgents = "6fce2c4d-9d52-4112-b2c3-c0b80c6b8436"

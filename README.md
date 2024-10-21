@@ -1,16 +1,16 @@
-# Swarm.jl
+# SwarmAgents.jl
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://svilupp.github.io/Swarm.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://svilupp.github.io/Swarm.jl/dev/) 
-[![Build Status](https://github.com/svilupp/Swarm.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/svilupp/Swarm.jl/actions/workflows/CI.yml?query=branch%3Amain) 
-[![Coverage](https://codecov.io/gh/svilupp/Swarm.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/svilupp/Swarm.jl) 
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://svilupp.github.io/SwarmAgents.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://svilupp.github.io/SwarmAgents.jl/dev/) 
+[![Build Status](https://github.com/svilupp/SwarmAgents.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/svilupp/SwarmAgents.jl/actions/workflows/CI.yml?query=branch%3Amain) 
+[![Coverage](https://codecov.io/gh/svilupp/SwarmAgents.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/svilupp/SwarmAgents.jl) 
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 # ⚠️ Experimental Package ⚠️
 
-**WARNING:** Swarm.jl is currently in an experimental stage and is under active development. Features, APIs, and functionalities may change without notice. Use at your own risk.
+**WARNING:** SwarmAgents.jl is currently in an experimental stage and is under active development. Features, APIs, and functionalities may change without notice. Use at your own risk.
 
 ## Overview
-Swarm.jl is a very opinionated translation of OpenAI's Swarm package. This Julia implementation leverages PromptingTools.jl to enable support for multiple LLM providers and tool calling functionalities.
+SwarmAgents.jl is a very opinionated translation of OpenAI's Swarm package. This Julia implementation leverages PromptingTools.jl to enable support for multiple LLM providers and tool calling functionalities.
 
 ## Key Features
 - Integration with various LLM providers through PromptingTools.jl.
@@ -24,7 +24,7 @@ Swarm.jl is a very opinionated translation of OpenAI's Swarm package. This Julia
 
 ```julia
 using Pkg
-Pkg.add(; url = "https://github.com/svilupp/Swarm.jl")
+Pkg.add(; url = "https://github.com/svilupp/SwarmAgents.jl")
 ```
 
 ## Key Concepts
@@ -55,7 +55,7 @@ Handoffs allow seamless transitions between different expertise areas, enhancing
 ## Usage
 
 ```julia
-using Swarm
+using SwarmAgents
 
 ## Define agents and their tools
 # Instructions are the routines

@@ -1,7 +1,7 @@
 # # Triage Agent Example
 
 # Necessary imports
-using Swarm
+using SwarmAgents
 using PromptingTools
 const PT = PromptingTools
 using JSON3
