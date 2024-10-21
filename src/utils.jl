@@ -1,12 +1,12 @@
 """
     handle_tool_calls!(
-        active_agent::Union{Agent, Nothing}, history::Vector{PT.AbstractMessage},
+        active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage},
         context::Dict{Symbol, Any} = Dict{Symbol, Any}())
 
 Handles tool calls for an agent.
 """
 function handle_tool_calls!(
-        active_agent::Union{Agent, Nothing}, history::Vector{PT.AbstractMessage},
+        active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage},
         context::Dict{Symbol, Any} = Dict{Symbol, Any}())
     last_msg = PT.last_message(history)
     @assert PT.isaitoolrequest(last_msg) "Last message must be an AIToolsRequest! Provided: $(last_msg|>typeof)"
@@ -36,12 +36,12 @@ function handle_tool_calls!(
 end
 
 """
-    update_system_message!(history::Vector{PT.AbstractMessage},
+    update_system_message!(history::AbstractVector{<:PT.AbstractMessage},
         active_agent::Union{Agent, Nothing})
 
 Updates the system message in the history (1st message) with the `active agent`'s instructions.
 """
-function update_system_message!(history::Vector{PT.AbstractMessage},
+function update_system_message!(history::AbstractVector{<:PT.AbstractMessage},
         active_agent::Union{Agent, Nothing})
     isnothing(active_agent) && return history
     if length(history) > 1 && PT.issystemmessage(history[1]) &&
@@ -56,12 +56,13 @@ function update_system_message!(history::Vector{PT.AbstractMessage},
 end
 
 """
-    run_full_turn(agent::Agent, messages::Vector{PT.AbstractMessage},
-        context::Dict{Symbol, Any} = Dict{Symbol, Any}(); max_turns::Int = 5, kwargs...)
+    run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessage},
+        context::Dict{Symbol, Any} = Dict{Symbol, Any}(); max_turns::Int = 5,
+        kwargs...)
 
 Runs a full turn of an agent (executes all tool calls).
 """
-function run_full_turn(agent::Agent, messages::Vector{PT.AbstractMessage},
+function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessage},
         context::Dict{Symbol, Any} = Dict{Symbol, Any}(); max_turns::Int = 5,
         kwargs...)
     active_agent = agent
