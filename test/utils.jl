@@ -1,13 +1,17 @@
 using Swarm: Agent, Tool, add_tools!, handle_tool_calls!, update_system_message!,
              run_full_turn, run_full_turn!, Session, Response
-using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolsRequest
+using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
+                      ToolMessage
 
-# Test handle_tool_calls!
+func1() = nothing
+func5() = "test"
+
 @testset "handle_tool_calls!" begin
     agent = Agent(name = "TestAgent")
-    add_tools!(agent, [Tool(identity), Tool(println)])
-    history = [PT.AIToolsRequest(tool_calls = [PT.ToolCall(
-        name = "identity", args = "test")])]
+    add_tools!(agent, [Tool(func1), Tool(func5)])
+    history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
+        tool_call_id = "1", raw = "",
+        name = "func5", args = Dict())])]
     context = Dict{Symbol, Any}()
 
     result = handle_tool_calls!(agent, history, context)
@@ -15,11 +19,13 @@ using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolsReques
     @test result.history[end].content == "test"
 
     # Test with no active agent
+    push!(history, PT.AIToolRequest(; content = "Hi"))
     result_no_agent = handle_tool_calls!(nothing, history, context)
     @test result_no_agent.active_agent === nothing
 
     # Test with empty tool calls
-    empty_history = [PT.AIToolsRequest(tool_calls = [])]
+    empty_history = AbstractMessage[PT.AIToolRequest(;
+        content = "hi", tool_calls = ToolMessage[])]
     result_empty = handle_tool_calls!(agent, empty_history, context)
     @test length(result_empty.history) == 1
 end
@@ -27,7 +33,7 @@ end
 # Test update_system_message!
 @testset "update_system_message!" begin
     agent = Agent(name = "TestAgent", instructions = "New instructions")
-    history = [PT.UserMessage("Hello")]
+    history = AbstractMessage[PT.UserMessage("Hello")]
 
     updated_history = update_system_message!(history, agent)
     @test length(updated_history) == 2
@@ -35,7 +41,8 @@ end
     @test updated_history[1].content == "New instructions"
 
     # Test with existing system message
-    history_with_system = [PT.SystemMessage("Old instructions"), PT.UserMessage("Hello")]
+    history_with_system = AbstractMessage[PT.SystemMessage("Old instructions"),
+        PT.UserMessage("Hello")]
     updated_history = update_system_message!(history_with_system, agent)
     @test length(updated_history) == 2
     @test updated_history[1].content == "New instructions"
@@ -48,7 +55,7 @@ end
 @testset "run_full_turn and run_full_turn!" begin
     agent = Agent(name = "TestAgent", instructions = "You are a test agent.")
     add_tools!(agent, Tool(identity))
-    messages = [PT.UserMessage("Hello")]
+    messages = AbstractMessage[PT.UserMessage("Hello")]
     context = Dict{Symbol, Any}()
 
     response = run_full_turn(agent, messages, context)
@@ -61,7 +68,6 @@ end
     @test updated_session.agent === agent
 end
 
-# Test Session constructor
 @testset "Session constructor" begin
     agent = Agent(name = "TestAgent")
     context = Dict{Symbol, Any}(:test => true)
