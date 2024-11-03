@@ -26,7 +26,9 @@ function handle_tool_calls!(
         ## Changing the agent
         if isabstractagent(output)
             next_agent = output
-            output = JSON3.write(Dict(:assistant => next_agent.name))
+            payload = Dict(:assistant => next_agent.name)
+            !isempty(args) && merge!(payload, args)
+            output = JSON3.write(payload)
         end
         tool.content = output
         printstyled(">> Tool Output: $(tool.content)\n", color = :light_blue)
@@ -77,15 +79,19 @@ function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessa
             tools, name_user = "User", name_assistant = scrub_agent_name(active_agent),
             return_all = true, verbose = false, kwargs...)
         # Print assistant response
-        !isnothing(PT.last_output(history)) &&
-            printstyled(">> Assistant: $(PT.last_output(history))\n", color = :magenta)
+        if !isnothing(PT.last_output(history))
+            name_assistant = "Assistant ($(scrub_agent_name(active_agent)))"
+            printstyled(">> $(name_assistant): $(PT.last_output(history))\n",
+                color = :magenta)
+        end
         isempty(tool_calls(history[end])) && break
         # Run tool calls
         (; active_agent, history, context) = handle_tool_calls!(
             active_agent, history, context)
     end
+    ## +1 because we inject SystemMessage at the beginning, +1 because we don't want the orig message
     return Response(;
-        messages = history[min(init_len + 1, end):end],
+        messages = history[min(init_len + 2, end):end],
         agent = active_agent,
         context = context
     )
