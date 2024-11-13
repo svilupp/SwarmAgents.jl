@@ -81,4 +81,68 @@ const PT = PromptingTools
         @test length(filtered_tools) == 1
         @test first(filtered_tools).name == "tool1"
     end
+
+    @testset "get_used_tools" begin
+        # Create history with tool usage
+        history = PT.AbstractMessage[]
+        push!(history, PT.AIToolRequestMessage(tool_calls=[PT.ToolCall(name="tool1", args="")]))
+        push!(history, PT.AIToolRequestMessage(tool_calls=[PT.ToolCall(name="tool2", args="")]))
+
+        used_tools = get_used_tools(history)
+        @test used_tools == [:tool1, :tool2]
+
+        # Test empty history
+        @test isempty(get_used_tools(PT.AbstractMessage[]))
+
+        # Test history with non-tool messages
+        history = [PT.UserMessage("test")]
+        @test isempty(get_used_tools(history))
+    end
+
+    @testset "get_allowed_tools" begin
+        # Test FixedOrder
+        rule = FixedOrder([:tool1, :tool2, :tool3])
+
+        # No tools used
+        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
+
+        # First tool used
+        @test get_allowed_tools(rule, [:tool1]) == ["tool2"]
+
+        # All tools used
+        @test isempty(get_allowed_tools(rule, [:tool1, :tool2, :tool3]))
+
+        # Test FixedPrerequisites
+        rule = FixedPrerequisites([:tool1, :tool2, :tool3])
+
+        # No tools used
+        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
+
+        # First tool used
+        @test Set(get_allowed_tools(rule, [:tool1])) == Set(["tool1", "tool2"])
+
+        # First two tools used
+        @test Set(get_allowed_tools(rule, [:tool1, :tool2])) == Set(["tool1", "tool2", "tool3"])
+    end
+
+    @testset "combine rules" begin
+        fixed_order = FixedOrder([:tool1, :tool2, :tool3])
+        prerequisites = FixedPrerequisites([:tool2, :tool3])
+        rules = [fixed_order, prerequisites]
+
+        # Test default (intersect)
+        used_tools = Symbol[]
+        allowed = get_allowed_tools(rules, used_tools)
+        @test isempty(allowed) # tool1 from fixed_order but not allowed by prerequisites
+
+        # Test after using tool1
+        used_tools = [:tool1]
+        allowed = get_allowed_tools(rules, used_tools)
+        @test allowed == ["tool2"] # tool2 is next in fixed_order and allowed by prerequisites
+
+        # Test with vcat
+        used_tools = Symbol[]
+        allowed = get_allowed_tools(rules, used_tools; combine=vcat)
+        @test Set(allowed) == Set(["tool1", "tool2"]) # tool1 from fixed_order and tool2 from prerequisites
+    end
 end
