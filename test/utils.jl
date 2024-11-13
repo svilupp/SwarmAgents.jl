@@ -1,8 +1,7 @@
 using SwarmAgents: Agent, Tool, add_tools!, handle_tool_calls!, update_system_message!,
                    run_full_turn, run_full_turn!, Session, Response
-const PT = PromptingTools
-using PT: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-          ToolMessage, TestEchoOpenAISchema
+using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
+                     ToolMessage, TestEchoOpenAISchema
 
 func1() = nothing
 func5() = "test"
@@ -10,7 +9,7 @@ func5() = "test"
 @testset "handle_tool_calls!" begin
     agent = Agent(name = "TestAgent")
     add_tools!(agent, [Tool(func1), Tool(func5)])
-    history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
+    history = AbstractMessage[PromptingTools.AIToolRequest(tool_calls = [ToolMessage(;
         tool_call_id = "1", raw = "",
         name = "func5", args = Dict())])]
     context = Dict{Symbol, Any}()
@@ -20,12 +19,12 @@ func5() = "test"
     @test result.history[end].content == "test"
 
     # Test with no active agent
-    push!(history, PT.AIToolRequest(; content = "Hi"))
+    push!(history, PromptingTools.AIToolRequest(; content = "Hi"))
     result_no_agent = handle_tool_calls!(nothing, history, context)
     @test result_no_agent.active_agent === nothing
 
     # Test with empty tool calls
-    empty_history = AbstractMessage[PT.AIToolRequest(;
+    empty_history = AbstractMessage[PromptingTools.AIToolRequest(;
         content = "hi", tool_calls = ToolMessage[])]
     result_empty = handle_tool_calls!(agent, empty_history, context)
     @test length(result_empty.history) == 1
@@ -34,16 +33,16 @@ end
 # Test update_system_message!
 @testset "update_system_message!" begin
     agent = Agent(name = "TestAgent", instructions = "New instructions")
-    history = AbstractMessage[PT.UserMessage("Hello")]
+    history = AbstractMessage[PromptingTools.UserMessage("Hello")]
 
     updated_history = update_system_message!(history, agent)
     @test length(updated_history) == 2
-    @test PT.issystemmessage(updated_history[1])
+    @test PromptingTools.issystemmessage(updated_history[1])
     @test updated_history[1].content == "New instructions"
 
     # Test with existing system message
-    history_with_system = AbstractMessage[PT.SystemMessage("Old instructions"),
-        PT.UserMessage("Hello")]
+    history_with_system = AbstractMessage[PromptingTools.SystemMessage("Old instructions"),
+        PromptingTools.UserMessage("Hello")]
     updated_history = update_system_message!(history_with_system, agent)
     @test length(updated_history) == 2
     @test updated_history[1].content == "New instructions"
@@ -70,13 +69,13 @@ end
     )
     schema = TestEchoOpenAISchema(; response = response1, status = 200)
     model_name = "mocktools_$(rand(1:999999))"  # Unique model name to avoid conflicts
-    PT.register_model!(; name = model_name, schema)
+    PromptingTools.register_model!(; name = model_name, schema)
 
     try
         agent = Agent(
             name = "TestAgent", instructions = "You are a test agent.", model = model_name)
         add_tools!(agent, Tool(func1))
-        messages = AbstractMessage[PT.UserMessage("Hello")]
+        messages = AbstractMessage[PromptingTools.UserMessage("Hello")]
         context = Dict{Symbol, Any}()
 
         response = run_full_turn(agent, messages, context; max_turns = 1)
