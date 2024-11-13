@@ -68,24 +68,30 @@ end
         :usage => Dict(:total_tokens => 20, :prompt_tokens => 15, :completion_tokens => 5)
     )
     schema = TestEchoOpenAISchema(; response = response1, status = 200)
-    PT.register_model!(; name = "mocktools", schema)
+    model_name = "mocktools_$(rand(1:999999))"  # Unique model name to avoid conflicts
+    PT.register_model!(; name = model_name, schema)
 
-    agent = Agent(
-        name = "TestAgent", instructions = "You are a test agent.", model = "mocktools")
-    add_tools!(agent, Tool(func1))
-    messages = AbstractMessage[PT.UserMessage("Hello")]
-    context = Dict{Symbol, Any}()
+    try
+        agent = Agent(
+            name = "TestAgent", instructions = "You are a test agent.", model = model_name)
+        add_tools!(agent, Tool(func1))
+        messages = AbstractMessage[PT.UserMessage("Hello")]
+        context = Dict{Symbol, Any}()
 
-    response = run_full_turn(agent, messages, context; max_turns = 1)
-    @test response isa Response
-    @test !isempty(response.messages)
-    @test response.messages[end].name == "func1"
+        response = run_full_turn(agent, messages, context; max_turns = 1)
+        @test response isa Response
+        @test !isempty(response.messages)
+        @test response.messages[end].name == "func1"
 
-    session = Session(agent)
-    updated_session = run_full_turn!(session, "Hello")
-    @test length(updated_session.messages) > 1
-    @test updated_session.agent === agent
-    @test updated_session.messages[end].name == "func1"
+        session = Session(agent)
+        updated_session = run_full_turn!(session, "Hello")
+        @test length(updated_session.messages) > 1
+        @test updated_session.agent === agent
+        @test updated_session.messages[end].name == "func1"
+    finally
+        # Cleanup: Unregister the test model
+        PT.unregister_model!(model_name)
+    end
 end
 
 @testset "Session constructor" begin
