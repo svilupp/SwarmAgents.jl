@@ -221,3 +221,101 @@ function apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent
     # Return only tools that are allowed by the rules
     return filter(t -> t.name ∈ allowed_tools, tools)
 end
+### Flow Rules Management
+
+"""
+    get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
+
+Extract the list of tools that have been used from the message history.
+Returns a vector of tool names as symbols.
+"""
+function get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
+    used_tools = Symbol[]
+    for msg in history
+        if PT.isaitoolrequest(msg)
+            for tool in PT.tool_calls(msg)
+                push!(used_tools, Symbol(tool.name))
+            end
+        end
+    end
+    return used_tools
+end
+
+"""
+    get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
+
+Get allowed tools for FixedOrder rule. Tools must be used in exact sequence.
+Returns a vector of allowed tool names as strings.
+"""
+function get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
+    # If no tools used, only first tool is allowed
+    if isempty(used_tools)
+        return [String(first(rule.tools))]
+    end
+
+    # Find the last used tool in the sequence
+    last_idx = findlast(t -> t ∈ used_tools, rule.tools)
+    if isnothing(last_idx)
+        # If no tool from sequence was used, start with first
+        return [String(first(rule.tools))]
+    elseif last_idx < length(rule.tools)
+        # Allow next tool in sequence
+        return [String(rule.tools[last_idx + 1])]
+    end
+    return String[]
+end
+
+"""
+    get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
+
+Get allowed tools for FixedPrerequisites rule. Later tools require earlier ones to be used first.
+Returns a vector of allowed tool names as strings.
+"""
+function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
+    allowed = String[]
+    for (i, tool) in enumerate(rule.tools)
+        if i == 1 || all(t -> t ∈ used_tools, rule.tools[1:i-1])
+            push!(allowed, String(tool))
+        end
+    end
+    return allowed
+end
+
+"""
+    get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
+
+Get allowed tools for multiple rules. Combines results using the specified function (default: intersect).
+Returns a vector of allowed tool names as strings.
+"""
+function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
+    isempty(rules) && return String[]
+
+    # Get allowed tools for first rule
+    allowed = Set(get_allowed_tools(first(rules), used_tools))
+
+    # Combine with remaining rules
+    for rule in rules[2:end]
+        allowed = combine(allowed, Set(get_allowed_tools(rule, used_tools)))
+    end
+
+    return collect(allowed)
+end
+
+"""
+    apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent, tools::Vector{<:AbstractTool})
+
+Apply flow rules to filter available tools based on usage history and rule types.
+Returns a filtered vector of tools that are allowed to be used in the current turn.
+"""
+function apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent, tools::Vector{<:AbstractTool})
+    isempty(agent.rules) && return tools
+
+    # Get used tools from history
+    used_tools = get_used_tools(history)
+
+    # Get allowed tools based on rules
+    allowed_tools = get_allowed_tools(agent.rules, used_tools)
+
+    # Return only tools that are allowed by the rules
+    return filter(t -> t.name ∈ allowed_tools, tools)
+end
