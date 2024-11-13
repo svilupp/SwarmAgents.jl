@@ -75,15 +75,15 @@ Base.show(io::IO, t::Response) = dump(io, t; maxdepth = 1)
 
 Adds `tools` to an `agent`.
 """
-function add_tools!(agent::Agent, tools::Vector)
+function add_tools!(agent::Agent, tools::Vector; kwargs...)
     for tool in tools
-        add_tools!(agent, tool)
+        add_tools!(agent, tool; kwargs...)
     end
 end
-function add_tools!(agent::Agent, tool::AbstractTool)
+function add_tools!(agent::Agent, tool::AbstractTool; kwargs...)
     @assert tool.name∉keys(agent.tool_map) "Tool $(tool.name) already exists. Only unique tool names are allowed."
     agent.tool_map[tool.name] = tool
 end
-function add_tools!(agent::Agent, callable::Union{Function, Type, Method})
-    add_tools!(agent, Tool(callable))
+function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
+    add_tools!(agent, Tool(callable; kwargs...))
 end
