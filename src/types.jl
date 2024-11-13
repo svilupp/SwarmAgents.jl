@@ -221,7 +221,6 @@ function apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent
     # Return only tools that are allowed by the rules
     return filter(t -> t.name ∈ allowed_tools, tools)
 end
-### Flow Rules Management
 
 """
     get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
