@@ -324,28 +324,38 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         # Start with empty set
         allowed = Set{String}()
 
-        # First, identify tools that would violate FixedOrder sequences
+        # First, add tools from FixedPrerequisites rules (these can be reused)
+        prereq_rules = findall(r -> r isa FixedPrerequisites, rules)
+        for i in prereq_rules
+            union!(allowed, allowed_per_rule[i])
+        end
+
+        # Then, add tools from FixedOrder rules while respecting sequence
         fixed_order_rules = findall(r -> r isa FixedOrder, rules)
-        excluded_tools = Set{String}()
         if !isempty(fixed_order_rules)
-            for (i, rule) in enumerate(rules)
-                i ∈ fixed_order_rules || continue
+            # Get tools that would violate sequence order
+            excluded_tools = Set{String}()
+            for i in fixed_order_rules
+                rule = rules[i]
                 # Find current position in sequence
                 current_pos = 1
                 while current_pos <= length(rule.tools) && rule.tools[current_pos] ∈ used_tools
                     current_pos += 1
                 end
-                # Exclude tools that come before current position (would violate sequence)
+                # Only exclude tools that come before current position and haven't been used
                 for j in 1:current_pos-1
-                    push!(excluded_tools, String(rule.tools[j]))
+                    tool = rule.tools[j]
+                    if !(tool ∈ used_tools)
+                        push!(excluded_tools, String(tool))
+                    end
                 end
+            end
+            # Add allowed tools from FixedOrder rules, excluding sequence violations
+            for i in fixed_order_rules
+                union!(allowed, setdiff(allowed_per_rule[i], excluded_tools))
             end
         end
 
-        # Add allowed tools from each rule, excluding those that would violate FixedOrder sequences
-        for (i, rule_allowed) in enumerate(allowed_per_rule)
-            union!(allowed, setdiff(rule_allowed, excluded_tools))
-        end
         return collect(allowed)
     else
         # For intersect (default) and other combine functions, use standard reduction
