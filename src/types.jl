@@ -321,20 +321,10 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
 
     # If using union, combine allowed tools from each rule while respecting FixedOrder constraints
     if combine === union
-        # Start with empty set
-        allowed = Set{String}()
-
-        # First, add tools from FixedPrerequisites rules (these can be reused)
-        prereq_rules = findall(r -> r isa FixedPrerequisites, rules)
-        for i in prereq_rules
-            union!(allowed, allowed_per_rule[i])
-        end
-
-        # Then, add tools from FixedOrder rules while respecting sequence
+        # First, identify tools that would violate FixedOrder sequences
         fixed_order_rules = findall(r -> r isa FixedOrder, rules)
+        excluded_tools = Set{String}()
         if !isempty(fixed_order_rules)
-            # Get tools that would violate sequence order
-            excluded_tools = Set{String}()
             for i in fixed_order_rules
                 rule = rules[i]
                 # Find current position in sequence
@@ -342,20 +332,21 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
                 while current_pos <= length(rule.tools) && rule.tools[current_pos] ∈ used_tools
                     current_pos += 1
                 end
-                # Only exclude tools that come before current position and haven't been used
+                # Only exclude unused tools that would violate sequence order
                 for j in 1:current_pos-1
                     tool = rule.tools[j]
-                    if !(tool ∈ used_tools)
+                    if !(Symbol(tool) ∈ used_tools)  # Only exclude if not already used
                         push!(excluded_tools, String(tool))
                     end
                 end
             end
-            # Add allowed tools from FixedOrder rules, excluding sequence violations
-            for i in fixed_order_rules
-                union!(allowed, setdiff(allowed_per_rule[i], excluded_tools))
-            end
         end
 
+        # Combine all allowed tools from all rules
+        allowed = reduce(union, allowed_per_rule)
+
+        # Apply sequence constraints to all tools
+        setdiff!(allowed, excluded_tools)
         return collect(allowed)
     else
         # For intersect (default) and other combine functions, use standard reduction
@@ -380,6 +371,7 @@ add_tools!(agent, [
     Tool(deploy),         # Model deployment
     Tool(monitor)         # Model monitoring
 ])
+```
 
 # Rule 1: Must follow strict ML lifecycle
 order_rule = FixedOrder([
