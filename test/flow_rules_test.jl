@@ -51,8 +51,8 @@ const PT = PromptingTools
     # Test get_used_tools
     @testset "get_used_tools" begin
         history = [
-            PT.AIToolRequest(tool_calls=[PT.ToolMessage(name="setup")]),
-            PT.AIToolRequest(tool_calls=[PT.ToolMessage(name="process")])
+            PT.AIToolRequest(tool_calls=[PT.ToolMessage(name="setup", tool_call_id="1", raw="")]),
+            PT.AIToolRequest(tool_calls=[PT.ToolMessage(name="process", tool_call_id="2", raw="")])
         ]
         @test Set(get_used_tools(history)) == Set([:setup, :process])
     end
