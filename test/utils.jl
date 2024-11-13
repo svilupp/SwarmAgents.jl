@@ -1,7 +1,7 @@
 using SwarmAgents: Agent, Tool, add_tools!, handle_tool_calls!, update_system_message!,
                    run_full_turn, run_full_turn!, Session, Response
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                      ToolMessage, TestEchoOpenAISchema, Models
+                      ToolMessage, TestEchoOpenAISchema
 
 func1() = nothing
 func5() = "test"
@@ -90,7 +90,7 @@ end
         @test updated_session.messages[end].name == "func1"
     finally
         # Cleanup: Clear the model registry after test
-        PT.Models.clear_registry!()
+        PromptingTools.Models.clear_registry!()
     end
 end
 
