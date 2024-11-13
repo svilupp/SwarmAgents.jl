@@ -222,63 +222,7 @@ function apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent
     return filter(t -> t.name ∈ allowed_tools, tools)
 end
 
-"""
-    get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
 
-Extract the list of tools that have been used from the message history.
-Returns a vector of tool names as symbols.
-"""
-function get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
-    used_tools = Symbol[]
-    for msg in history
-        if PT.isaitoolrequest(msg)
-            for tool in PT.tool_calls(msg)
-                push!(used_tools, Symbol(tool.name))
-            end
-        end
-    end
-    return used_tools
-end
-
-"""
-    get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
-
-Get allowed tools for FixedOrder rule. Tools must be used in exact sequence.
-Returns a vector of allowed tool names as strings.
-"""
-function get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
-    # If no tools used, only first tool is allowed
-    if isempty(used_tools)
-        return [String(first(rule.tools))]
-    end
-
-    # Find the last used tool in the sequence
-    last_idx = findlast(t -> t ∈ used_tools, rule.tools)
-    if isnothing(last_idx)
-        # If no tool from sequence was used, start with first
-        return [String(first(rule.tools))]
-    elseif last_idx < length(rule.tools)
-        # Allow next tool in sequence
-        return [String(rule.tools[last_idx + 1])]
-    end
-    return String[]
-end
-
-"""
-    get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
-
-Get allowed tools for FixedPrerequisites rule. Later tools require earlier ones to be used first.
-Returns a vector of allowed tool names as strings.
-"""
-function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
-    allowed = String[]
-    for (i, tool) in enumerate(rule.tools)
-        if i == 1 || all(t -> t ∈ used_tools, rule.tools[1:i-1])
-            push!(allowed, String(tool))
-        end
-    end
-    return allowed
-end
 
 """
     get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
