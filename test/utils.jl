@@ -2,7 +2,7 @@ using SwarmAgents: Agent, Tool, add_tools!, handle_tool_calls!, update_system_me
                    run_full_turn, run_full_turn!, Session, Response
 using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                     ToolMessage, TestEchoOpenAISchema
+                     ToolMessage, TestEchoOpenAISchema, Models
 
 test_func1() = nothing
 test_func5() = "test"
