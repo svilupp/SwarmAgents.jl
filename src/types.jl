@@ -324,26 +324,27 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         # Start with empty set
         allowed = Set{String}()
 
-        # First, identify tools used in FixedOrder sequences
+        # First, identify tools that would violate FixedOrder sequences
         fixed_order_rules = findall(r -> r isa FixedOrder, rules)
-        fixed_order_used = Set{String}()
+        excluded_tools = Set{String}()
         if !isempty(fixed_order_rules)
             for (i, rule) in enumerate(rules)
                 i ∈ fixed_order_rules || continue
-                # Add all used tools from this sequence to excluded set
-                for (j, tool) in enumerate(rule.tools)
-                    if tool ∈ used_tools
-                        push!(fixed_order_used, String(tool))
-                    else
-                        break  # Stop at first unused tool in sequence
-                    end
+                # Find current position in sequence
+                current_pos = 1
+                while current_pos <= length(rule.tools) && rule.tools[current_pos] ∈ used_tools
+                    current_pos += 1
+                end
+                # Exclude tools that come before current position (would violate sequence)
+                for j in 1:current_pos-1
+                    push!(excluded_tools, String(rule.tools[j]))
                 end
             end
         end
 
-        # Add allowed tools from each rule, excluding those used in FixedOrder sequences
+        # Add allowed tools from each rule, excluding those that would violate FixedOrder sequences
         for (i, rule_allowed) in enumerate(allowed_per_rule)
-            union!(allowed, setdiff(rule_allowed, fixed_order_used))
+            union!(allowed, setdiff(rule_allowed, excluded_tools))
         end
         return collect(allowed)
     else
