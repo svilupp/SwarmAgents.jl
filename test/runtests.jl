@@ -1,6 +1,6 @@
 using SwarmAgents
-using PromptingTools
-const PT = PromptingTools
+using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
+                     ToolMessage, TestEchoOpenAISchema, Models
 using JSON3
 using Test
 using Aqua
