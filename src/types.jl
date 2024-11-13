@@ -258,7 +258,8 @@ end
 """
     get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
 
-Get allowed tools for multiple rules. Combines results using the specified function (default: intersect).
+Get allowed tools considering multiple rules.
+The combine function determines how to combine results from multiple rules (intersect or union).
 Returns a vector of allowed tool names as strings.
 
 # Examples
@@ -315,15 +316,22 @@ See also: [`FixedOrder`](@ref), [`FixedPrerequisites`](@ref), [`apply_rules`](@r
 function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
     isempty(rules) && return String[]
 
-    # Get allowed tools for first rule
-    allowed = Set(get_allowed_tools(first(rules), used_tools))
+    # Get allowed tools for each rule
+    allowed_per_rule = [Set(get_allowed_tools(rule, used_tools)) for rule in rules]
 
-    # Combine with remaining rules
-    for rule in rules[2:end]
-        allowed = combine(allowed, Set(get_allowed_tools(rule, used_tools)))
+    # If using union, filter out tools that aren't allowed by their respective rules
+    if combine === union
+        # Start with empty set
+        allowed = Set{String}()
+        # Add tools from each rule only if they're allowed by that rule
+        for (rule, rule_allowed) in zip(rules, allowed_per_rule)
+            union!(allowed, rule_allowed)
+        end
+        return collect(allowed)
+    else
+        # For intersect (default) and other combine functions, use standard reduction
+        return collect(reduce(combine, allowed_per_rule))
     end
-
-    return collect(allowed)
 end
 
 """
