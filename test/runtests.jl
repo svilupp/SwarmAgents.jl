@@ -1,4 +1,5 @@
 using SwarmAgents
+using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
                      ToolMessage, TestEchoOpenAISchema
 using JSON3
