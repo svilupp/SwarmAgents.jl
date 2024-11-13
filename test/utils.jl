@@ -90,8 +90,8 @@ end
         @test updated_session.agent === agent
         @test updated_session.messages[end].name == "test_func1"
     finally
-        # Cleanup: Unregister the test model after test
-        PromptingTools.unregister_model!(model_name)
+        # Cleanup: Clear the model registry after test
+        PromptingTools.Models.clear_registry!()
     end
 end
 
