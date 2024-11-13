@@ -230,19 +230,7 @@ end
 Get allowed tools for multiple rules. Combines results using the specified function (default: intersect).
 Returns a vector of allowed tool names as strings.
 """
-function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
-    isempty(rules) && return String[]
-
-    # Get allowed tools for first rule
-    allowed = Set(get_allowed_tools(first(rules), used_tools))
-
-    # Combine with remaining rules
-    for rule in rules[2:end]
-        allowed = combine(allowed, Set(get_allowed_tools(rule, used_tools)))
-    end
-
-    return collect(allowed)
-end
+# Removed duplicate implementation
 
 """
     apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent, tools::Vector{<:AbstractTool})
@@ -250,15 +238,4 @@ end
 Apply flow rules to filter available tools based on usage history and rule types.
 Returns a filtered vector of tools that are allowed to be used in the current turn.
 """
-function apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent, tools::Vector{<:AbstractTool})
-    isempty(agent.rules) && return tools
-
-    # Get used tools from history
-    used_tools = get_used_tools(history)
-
-    # Get allowed tools based on rules
-    allowed_tools = get_allowed_tools(agent.rules, used_tools)
-
-    # Return only tools that are allowed by the rules
-    return filter(t -> t.name ∈ allowed_tools, tools)
-end
+# Removed duplicate implementation
