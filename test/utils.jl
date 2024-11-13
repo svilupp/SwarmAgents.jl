@@ -89,8 +89,8 @@ end
         @test updated_session.agent === agent
         @test updated_session.messages[end].name == "func1"
     finally
-        # Cleanup: Unregister the test model
-        PT.unregister_model!(model_name)
+        # Cleanup: Clear the model registry after test
+        PT.clear_registry!()
     end
 end
 
