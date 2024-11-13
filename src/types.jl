@@ -324,10 +324,15 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         # Start with empty set
         allowed = Set{String}()
 
-        # First, add tools from FixedPrerequisites rules (these can be reused)
+        # First, add previously used tools from FixedPrerequisites rules
         prereq_rules = findall(r -> r isa FixedPrerequisites, rules)
         for i in prereq_rules
-            union!(allowed, allowed_per_rule[i])
+            # Only include tools that have been used
+            for tool in rules[i].tools
+                if Symbol(tool) ∈ used_tools
+                    push!(allowed, String(tool))
+                end
+            end
         end
 
         # Then, handle FixedOrder rules by only allowing the next tool in sequence
