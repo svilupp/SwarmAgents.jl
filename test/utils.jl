@@ -1,17 +1,17 @@
 using SwarmAgents: Agent, Tool, add_tools!, handle_tool_calls!, update_system_message!,
                    run_full_turn, run_full_turn!, Session, Response
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                     ToolMessage, TestEchoOpenAISchema
+                     ToolMessage, TestEchoOpenAISchema, Models
 
-func1() = nothing
-func5() = "test"
+test_func1() = nothing
+test_func5() = "test"
 
 @testset "handle_tool_calls!" begin
     agent = Agent(name = "TestAgent")
-    add_tools!(agent, [Tool(func1), Tool(func5)])
+    add_tools!(agent, [Tool(test_func1), Tool(test_func5)])
     history = AbstractMessage[PromptingTools.AIToolRequest(tool_calls = [ToolMessage(;
         tool_call_id = "1", raw = "",
-        name = "func5", args = Dict())])]
+        name = "test_func5", args = Dict())])]
     context = Dict{Symbol, Any}()
 
     result = handle_tool_calls!(agent, history, context)
@@ -60,7 +60,7 @@ end
                 :tool_calls => [
                     Dict(:id => "123",
                     :function => Dict(
-                        :name => "func1",
+                        :name => "test_func1",
                         :arguments => JSON3.write(Dict())))
                 ]),
             :finish_reason => "tool_calls")
@@ -74,23 +74,23 @@ end
     try
         agent = Agent(
             name = "TestAgent", instructions = "You are a test agent.", model = model_name)
-        add_tools!(agent, Tool(func1))
+        add_tools!(agent, Tool(test_func1))
         messages = AbstractMessage[PromptingTools.UserMessage("Hello")]
         context = Dict{Symbol, Any}()
 
         response = run_full_turn(agent, messages, context; max_turns = 1)
         @test response isa Response
         @test !isempty(response.messages)
-        @test response.messages[end].name == "func1"
+        @test response.messages[end].name == "test_func1"
 
         session = Session(agent)
         updated_session = run_full_turn!(session, "Hello")
         @test length(updated_session.messages) > 1
         @test updated_session.agent === agent
-        @test updated_session.messages[end].name == "func1"
+        @test updated_session.messages[end].name == "test_func1"
     finally
         # Cleanup: Clear the model registry after test
-        PromptingTools.Models.clear_registry!()
+        Models.clear_registry!()
     end
 end
 
