@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.2.0]
+
+### Fixed
+- Messages were not collated correctly when multiple messages were sent in a single request.
+
 ## [0.1.0]
 
 - Initial release
