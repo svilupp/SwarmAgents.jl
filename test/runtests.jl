@@ -12,4 +12,5 @@ using Aqua
     end
     include("types.jl")
     include("utils.jl")
+    include("flow_rules_test.jl")
 end
