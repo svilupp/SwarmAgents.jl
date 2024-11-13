@@ -248,8 +248,7 @@ end
 function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
     allowed = String[]
     for (i, tool) in enumerate(rule.tools)
-        # Only allow tools that haven't been used yet and whose prerequisites are met
-        if tool ∉ used_tools && (i == 1 || all(t -> t ∈ used_tools, rule.tools[1:i-1]))
+        if i == 1 || all(t -> t ∈ used_tools, rule.tools[1:i-1])
             push!(allowed, String(tool))
         end
     end
@@ -319,10 +318,6 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
 
     # Get allowed tools for each rule
     allowed_per_rule = [Set(get_allowed_tools(rule, used_tools)) for rule in rules]
-
-    # Filter out tools that have already been used
-    used_tools_str = String.(used_tools)
-    allowed_per_rule = [setdiff(allowed, used_tools_str) for allowed in allowed_per_rule]
 
     # If using union, combine allowed tools from each rule
     if combine === union
