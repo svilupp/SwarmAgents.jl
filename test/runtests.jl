@@ -1,7 +1,7 @@
 using SwarmAgents
 using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                     ToolMessage, TestEchoOpenAISchema, Models
+                     ToolMessage, TestEchoOpenAISchema
 using JSON3
 using Test
 using Aqua
