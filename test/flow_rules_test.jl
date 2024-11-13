@@ -1,6 +1,6 @@
 using Test
 using SwarmAgents: Agent, Tool, FixedOrder, FixedPrerequisites, get_allowed_tools, get_used_tools, add_rules!
-using PromptingTools as PT
+const PT = PromptingTools
 
 @testset "Flow Rules" begin
     # Test FixedOrder rule
