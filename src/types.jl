@@ -239,17 +239,33 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
         # If no tool from sequence was used, start with first
         return [String(first(rule.tools))]
     elseif last_idx < length(rule.tools)
-        # Allow next tool in sequence
-        return [String(rule.tools[last_idx + 1])]
+        # Allow next tool in sequence, but only if it hasn't been used yet
+        next_tool = rule.tools[last_idx + 1]
+        return next_tool ∈ used_tools ? String[] : [String(next_tool)]
     end
     return String[]
 end
 
 function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
     allowed = String[]
+    used_tools_set = Set(used_tools)
+
+    # Find the highest index of a used tool
+    max_used_idx = maximum([findlast(==(t), rule.tools) for t in used_tools if t in rule.tools], init=0)
+
     for (i, tool) in enumerate(rule.tools)
-        if i == 1 || all(t -> t ∈ used_tools, rule.tools[1:i-1])
-            push!(allowed, String(tool))
+        # Allow tools whose prerequisites are met
+        if i == 1 || all(t -> t ∈ used_tools_set, rule.tools[1:i-1])
+            # For used tools, only keep them if they're prerequisites for future tools
+            if tool ∈ used_tools_set
+                # Keep if it's a prerequisite for any future tool that hasn't been used
+                future_tools = rule.tools[i+1:end]
+                if any(t -> t ∉ used_tools_set, future_tools)
+                    push!(allowed, String(tool))
+                end
+            else
+                push!(allowed, String(tool))
+            end
         end
     end
     return allowed
@@ -316,49 +332,50 @@ See also: [`FixedOrder`](@ref), [`FixedPrerequisites`](@ref), [`apply_rules`](@r
 function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
     isempty(rules) && return String[]
 
-    # Get allowed tools for each rule
-    allowed_per_rule = [Set(get_allowed_tools(rule, used_tools)) for rule in rules]
+    # Split rules by type
+    fixed_order_rules = filter(r -> r isa FixedOrder, rules)
+    prereq_rules = filter(r -> r isa FixedPrerequisites, rules)
 
-    # If using union, combine allowed tools from each rule while respecting FixedOrder constraints
+    # Convert used_tools to strings for consistency
+    used_tools_str = Set(String.(used_tools))
+
+    # For union case, handle FixedOrder rules specially
     if combine === union
-        # Start with empty set
-        allowed = Set{String}()
-
-        # First, add previously used tools from FixedPrerequisites rules
-        prereq_rules = findall(r -> r isa FixedPrerequisites, rules)
-        for i in prereq_rules
-            # Only include tools that have been used
-            for tool in rules[i].tools
-                if Symbol(tool) ∈ used_tools
-                    push!(allowed, String(tool))
-                end
+        # Get next tool from fixed order rules
+        fixed_order_allowed = Set{String}()
+        for rule in fixed_order_rules
+            last_idx = findlast(t -> t ∈ used_tools, rule.tools)
+            next_idx = isnothing(last_idx) ? 1 : last_idx + 1
+            if next_idx <= length(rule.tools)
+                push!(fixed_order_allowed, String(rule.tools[next_idx]))
             end
         end
 
-        # Then, handle FixedOrder rules by only allowing the next tool in sequence
-        fixed_order_rules = findall(r -> r isa FixedOrder, rules)
-        if !isempty(fixed_order_rules)
-            for i in fixed_order_rules
-                rule = rules[i]
-                # Find next tool in sequence that hasn't been used
-                next_tool = nothing
-                for tool in rule.tools
-                    if !(Symbol(tool) ∈ used_tools)
-                        next_tool = String(tool)
-                        break
+        # Get valid prerequisites for unused tools
+        prereq_allowed = Set{String}()
+        for rule in prereq_rules
+            for (i, tool) in enumerate(rule.tools)
+                tool_str = String(tool)
+                # If this is a used tool and there's an unused tool right after it
+                if tool_str ∈ used_tools_str && i < length(rule.tools)
+                    next_tool = String(rule.tools[i + 1])
+                    if next_tool ∉ used_tools_str
+                        push!(prereq_allowed, tool_str)
                     end
                 end
-                # Add next tool if found
-                if !isnothing(next_tool)
-                    push!(allowed, next_tool)
-                end
             end
         end
 
-        return collect(allowed)
+        # Combine allowed tools from both rule types
+        return collect(union(fixed_order_allowed, prereq_allowed))
     else
-        # For intersect (default) and other combine functions, use standard reduction
-        return collect(reduce(combine, allowed_per_rule))
+        # For intersect case, use standard reduction with all rules
+        allowed_per_rule = vcat(
+            [Set(get_allowed_tools(r, used_tools)) for r in fixed_order_rules],
+            [Set(get_allowed_tools(r, used_tools)) for r in prereq_rules]
+        )
+        allowed = reduce(combine, allowed_per_rule)
+        return collect(allowed)
     end
 end
 
@@ -379,7 +396,6 @@ add_tools!(agent, [
     Tool(deploy),         # Model deployment
     Tool(monitor)         # Model monitoring
 ])
-```
 
 # Rule 1: Must follow strict ML lifecycle
 order_rule = FixedOrder([
@@ -427,6 +443,3 @@ function apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent
     # Return only tools that are allowed by the rules
     return filter(t -> t.name ∈ allowed_tools, tools)
 end
-
-
-
