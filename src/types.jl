@@ -321,32 +321,35 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
 
     # If using union, combine allowed tools from each rule while respecting FixedOrder constraints
     if combine === union
-        # First, identify tools that would violate FixedOrder sequences
+        # Start with empty set
+        allowed = Set{String}()
+
+        # First, add tools from FixedPrerequisites rules (these can be reused)
+        prereq_rules = findall(r -> r isa FixedPrerequisites, rules)
+        for i in prereq_rules
+            union!(allowed, allowed_per_rule[i])
+        end
+
+        # Then, handle FixedOrder rules by only allowing the next tool in sequence
         fixed_order_rules = findall(r -> r isa FixedOrder, rules)
-        excluded_tools = Set{String}()
         if !isempty(fixed_order_rules)
             for i in fixed_order_rules
                 rule = rules[i]
-                # Find current position in sequence
-                current_pos = 1
-                while current_pos <= length(rule.tools) && rule.tools[current_pos] ∈ used_tools
-                    current_pos += 1
-                end
-                # Only exclude unused tools that would violate sequence order
-                for j in 1:current_pos-1
-                    tool = rule.tools[j]
-                    if !(Symbol(tool) ∈ used_tools)  # Only exclude if not already used
-                        push!(excluded_tools, String(tool))
+                # Find next tool in sequence that hasn't been used
+                next_tool = nothing
+                for tool in rule.tools
+                    if !(Symbol(tool) ∈ used_tools)
+                        next_tool = String(tool)
+                        break
                     end
+                end
+                # Add next tool if found
+                if !isnothing(next_tool)
+                    push!(allowed, next_tool)
                 end
             end
         end
 
-        # Combine all allowed tools from all rules
-        allowed = reduce(union, allowed_per_rule)
-
-        # Apply sequence constraints to all tools
-        setdiff!(allowed, excluded_tools)
         return collect(allowed)
     else
         # For intersect (default) and other combine functions, use standard reduction
