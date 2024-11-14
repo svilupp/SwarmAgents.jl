@@ -1,3 +1,6 @@
+using PromptingTools
+using PromptingTools: ToolMessage, SystemMessage, UserMessage, AbstractMessage
+
 """
     handle_tool_calls!(
         active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage},
@@ -7,22 +10,31 @@ Handles tool calls for an agent.
 """
 function handle_tool_calls!(
         active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage},
-        context::Dict{Symbol, Any} = Dict{Symbol, Any}())
+        session::Session)
     last_msg = PT.last_message(history)
     @assert PT.isaitoolrequest(last_msg) "Last message must be an AIToolsRequest! Provided: $(last_msg|>typeof)"
 
-    isempty(last_msg.tool_calls) && return (; active_agent, history, context)
+    isempty(last_msg.tool_calls) && return (; active_agent, history, context = session.context)
     next_agent = active_agent
     for tool in tool_calls(history[end])
         if isnothing(active_agent)
-            println("Early exit: no active agent!")
+            print_progress(session.io, active_agent, ToolMessage("Early exit", nothing, "Early exit", "Early exit", Dict{Symbol,Any}(), "Early exit", :default))
             continue
         end
         name, args = tool.name, tool.args
-        printstyled(">> Tool Request: $name, args: $args\n", color = :light_blue)
-        @assert name ∈ keys(active_agent.tool_map) "Tool $name not found in agent $(active_agent.name)'s tool map."
-        ## TODO: add try-catch for function errors
-        output = PT.execute_tool(active_agent.tool_map, tool, context)
+        print_progress(session.io, active_agent, tool)
+        @assert name ∈ keys(active_agent.tool_map) || name ∈ keys(session.rules) "Tool $name not found in agent $(active_agent.name)'s tool map or session rules."
+
+        # Get tool from agent's tool_map or session rules
+        tool_impl = get(active_agent.tool_map, name, nothing)
+        if isnothing(tool_impl)
+            tool_impl = session.rules[name]
+        end
+
+        ## Execute tool and store full output in artifacts
+        output = PT.execute_tool(Dict(name => tool_impl), tool, session.context)
+        push!(session.artifacts, output)
+
         ## Changing the agent
         if isabstractagent(output)
             next_agent = output
@@ -30,11 +42,12 @@ function handle_tool_calls!(
             !isempty(args) && merge!(payload, args)
             output = JSON3.write(payload)
         end
-        tool.content = output
-        printstyled(">> Tool Output: $(tool.content)\n", color = :light_blue)
-        push!(history, tool)
+        # Create a new ToolMessage with the output content
+        output_msg = ToolMessage(string(output), nothing, tool.tool_call_id, tool.tool_call_id, Dict{Symbol,Any}(), tool.name, :default)
+        print_progress(session.io, active_agent, output_msg)
+        push!(history, output_msg)
     end
-    return (; active_agent = next_agent, history, context)
+    return (; active_agent = next_agent, history, context = session.context)
 end
 
 """
@@ -65,35 +78,36 @@ end
 Runs a full turn of an agent (executes all tool calls).
 """
 function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessage},
-        context::Dict{Symbol, Any} = Dict{Symbol, Any}(); max_turns::Int = 5,
+        session::Session; max_turns::Int = 5,
         kwargs...)
     active_agent = agent
-    context = deepcopy(context)
     history = deepcopy(messages)
     init_len = length(messages)
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
-        tools = apply_rules(history, active_agent, collect(values(active_agent.tool_map)))
+        # Combine tools from agent and session
+        tools = vcat(
+            collect(values(active_agent.tool_map)),
+            collect(values(session.rules))
+        )
         update_system_message!(history, active_agent)
         history = PT.aitools(history; model = active_agent.model,
             tools, name_user = "User", name_assistant = scrub_agent_name(active_agent),
             return_all = true, verbose = false, kwargs...)
         # Print assistant response
         if !isnothing(PT.last_output(history))
-            name_assistant = "Assistant ($(scrub_agent_name(active_agent)))"
-            printstyled(">> $(name_assistant): $(PT.last_output(history))\n",
-                color = :magenta)
+            print_progress(session.io, active_agent, history[end])
         end
         isempty(tool_calls(history[end])) && break
         # Run tool calls
-        (; active_agent, history, context) = handle_tool_calls!(
-            active_agent, history, context)
+        (; active_agent, history) = handle_tool_calls!(
+            active_agent, history, session)
     end
     ## +1 because we inject SystemMessage at the beginning, +1 because we don't want the orig message
     return Response(;
         messages = history[min(init_len + 2, end):end],
         agent = active_agent,
-        context = context
+        context = session.context
     )
 end
 function run_full_turn!(session::Session, user_prompt::AbstractString; kwargs...)
@@ -102,22 +116,11 @@ function run_full_turn!(session::Session, user_prompt::AbstractString; kwargs...
     ## At the user prompt
     push!(session.messages, PT.UserMessage(user_prompt))
     printstyled(">> User: $user_prompt\n", color = :light_red)
-    resp = run_full_turn(session.agent, session.messages, session.context; kwargs...)
+    resp = run_full_turn(session.agent, session.messages, session; kwargs...)
     session.messages = vcat(session.messages, resp.messages)
     session.agent = resp.agent
     session.context = resp.context
     return session
 end
 
-"""
-    Session(agent::Agent;
-        context::Dict{Symbol, Any} = Dict{Symbol, Any}())
 
-Initializes a `Session` with an `agent` and an optional `context`.
-
-Run `run_full_turn!` with a `user_prompt` to continue the session.
-"""
-function Session(agent::Agent;
-        context::Dict{Symbol, Any} = Dict{Symbol, Any}())
-    return Session(; agent, context)
-end
