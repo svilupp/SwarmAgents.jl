@@ -147,4 +147,49 @@ This feature is particularly valuable for:
 
 See `examples/privacy_example.jl` for a complete example of privacy features.
 
+### Agent References
+
+SwarmAgents.jl provides a flexible agent reference system through the `AbstractAgent` type hierarchy:
+- `AbstractAgentActor`: Concrete agents that can perform actions
+- `AbstractAgentRef`: References to other agents
+- `AgentRef`: A simple reference to another agent by name
+
+Example usage:
+
+```julia
+# Create agents and references
+main_agent = Agent(name="MainAgent", instructions="Main agent instructions")
+helper_agent = Agent(name="HelperAgent", instructions="Helper agent instructions")
+helper_ref = AgentRef(name="HelperAgent")
+
+# Initialize session with agent map
+session = Session(main_agent)
+add_agent!(session, helper_agent)
+
+# Use reference to find actual agent
+found_agent = find_agent(session.agent_map, helper_ref)  # Returns helper_agent
+```
+
+This feature enables:
+- Flexible agent relationships and handoffs
+- Indirect agent references without direct coupling
+- Dynamic agent resolution during execution
+
+### Flow Rules and Termination Checks
+
+SwarmAgents.jl includes a sophisticated flow control system with termination checks to prevent infinite loops and detect problematic patterns:
+
+```julia
+# Create termination checks
+checks = [
+    TerminationCycleCheck(3, 3),  # Detect 3 repetitions of cycles up to length 3
+    TerminationRepeatCheck(5),    # Detect 5 consecutive uses of the same tool
+    TerminationGenericCheck((h, a) -> length(h) > 10 ? nothing : a)  # Custom check
+]
+```
+
+**Important Note**: Flow rules and termination checks operate on the complete message history, ignoring PrivateMessage visibility restrictions. This ensures proper flow control even when some messages are private.
+
+See `examples/flow_rules_example.jl` for flow control examples.
+
 See folder `examples/` for more examples.
