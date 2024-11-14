@@ -26,6 +26,15 @@ const FLIGHTS = Dict(
 # This will store flight information, user details, and booking reference
 const CONTEXT_KEYS = [:current_flight, :name, :booking_ref]
 
+# Parameter structures for tools
+Base.@kwdef struct CheckStatusParams
+    none::Nothing = nothing
+end
+
+Base.@kwdef struct ChangeFlightParams
+    none::Nothing = nothing
+end
+
 # Example of required context structure:
 # context = Dict{Symbol, Any}(
 #     :current_flight => "FL123",
@@ -62,47 +71,9 @@ function change_flight!(context::Dict{Symbol, Any}, new_flight::String)
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-"""
-    wrapped_check_status(msg::String, session::Session)::String
+# Tool functions with parameter structs are defined at the top of the file
 
-Tool function to check the status of the current flight.
-
-# Arguments
-- `msg::String`: The user message (unused in this case)
-- `session::Session`: The current session containing context
-
-# Returns
-- `String`: A message containing the flight details or status
-"""
-function wrapped_check_status(msg::String, session::Session)::String
-    context = session.context::Dict{Symbol, Any}
-    if !haskey(context, :current_flight) || isnothing(context[:current_flight])
-        return "No flight currently booked"
-    end
-    get_flight_details(context[:current_flight])
-end
-
-"""
-    wrapped_change_flight(msg::String, session::Session)::String
-
-Tool function to change the current flight based on the message.
-
-# Arguments
-- `msg::String`: The user message containing the new flight number
-- `session::Session`: The current session containing context
-
-# Returns
-- `String`: A confirmation message or error message
-"""
-function wrapped_change_flight(msg::String, session::Session)::String
-    flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
-    if isnothing(flight_match)
-        return "Please specify the new flight number (e.g., 'change flight to FL124')"
-    end
-    new_flight = flight_match[1]
-    context = session.context::Dict{Symbol, Any}
-    change_flight!(context, new_flight)
-end
+# Removed old wrapped functions as they are no longer needed
 
 # Example usage:
 function run_example()
@@ -129,17 +100,17 @@ function run_example()
     add_tools!(agent, [
         Tool(;
             name="check_status",
-            parameters=(none=Nothing,),  # Updated to match car_analysis.jl format
+            parameters=(none=Nothing,),
             return_type=String,
             description="Check the status of your current flight",
-            callable=(msg, session) -> wrapped_check_status(msg, session)
+            callable=(msg, session) -> check_status(CheckStatusParams(), session.context)
         ),
         Tool(;
             name="change_flight",
-            parameters=(none=Nothing,),  # Updated to match car_analysis.jl format
+            parameters=(none=Nothing,),
             return_type=String,
             description="Change your flight to a new flight number",
-            callable=(msg, session) -> wrapped_change_flight(msg, session)
+            callable=(msg, session) -> change_flight(ChangeFlightParams(), msg, session.context)
         )
     ])
 
