@@ -37,14 +37,14 @@ end
 """
 Session context wrapper for type safety
 """
-Base.@kwdef mutable struct SessionContext
+Base.@kwdef mutable struct ShoeStoreSessionContext
     context::ShoeStoreContext
 end
 
 """
-Convert SessionContext to Dict format required by SwarmAgents.Session
+Convert ShoeStoreSessionContext to Dict format required by SwarmAgents.Session
 """
-function to_session_dict(ctx::SessionContext)::Dict{Symbol,Any}
+function to_session_dict(ctx::ShoeStoreSessionContext)::Dict{Symbol,Any}
     Dict{Symbol,Any}(:context => ctx.context)
 end
 
@@ -90,16 +90,16 @@ end
 # Parameter structures for tools
 Base.@kwdef struct AuthenticateParams
     msg::String
-    context::SessionContext
+    context::ShoeStoreSessionContext
 end
 
 Base.@kwdef struct ShowInventoryParams
-    context::SessionContext
+    context::ShoeStoreSessionContext
 end
 
 Base.@kwdef struct CheckSizeParams
     msg::String
-    context::SessionContext
+    context::ShoeStoreSessionContext
 end
 
 """
@@ -212,7 +212,7 @@ Tool function to authenticate users.
 """
 function wrapped_authenticate(msg::String, session::Session)::String
     store_context = session.context[:context]::ShoeStoreContext
-    session_context = SessionContext(context=store_context)
+    session_context = ShoeStoreSessionContext(context=store_context)
     params = AuthenticateParams(msg=msg, context=session_context)
     authenticate(params)
 end
@@ -230,7 +230,7 @@ Tool function to show available inventory.
 """
 function wrapped_show_inventory(session::Session)::String
     store_context = session.context[:context]::ShoeStoreContext
-    session_context = SessionContext(context=store_context)
+    session_context = ShoeStoreSessionContext(context=store_context)
     params = ShowInventoryParams(context=session_context)
     show_inventory(params)
 end
@@ -249,7 +249,7 @@ Tool function to check shoe size availability.
 """
 function wrapped_check_size(msg::String, session::Session)::String
     store_context = session.context[:context]::ShoeStoreContext
-    session_context = SessionContext(context=store_context)
+    session_context = ShoeStoreSessionContext(context=store_context)
     params = CheckSizeParams(msg=msg, context=session_context)
     check_size(params)
 end
@@ -277,7 +277,7 @@ function run_example()
     add_tools!(agent, collect(values(tool_map)))
 
     # Create a session with proper context
-    session = Session(agent; context=to_session_dict(SessionContext(context=context)))
+    session = Session(agent; context=to_session_dict(ShoeStoreSessionContext(context=context)))
 
     # Example conversation
     println("Bot: Welcome to our shoe store! Please authenticate first.")
