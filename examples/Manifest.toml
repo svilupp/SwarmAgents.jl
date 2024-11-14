@@ -469,8 +469,6 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 [[deps.PromptingTools]]
 deps = ["AbstractTrees", "Base64", "Dates", "HTTP", "JSON3", "Logging", "OpenAI", "Pkg", "PrecompileTools", "Preferences", "REPL", "Random", "StreamCallbacks", "Test"]
 git-tree-sha1 = "964e1aa85862e35d4756f4337af32d3487523968"
-repo-rev = "main"
-repo-url = "https://github.com/svilupp/PromptingTools.jl.git"
 uuid = "670122d1-24a8-4d70-bfce-740807c42192"
 version = "0.63.0"
 
