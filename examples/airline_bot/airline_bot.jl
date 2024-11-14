@@ -19,14 +19,16 @@ const FLIGHTS = Dict(
     "FL125" => Dict("from" => "Paris", "to" => "New York", "time" => DateTime(2024, 12, 3, 9, 15))
 )
 
-"""
-Context structure for the airline bot
-"""
-Base.@kwdef mutable struct AirlineContext
-    current_flight::Union{String, Nothing} = nothing
-    name::String = ""
-    booking_ref::String = ""
-end
+# Initialize context type as Dict{Symbol, Any}
+# This will store flight information, user details, and booking reference
+const CONTEXT_KEYS = [:current_flight, :name, :booking_ref]
+
+# Example of required context structure:
+# context = Dict{Symbol, Any}(
+#     :current_flight => "FL123",
+#     :name => "John Doe",
+#     :booking_ref => "ABC123"
+# )
 
 """
 Check if a flight exists in our database
@@ -49,11 +51,11 @@ end
 """
 Change flight in the context
 """
-function change_flight!(context::AirlineContext, new_flight::String)
+function change_flight!(context::Dict{Symbol, Any}, new_flight::String)
     if !flight_exists(new_flight)
         return "Flight $new_flight does not exist"
     end
-    context.current_flight = new_flight
+    context[:current_flight] = new_flight
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
@@ -70,11 +72,11 @@ Tool function to check the status of the current flight.
 - `String`: A message containing the flight details or status
 """
 function wrapped_check_status(msg::String, session::Session)::String
-    context = session.context::AirlineContext
-    if isnothing(context.current_flight)
+    context = session.context::Dict{Symbol, Any}
+    if !haskey(context, :current_flight) || isnothing(context[:current_flight])
         return "No flight currently booked"
     end
-    get_flight_details(context.current_flight)
+    get_flight_details(context[:current_flight])
 end
 
 """
@@ -95,17 +97,17 @@ function wrapped_change_flight(msg::String, session::Session)::String
         return "Please specify the new flight number (e.g., 'change flight to FL124')"
     end
     new_flight = flight_match[1]
-    context = session.context::AirlineContext
+    context = session.context::Dict{Symbol, Any}
     change_flight!(context, new_flight)
 end
 
 # Example usage:
 function run_example()
-    # Initialize the context
-    context = AirlineContext(
-        current_flight = "FL123",  # User's current flight
-        name = "John Doe",         # User's name
-        booking_ref = "ABC123"     # Booking reference
+    # Initialize the context as Dict{Symbol, Any}
+    context = Dict{Symbol, Any}(
+        :current_flight => "FL123",  # User's current flight
+        :name => "John Doe",         # User's name
+        :booking_ref => "ABC123"     # Booking reference
     )
 
     # Create tools and agent
