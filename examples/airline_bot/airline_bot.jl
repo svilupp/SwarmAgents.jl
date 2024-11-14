@@ -71,6 +71,17 @@ function change_flight!(context::AirlineContext, new_flight::String)
 end
 
 # Define our tools
+"""
+    check_flight_status(context::SessionContext)::String
+
+Check the status of the current flight in the session context.
+
+# Arguments
+- `context::SessionContext`: The session context containing flight information
+
+# Returns
+- `String`: A message containing the flight details or status
+"""
 function check_flight_status(context::SessionContext)::String
     if isnothing(context.context.current_flight)
         return "No flight currently booked"
@@ -78,6 +89,18 @@ function check_flight_status(context::SessionContext)::String
     get_flight_details(context.context.current_flight)
 end
 
+"""
+    change_flight(msg::String, context::SessionContext)::String
+
+Change the current flight based on the message content.
+
+# Arguments
+- `msg::String`: The user message containing the new flight number
+- `context::SessionContext`: The session context containing flight information
+
+# Returns
+- `String`: A confirmation message or error message
+"""
 function change_flight(msg::String, context::SessionContext)::String
     flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
     if isnothing(flight_match)
