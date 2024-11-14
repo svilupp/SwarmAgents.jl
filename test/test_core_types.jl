@@ -4,6 +4,10 @@ using PromptingTools
 using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
 import Base.Logging
 
+# Define test utility functions at module level
+func1() = nothing
+func2() = nothing
+
 @testset "Core Types" begin
     @testset "Agent Type Hierarchy" begin
         # Create test agents and references
@@ -29,9 +33,6 @@ import Base.Logging
         @test !agent.private
 
         # Test tool management
-        func1() = nothing
-        func2() = nothing
-
         tools = [Tool(func1), Tool(func2)]
         add_tools!(agent, tools)
         @test length(agent.tool_map) == 2
@@ -93,8 +94,6 @@ import Base.Logging
         @test session.agent === agent
 
         # Test session rules management
-        func1() = nothing
-        func2() = nothing
         tools = [Tool(func1), Tool(func2)]
 
         add_rules!(session, tools)
