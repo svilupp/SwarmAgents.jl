@@ -1,13 +1,19 @@
 using PromptingTools
 using PromptingTools: AbstractMessage, SystemMessage, UserMessage
 
-# Convert methods for message types
-function Base.convert(::Type{T}, msg::SystemMessage) where T <: AbstractMessage
+"""
+    convert_message(T::Type{<:AbstractMessage}, msg::SystemMessage)
+    convert_message(T::Type{<:AbstractMessage}, msg::UserMessage)
+
+Convert a message from one type to another within the PromptingTools ecosystem.
+This is an internal utility function to handle message type conversions without type piracy.
+"""
+function convert_message(::Type{T}, msg::SystemMessage) where T <: AbstractMessage
     T(msg.content)
 end
 
-function Base.convert(::Type{T}, msg::UserMessage) where T <: AbstractMessage
+function convert_message(::Type{T}, msg::UserMessage) where T <: AbstractMessage
     T(msg.content)
 end
 
-export convert
+export convert_message

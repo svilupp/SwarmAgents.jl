@@ -63,10 +63,10 @@ function update_system_message!(history::AbstractVector{T},
     if length(history) > 1 && PT.issystemmessage(history[1]) &&
        !isempty(active_agent.instructions)
         ## Update the system message
-        history[1] = convert(T, PT.SystemMessage(active_agent.instructions))
+        history[1] = convert_message(T, PT.SystemMessage(active_agent.instructions))
     else
         ## Add the system message to the beginning of the history
-        pushfirst!(history, convert(T, PT.SystemMessage(active_agent.instructions)))
+        pushfirst!(history, convert_message(T, PT.SystemMessage(active_agent.instructions)))
     end
     return history
 end
