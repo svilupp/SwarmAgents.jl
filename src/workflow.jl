@@ -163,4 +163,4 @@ end
 
 function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
     add_tools!(agent, Tool(callable; kwargs...))
-end
+end  # End of add_tools!

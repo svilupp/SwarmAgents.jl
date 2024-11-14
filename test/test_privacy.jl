@@ -109,5 +109,21 @@ using Test
         # Test no privacy wrapping for public agent
         public_msg = maybe_private_message(msg, public_agent)
         @test public_msg === msg  # Should return original message
+
+        # Test last turn visibility
+        last_turn_msg = maybe_private_message(msg, agent; last_turn=true)
+        @test last_turn_msg isa PrivateMessage
+        @test last_turn_msg.last_turn == true
+        @test is_visible(last_turn_msg, Agent("OtherAgent", private=false))
+
+        # Test assistant message with no tool calls visibility
+        assistant_msg = PT.AssistantMessage("Final response")
+        private_assistant = maybe_private_message(assistant_msg, agent; last_turn=true)
+        @test is_visible(private_assistant, Agent("OtherAgent", private=false))
+
+        # Test agent handoff visibility
+        tool_msg = ToolMessage("test", nothing, "id", "id", Dict{Symbol,Any}(), "test", :default)
+        handoff_msg = maybe_private_message(tool_msg, agent; last_turn=true)
+        @test is_visible(handoff_msg, Agent("NextAgent", private=true))
     end
 end
