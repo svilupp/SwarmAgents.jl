@@ -132,8 +132,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(check_flight_status),
-        Tool(change_flight)
+        PT.Tool(check_flight_status),
+        PT.Tool(change_flight)
     ])
 
     # Create a session with proper context
