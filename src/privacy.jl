@@ -16,12 +16,12 @@ struct PrivateMessage <: PT.AbstractMessage
 end
 
 # Forward all AbstractMessage interface methods to the underlying object
-PT.content(msg::PrivateMessage) = PT.content(msg.object)
-PT.role(msg::PrivateMessage) = PT.role(msg.object)
-PT.name(msg::PrivateMessage) = PT.name(msg.object)
-PT.tool_calls(msg::PrivateMessage) = PT.tool_calls(msg.object)
-PT.last_message(msgs::AbstractVector{<:PT.AbstractMessage}) = last(msgs)
-PT.last_output(msgs::AbstractVector{<:PT.AbstractMessage}) = PT.last_output(last(msgs))
+Base.getproperty(msg::PrivateMessage, name::Symbol) = name === :content ? msg.object.content :
+                                                     name === :role ? msg.object.role :
+                                                     name === :name ? msg.object.name :
+                                                     getfield(msg, name)
+PT.tool_calls(msg::PrivateMessage) = PT.tool_calls(msg.object)  # Keep this as a method since it's defined as one
+PT.last_output(msg::PrivateMessage) = PT.last_output(msg.object)
 
 """
     is_visible(message::PT.AbstractMessage, agent::Agent)::Bool
