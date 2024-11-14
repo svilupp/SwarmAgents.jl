@@ -11,6 +11,13 @@ This is an internal utility function to handle message type conversions without 
 - Preserves tool-specific fields when converting between tool message types
 - Handles conversion between UserMessage, SystemMessage, AIToolRequest, and ToolMessage
 """
+# Base case: converting to same type is a no-op
+convert_message(::Type{T}, msg::T) where T <: AbstractMessage = msg
+
+# Converting to AbstractMessage returns the original message
+convert_message(::Type{AbstractMessage}, msg::AbstractMessage) = msg
+
+# Specific conversions
 function convert_message(::Type{T}, msg::SystemMessage) where T <: AbstractMessage
     T(msg.content)
 end
@@ -34,8 +41,5 @@ function convert_message(::Type{T}, msg::ToolMessage) where T <: AbstractMessage
         T(msg.content)
     end
 end
-
-# Passthrough for same type
-convert_message(::Type{T}, msg::T) where T <: AbstractMessage = msg
 
 export convert_message

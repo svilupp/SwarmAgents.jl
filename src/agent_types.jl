@@ -9,6 +9,7 @@ abstract type AbstractAgent end
 
 """
     AgentRef(name::String)
+    AgentRef(; name::String)
 
 Reference to an agent in the agent map.
 
@@ -22,6 +23,22 @@ Reference to an agent in the agent map.
 struct AgentRef <: AbstractAgent
     name::String
 end
+
+# Add keyword constructor
+AgentRef(; name::String) = AgentRef(name)
+
+"""
+    isabstractagent(x)
+
+Check if x is an AbstractAgent.
+
+# Arguments
+- `x`: Object to check
+
+# Returns
+- `Bool`: true if x is an AbstractAgent
+"""
+isabstractagent(x) = x isa AbstractAgent
 
 """
     isabstractagentref(x)
@@ -50,4 +67,4 @@ Check if x is a concrete agent (not a reference).
 isabstractagentactor(x) = x isa AbstractAgent && !isabstractagentref(x)
 
 export AbstractAgent, AgentRef,
-    isabstractagentref, isabstractagentactor
+    isabstractagent, isabstractagentref, isabstractagentactor
