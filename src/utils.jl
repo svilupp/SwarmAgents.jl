@@ -42,8 +42,9 @@ function handle_tool_calls!(
             !isempty(args) && merge!(payload, args)
             output = JSON3.write(payload)
         end
-        # Create a new ToolMessage with the output content
+        # Create a new ToolMessage with the output content and wrap if agent is private
         output_msg = ToolMessage(string(output), nothing, tool.tool_call_id, tool.tool_call_id, Dict{Symbol,Any}(), tool.name, :default)
+        output_msg = wrap_message(output_msg, active_agent)
         print_progress(session.io, active_agent, output_msg)
         push!(history, output_msg)
     end
@@ -85,20 +86,32 @@ function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessa
     init_len = length(messages)
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
+        # Filter history for visible messages
+        visible_history = filter_history(history, active_agent)
+
         # Combine tools from agent and session
         tools = vcat(
             collect(values(active_agent.tool_map)),
             collect(values(session.rules))
         )
-        update_system_message!(history, active_agent)
-        history = PT.aitools(history; model = active_agent.model,
+        update_system_message!(visible_history, active_agent)
+        response = PT.aitools(visible_history; model = active_agent.model,
             tools, name_user = "User", name_assistant = scrub_agent_name(active_agent),
             return_all = true, verbose = false, kwargs...)
-        # Print assistant response
-        if !isnothing(PT.last_output(history))
-            print_progress(session.io, active_agent, history[end])
+
+        # Wrap response in PrivateMessage if agent is private
+        if active_agent.private
+            response[end] = wrap_message(response[end], active_agent)
         end
-        isempty(tool_calls(history[end])) && break
+
+        # Update full history with response
+        append!(history, response[length(visible_history)+1:end])
+
+        # Print assistant response
+        if !isnothing(PT.last_output(response))
+            print_progress(session.io, active_agent, response[end])
+        end
+        isempty(tool_calls(response[end])) && break
         # Run tool calls
         (; active_agent, history) = handle_tool_calls!(
             active_agent, history, session)

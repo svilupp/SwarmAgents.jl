@@ -93,7 +93,58 @@ run_full_turn!(sess, "What do you mean?")
 >> Tool Request: transfer_to_english_agent, args: Dict{Symbol, Any}()
 >> Tool Output: {"assistant":"English Agent"}
 >> Assistant: You were speaking in Spanish, so I transferred you to a Spanish-speaking agent. How can I assist you in English today?
+
+## Privacy Features
+
+SwarmAgents.jl supports private messaging between agents through the `PrivateMessage` type and the `private` field in the `Agent` struct.
+
+### Private Agents
+
+You can create a private agent that will keep its messages visible only to itself:
+
+```julia
+private_agent = Agent(
+    name = "PrivateAgent",
+    instructions = "You are a private agent.",
+    private = true  # Messages from this agent will be private
+)
 ```
 
+When `private = true`, all messages from this agent will be automatically wrapped in a `PrivateMessage` that is only visible to this agent.
+
+### Message Visibility
+
+The privacy system ensures that:
+- Private messages are only visible to specified agents
+- Public messages are visible to all agents
+- Tool messages respect privacy settings
+- Message history is filtered based on visibility
+
+Example usage:
+
+```julia
+# Create agents
+private_agent = Agent(name="PrivateAgent", private=true)
+public_agent = Agent(name="PublicAgent")
+
+# Initialize session
+session = Session(private_agent)
+
+# Private agent's messages will only be visible to itself
+run_full_turn!(session, "This message will be private")
+
+# Switch to public agent
+session.agent = public_agent
+# Public agent won't see private agent's messages
+run_full_turn!(session, "What was the previous message?")
+```
+
+This feature is particularly valuable for:
+- Keeping sensitive information private between agents
+- Reducing noise in agent communications
+- Maintaining a full history while only showing relevant messages to each agent
+- Optimizing performance by filtering irrelevant messages
+
+See `examples/privacy_example.jl` for a complete example of privacy features.
 
 See folder `examples/` for more examples.

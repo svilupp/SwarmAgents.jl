@@ -12,4 +12,5 @@ using Aqua
     include("test_types.jl")
     include("test_utils.jl")
     include("test_swarm.jl")
+    include("test_privacy.jl")
 end

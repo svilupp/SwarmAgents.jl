@@ -14,6 +14,7 @@ Agent is a stateless struct that holds the the reference to LLM, tools and the i
 - `tool_map::Dict{String, AbstractTool}`: A dictionary of tools available to the agent.
 - `tool_choice::Union{String, Nothing}`: The tool choice for the agent.
 - `parallel_tool_calls::Bool`: Whether to allow parallel tool calls. Defaults to `true` - NOT SUPPORTED YET.
+- `private::Bool`: Whether agent's messages should be private by default.
 """
 Base.@kwdef struct Agent <: AbstractAgent
     name::String = "Agent"
@@ -22,6 +23,7 @@ Base.@kwdef struct Agent <: AbstractAgent
     tool_map::Dict{String, AbstractTool} = Dict()
     tool_choice::Union{String, Nothing} = nothing
     parallel_tool_calls::Bool = true
+    private::Bool = false  # Whether agent's messages should be private by default
 end
 function Base.show(io::IO, t::AbstractAgent)
     print(io, t.name, " (Tools: ", length(t.tool_map), ")")
