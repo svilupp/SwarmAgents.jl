@@ -35,6 +35,13 @@ Base.@kwdef mutable struct SessionContext
 end
 
 """
+Convert SessionContext to Dict format required by SwarmAgents.Session
+"""
+function to_session_dict(ctx::SessionContext)::Dict{Symbol,Any}
+    Dict{Symbol,Any}(:context => ctx.context)
+end
+
+"""
 Check if a flight exists in our database
 """
 function flight_exists(flight_number::String)
@@ -118,7 +125,7 @@ function run_example()
     )
 
     # Create a session with proper context
-    session = Session(agent; context=SessionContext(context=context))
+    session = Session(agent; context=to_session_dict(SessionContext(context=context)))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
