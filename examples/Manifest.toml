@@ -569,7 +569,7 @@ version = "7.2.1+1"
 
 [[deps.SwarmAgents]]
 deps = ["JSON3", "PromptingTools"]
-path = ".."
+path = "/home/ubuntu/projects/SwarmAgents.jl"
 uuid = "6fce2c4d-9d52-4112-b2c3-c0b80c6b8436"
 version = "0.2.0"
 

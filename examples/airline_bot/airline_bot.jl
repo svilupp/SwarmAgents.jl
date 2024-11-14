@@ -78,15 +78,13 @@ function run_example()
     check_status_tool = PT.Tool(
         check_flight_status;
         name = "check_flight_status",
-        description = "Check the status of the current flight",
-        triggers = ["status", "my flight"]
+        docs = "Check the status of the current flight"
     )
 
     change_flight_tool = PT.Tool(
         change_flight;
         name = "change_flight",
-        description = "Change the current flight to a new flight",
-        triggers = ["change", "switch"]
+        docs = "Change the current flight to a new flight"
     )
 
     # Initialize the agent with tools
