@@ -73,14 +73,14 @@ function run_example()
     )
 
     # Create tools
-    check_status_tool = Tool(
+    check_status_tool = PT.Tool(
         check_flight_status;
         name = "check_flight_status",
         description = "Check the status of the current flight",
         triggers = ["status", "my flight"]
     )
 
-    change_flight_tool = Tool(
+    change_flight_tool = PT.Tool(
         change_flight;
         name = "change_flight",
         description = "Change the current flight to a new flight",
