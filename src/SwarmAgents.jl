@@ -14,6 +14,7 @@ include("types.jl")
 
 # Include other functionality
 include("message_utils.jl")
+include("agent_management.jl")
 include("utils.jl")
 include("flow_rules.jl")
 include("privacy.jl")
