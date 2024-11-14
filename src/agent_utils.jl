@@ -14,6 +14,32 @@ Abstract type for agent references that point to other agents.
 abstract type AbstractAgentRef <: AbstractAgent end
 
 """
+    AgentRef <: AbstractAgentRef
+
+A reference to another agent in the system.
+
+# Fields
+- `name::String`: The name of the referenced agent
+"""
+struct AgentRef <: AbstractAgentRef
+    name::String
+end
+
+"""
+    isabstractagent(agent) -> Bool
+
+Check if an object is an AbstractAgent.
+
+# Arguments
+- `agent`: Object to check
+
+# Returns
+- `Bool`: true if agent is an AbstractAgent, false otherwise
+"""
+isabstractagent(agent::AbstractAgent) = true
+isabstractagent(::Any) = false
+
+"""
     isabstractagentref(agent) -> Bool
 
 Check if an agent is an AbstractAgentRef.
@@ -64,28 +90,37 @@ If an AgentRef is provided, follows references until finding a real agent or err
 - Agent structs do not have to be in agent_map, only AgentRefs must be there
 """
 function find_agent(agent_map::Dict{Symbol, AbstractAgent}, agent_ref)
-    # Handle string input
-    if agent_ref isa String
-        agent_ref = Symbol(agent_ref)
-    end
+    # Track visited references to detect cycles
+    visited = Set{Symbol}()
 
-    # Handle symbol input
-    if agent_ref isa Symbol
-        !haskey(agent_map, agent_ref) &&
-            throw(ArgumentError("Agent reference not found: $agent_ref"))
-        return find_agent(agent_map, agent_map[agent_ref])
-    end
-
-    # Handle agent input
-    if agent_ref isa AbstractAgent
-        if isabstractagentactor(agent_ref)
-            return agent_ref
-        elseif isabstractagentref(agent_ref)
-            return find_agent(agent_map, Symbol(agent_ref.name))
+    function resolve_ref(current_ref)
+        if current_ref isa String
+            current_ref = Symbol(current_ref)
         end
+
+        if current_ref isa Symbol
+            if current_ref in visited
+                throw(ArgumentError("Circular reference detected in agent map"))
+            end
+            push!(visited, current_ref)
+
+            !haskey(agent_map, current_ref) &&
+                throw(ArgumentError("Agent reference not found: $current_ref"))
+            return resolve_ref(agent_map[current_ref])
+        end
+
+        if current_ref isa AbstractAgent
+            if isabstractagentactor(current_ref)
+                return current_ref
+            elseif isabstractagentref(current_ref)
+                return resolve_ref(Symbol(current_ref.name))
+            end
+        end
+
+        throw(ArgumentError("Invalid agent reference type: $(typeof(current_ref))"))
     end
 
-    throw(ArgumentError("Invalid agent reference type: $(typeof(agent_ref))"))
+    resolve_ref(agent_ref)
 end
 
 """
@@ -103,19 +138,16 @@ a warning is issued before overwriting.
 
 # Notes
 - Issues a warning if overwriting an existing agent
-- Only adds the agent if it's an AbstractAgentRef
 """
 function add_agent!(session::Session, agent::AbstractAgent)
-    if isabstractagentref(agent)
-        agent_name = Symbol(agent.name)
-        if haskey(session.agent_map, agent_name)
-            @warn "Overwriting existing agent '$(agent.name)' in agent map"
-        end
-        session.agent_map[agent_name] = agent
+    agent_name = Symbol(agent.name)
+    if haskey(session.agent_map, agent_name)
+        @warn "Overwriting existing agent '$(agent.name)' in agent map"
     end
+    session.agent_map[agent_name] = agent
     return session
 end
 
-export AbstractAgent, AbstractAgentActor, AbstractAgentRef,
-    isabstractagentref, isabstractagentactor,
+export AbstractAgent, AbstractAgentActor, AbstractAgentRef, AgentRef,
+    isabstractagent, isabstractagentref, isabstractagentactor,
     find_agent, add_agent!
