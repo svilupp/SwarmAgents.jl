@@ -16,20 +16,6 @@ const FLIGHTS = Dict(
     "FL125" => Dict("from" => "Paris", "to" => "New York", "time" => DateTime(2024, 12, 3, 9, 15))
 )
 
-# Define our conversation flow rules
-struct AirlineFlowRules <: AbstractFlowRules end
-
-"""
-Initialize the context with user's flight information
-"""
-function initialize_context()
-    Dict(
-        "current_flight" => "FL123",  # User's current flight
-        "name" => "John Doe",         # User's name
-        "booking_ref" => "ABC123"     # Booking reference
-    )
-end
-
 """
 Check if a flight exists in our database
 """
@@ -51,75 +37,86 @@ end
 """
 Change flight in the context
 """
-function change_flight!(context::Dict, new_flight::String)
+function change_flight!(context::Dict{Symbol,Any}, new_flight::String)
     if !flight_exists(new_flight)
-        return false, "Flight $new_flight does not exist"
+        return "Flight $new_flight does not exist"
     end
-    context["current_flight"] = new_flight
-    return true, "Flight changed successfully to $new_flight"
+    context[:current_flight] = new_flight
+    "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-"""
-Process user message and update context accordingly
-"""
-function SwarmAgents.process_message(rules::AirlineFlowRules, message::String, context::Dict)
-    # Convert message to lowercase for easier matching
-    msg = lowercase(message)
-
-    # Check flight status
-    if contains(msg, "status") || contains(msg, "my flight")
-        current_flight = context["current_flight"]
-        return get_flight_details(current_flight)
-
-    # Change flight
-    elseif contains(msg, "change") && contains(msg, "flight")
-        # Extract flight number (assuming format "change flight to FL124")
-        flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", message)
-        if isnothing(flight_match)
-            return "Please specify the new flight number (e.g., 'change flight to FL124')"
-        end
-
-        new_flight = flight_match[1]
-        success, message = change_flight!(context, new_flight)
-        if success
-            return "$(message)\n$(get_flight_details(new_flight))"
-        else
-            return message
-        end
-
-    # Help message
-    elseif contains(msg, "help")
-        return """
-        I can help you with:
-        - Checking flight status: "What's my flight status?"
-        - Changing flights: "Change flight to FL124"
-        - Getting help: "help"
-        """
-
-    # Default response
-    else
-        return "I'm not sure how to help with that. Try asking for 'help' to see what I can do."
+# Define our tools
+function check_flight_status(context::Dict{Symbol,Any})
+    current_flight = get(context, :current_flight, nothing)
+    if isnothing(current_flight)
+        return "No flight currently booked"
     end
+    get_flight_details(current_flight)
+end
+
+function change_flight(msg::String, context::Dict{Symbol,Any})
+    flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
+    if isnothing(flight_match)
+        return "Please specify the new flight number (e.g., 'change flight to FL124')"
+    end
+    new_flight = flight_match[1]
+    change_flight!(context, new_flight)
 end
 
 # Example usage:
 function run_example()
-    # Initialize the bot with our rules and context
-    bot = Agent(
-        AirlineFlowRules(),
-        initialize_context()
+    # Initialize the context
+    context = Dict{Symbol,Any}(
+        :current_flight => "FL123",  # User's current flight
+        :name => "John Doe",         # User's name
+        :booking_ref => "ABC123"     # Booking reference
     )
+
+    # Create tools
+    check_status_tool = Tool(
+        check_flight_status;
+        name = "check_flight_status",
+        description = "Check the status of the current flight",
+        triggers = ["status", "my flight"]
+    )
+
+    change_flight_tool = Tool(
+        change_flight;
+        name = "change_flight",
+        description = "Change the current flight to a new flight",
+        triggers = ["change", "switch"]
+    )
+
+    # Initialize the agent with tools
+    agent = Agent(;
+        name = "Airline Bot",
+        instructions = """
+        You are an airline customer service bot. You can help with:
+        - Checking flight status
+        - Changing flights
+        Use the available tools to assist customers.
+        """,
+        tools = [check_status_tool, change_flight_tool]
+    )
+
+    # Create a session
+    session = Session(agent; context=context)
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
-    println("\nUser: What's my flight status?")
-    println("Bot: ", process_message(bot.rules, "What's my flight status?", bot.context))
 
-    println("\nUser: Change flight to FL124")
-    println("Bot: ", process_message(bot.rules, "Change flight to FL124", bot.context))
+    # Process messages through the session
+    messages = [
+        "What's my flight status?",
+        "Change flight to FL124",
+        "What's my flight status?"
+    ]
 
-    println("\nUser: What's my flight status?")
-    println("Bot: ", process_message(bot.rules, "What's my flight status?", bot.context))
+    for (i, msg) in enumerate(messages)
+        println("\nUser: $msg")
+        response = process_message(session, msg)
+        println("Bot: $response")
+    end
 end
 
 # Run the example if this file is run directly

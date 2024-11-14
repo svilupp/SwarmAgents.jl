@@ -167,16 +167,16 @@ function run_example()
     println("Bot: Welcome to our shoe store! Please authenticate first.")
 
     println("\nUser: show shoes")
-    println("Bot: ", process_message(bot, "show shoes"))
+    println("Bot: ", bot("show shoes"))
 
     println("\nUser: authenticate: Jan Svilupp, jan@svilupp.github.com")
-    println("Bot: ", process_message(bot, "authenticate: Jan Svilupp, jan@svilupp.github.com"))
+    println("Bot: ", bot("authenticate: Jan Svilupp, jan@svilupp.github.com"))
 
     println("\nUser: show shoes")
-    println("Bot: ", process_message(bot, "show shoes"))
+    println("Bot: ", bot("show shoes"))
 
     println("\nUser: check size 9 Running Shoes")
-    println("Bot: ", process_message(bot, "check size 9 Running Shoes"))
+    println("Bot: ", bot("check size 9 Running Shoes"))
 end
 
 # Run the example if this file is run directly
