@@ -25,6 +25,8 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         end
 
         ## Execute tool and store full output in artifacts
+        # Ensure tool_impl is wrapped as a PromptingTools.AbstractTool if it's a ToolFlowRules
+        tool_impl = tool_impl isa PromptingTools.AbstractTool ? tool_impl : Tool(tool_impl)
         output = PT.execute_tool(Dict(name => tool_impl), tool, session.context)
         push!(session.artifacts, output)
 
