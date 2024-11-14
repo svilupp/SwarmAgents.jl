@@ -74,7 +74,7 @@ function create_visualizations(df::DataFrame)
         df,
         Layout(
             title="Car Prices by Brand",
-            yaxis_title="Price ($)",
+            yaxis_title="Price (\\$)",
             boxmode="group"
         ),
         Box(x=:brand, y=:price)
@@ -86,7 +86,7 @@ function create_visualizations(df::DataFrame)
         Layout(
             title="MPG vs Price",
             xaxis_title="MPG",
-            yaxis_title="Price ($)"
+            yaxis_title="Price (\\$)"
         ),
         Scatter(x=:mpg, y=:price, mode="markers", marker=attr(color=:brand, colorscale="Viridis"))
     )
