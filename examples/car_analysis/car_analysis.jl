@@ -15,7 +15,24 @@ This example demonstrates:
 """
 
 # Define our conversation flow rules
-struct CarAnalysisFlowRules <: AbstractFlowRules end
+struct CarAnalysisFlowRules <: AbstractToolFlowRules end
+
+# Define tool parameters
+Base.@kwdef struct ShowStatsParams
+    none::Nothing = nothing
+end
+
+Base.@kwdef struct ShowInsightsParams
+    none::Nothing = nothing
+end
+
+Base.@kwdef struct ShowPlotsParams
+    none::Nothing = nothing
+end
+
+Base.@kwdef struct ResetDataParams
+    none::Nothing = nothing
+end
 
 """
 Create a mock car dataset
@@ -94,83 +111,82 @@ function create_visualizations(df::DataFrame)
     return [price_box, mpg_scatter]
 end
 
-"""
-Process user message and update context accordingly
-"""
-function SwarmAgents.process_message(rules::CarAnalysisFlowRules, message::String, session::Session)
-    msg = lowercase(message)
-    context = session.context
-
-    # First message or reset - create new dataset
-    if !haskey(context, "data") || contains(msg, "reset data")
-        context["data"] = create_mock_dataset()
-        return "Created new mock dataset with $(nrow(context["data"])) cars. Try 'show insights' or 'show plots'!"
-
-    # Show insights
-    elseif contains(msg, "show insight")
-        insights = generate_insights(context["data"])
-        return """
-        Here are some insights about the data:
-
-        $insights
-        """
-
-    # Show visualizations
-    elseif contains(msg, "show plot")
-        plots = create_visualizations(context["data"])
-        # In a real application, we'd save these plots and return URLs
-        return "Generated $(length(plots)) plots: price distribution and MPG vs Price scatter plot"
-
-    # Show basic stats
-    elseif contains(msg, "show stat")
-        df = context["data"]
-        stats = """
-        Basic Statistics:
-        - Number of cars: $(nrow(df))
-        - Average price: \$$(round(mean(df.price), digits=2))
-        - Average MPG: $(round(mean(df.mpg), digits=1))
-        - Newest car: $(maximum(df.year))
-        - Oldest car: $(minimum(df.year))
-        """
-        return stats
-
-    # Help message
-    elseif contains(msg, "help")
-        return """
-        I can help you analyze car data:
-        - Show insights: "show insights"
-        - Show plots: "show plots"
-        - Show statistics: "show stats"
-        - Reset data: "reset data"
-        - Get help: "help"
-        """
-
-    # Default response
-    else
-        return "I'm not sure how to help with that. Try asking for 'help' to see what I can do."
+# Tool functions
+function show_stats(params::ShowStatsParams, context::Dict)
+    if !haskey(context, "data")
+        return "No data available. Please reset the data first."
     end
+
+    df = context["data"]
+    return """
+    Basic Statistics:
+    - Number of cars: $(nrow(df))
+    - Average price: \$$(round(mean(df.price), digits=2))
+    - Average MPG: $(round(mean(df.mpg), digits=1))
+    - Newest car: $(maximum(df.year))
+    - Oldest car: $(minimum(df.year))
+    """
+end
+
+function show_insights(params::ShowInsightsParams, context::Dict)
+    if !haskey(context, "data")
+        return "No data available. Please reset the data first."
+    end
+
+    insights = generate_insights(context["data"])
+    return """
+    Here are some insights about the data:
+
+    $insights
+    """
+end
+
+function show_plots(params::ShowPlotsParams, context::Dict)
+    if !haskey(context, "data")
+        return "No data available. Please reset the data first."
+    end
+
+    plots = create_visualizations(context["data"])
+    return "Generated $(length(plots)) plots: price distribution and MPG vs Price scatter plot"
+end
+
+function reset_data(params::ResetDataParams, context::Dict)
+    context["data"] = create_mock_dataset()
+    return "Created new mock dataset with $(nrow(context["data"])) cars. Try 'show insights' or 'show plots'!"
 end
 
 # Example usage
 function run_example()
-    # Initialize the bot with our rules and context
+    # Initialize the bot with our rules and empty context
     bot = Agent(
         CarAnalysisFlowRules(),
-        Dict{String, Any}()  # Empty context, will be populated on first message
+        Dict{String, Any}()
     )
+
+    # Add tools
+    add_tools!(bot, [
+        (show_stats, ShowStatsParams, "Show basic statistics about the car dataset"),
+        (show_insights, ShowInsightsParams, "Show insights generated from the car dataset"),
+        (show_plots, ShowPlotsParams, "Show visualizations of the car dataset"),
+        (reset_data, ResetDataParams, "Reset/create new car dataset")
+    ])
 
     # Example conversation
     println("Bot: Welcome to the car data analysis bot! I'll create some mock data for analysis.")
-    println("Bot: ", SwarmAgents.process_message(bot.rules, "reset data", bot))
+    response = run_full_turn(bot, "reset data")
+    println("Bot: ", response)
 
     println("\nUser: show stats")
-    println("Bot: ", SwarmAgents.process_message(bot.rules, "show stats", bot))
+    response = run_full_turn(bot, "show stats")
+    println("Bot: ", response)
 
     println("\nUser: show insights")
-    println("Bot: ", SwarmAgents.process_message(bot.rules, "show insights", bot))
+    response = run_full_turn(bot, "show insights")
+    println("Bot: ", response)
 
     println("\nUser: show plots")
-    println("Bot: ", SwarmAgents.process_message(bot.rules, "show plots", bot))
+    response = run_full_turn(bot, "show plots")
+    println("Bot: ", response)
 end
 
 # Run the example if this file is run directly
