@@ -114,7 +114,10 @@ function run_example()
     # Add tools to the agent
     add_tools!(agent, [
         Tool("check_status",
-             [:string],  # Return type as vector of symbols
+             Dict{String,Any}(
+                 "parameters" => Dict{String,Any}(),
+                 "returns" => [:string]
+             ),
              "Check the status of your current flight",
              nothing,
              function(msg::PT.AIToolRequest, session)
@@ -122,7 +125,10 @@ function run_example()
              end
         ),
         Tool("change_flight",
-             [:string],  # Return type as vector of symbols
+             Dict{String,Any}(
+                 "parameters" => Dict{String,Any}(),
+                 "returns" => [:string]
+             ),
              "Change your flight to a new flight number",
              nothing,
              function(msg::PT.AIToolRequest, session)
