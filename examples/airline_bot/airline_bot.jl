@@ -111,14 +111,21 @@ function run_example()
         :id => "123",
         :choices => [
             Dict(
-                :message => Dict(:content => "Let me check your flight status.",
+                :message => Dict(
+                    :content => "Let me check your flight status.",
                     :tool_calls => [
-                        Dict(:id => "123",
+                        Dict(
+                            :id => "call_123",
+                            :type => "function",
                             :function => Dict(
                                 :name => "check_status",
-                                :arguments => JSON3.write(Dict(:message => "What's my flight status?"))))
-                    ]),
-                :finish_reason => "tool_calls")
+                                :arguments => "{\"message\": \"What's my flight status?\"}"
+                            )
+                        )
+                    ]
+                ),
+                :finish_reason => "tool_calls"
+            )
         ],
         :usage => Dict(:total_tokens => 20, :prompt_tokens => 15, :completion_tokens => 5)
     )
