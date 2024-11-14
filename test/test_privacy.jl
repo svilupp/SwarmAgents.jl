@@ -117,7 +117,7 @@ using Test
         @test is_visible(last_turn_msg, Agent("OtherAgent", private=false))
 
         # Test assistant message with no tool calls visibility
-        assistant_msg = PT.AssistantMessage("Final response")
+        assistant_msg = PT.AIMessage("Final response")
         private_assistant = maybe_private_message(assistant_msg, agent; last_turn=true)
         @test is_visible(private_assistant, Agent("OtherAgent", private=false))
 
