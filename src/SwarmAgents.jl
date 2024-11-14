@@ -8,6 +8,12 @@ using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIToolRequest
 using PromptingTools: AbstractTool, isabstracttool, Tool
 using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 
+# Flow rules (termination and tool selection)
+include("flow_rules.jl")
+export AbstractFlowRules, AbstractToolFlowRules, AbstractTerminationFlowRules,
+    TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
+    is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools
+
 # Core types (abstract types, agent, session)
 include("core_types.jl")
 export AbstractAgent, AbstractAgentActor, AbstractAgentRef, Agent, Session,
@@ -20,12 +26,6 @@ export print_progress, scrub_agent_name, convert_message
 # Privacy functionality
 include("privacy.jl")
 export PrivateMessage, is_visible, filter_history, maybe_private_message
-
-# Flow rules (termination and tool selection)
-include("flow_rules.jl")
-export AbstractFlowRules, AbstractToolFlowRules, AbstractTerminationFlowRules,
-    TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
-    is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools
 
 # Workflow (run_full_turn, handle tool calls)
 include("workflow.jl")
