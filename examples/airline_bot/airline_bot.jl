@@ -119,21 +119,7 @@ function run_example()
         booking_ref = "ABC123"     # Booking reference
     )
 
-    # Create tools
-    check_status_tool = PT.Tool(
-        check_flight_status;
-        name = "check_flight_status"
-    )
-
-    change_flight_tool = PT.Tool(
-        change_flight;
-        name = "change_flight"
-    )
-
-    # Initialize the agent with tools
-    tool_map = Dict{String, PromptingTools.AbstractTool}(
-        tool.name => tool for tool in [check_status_tool, change_flight_tool]
-    )
+    # Create tools and agent
     agent = Agent(;
         name = "Airline Bot",
         instructions = """
@@ -141,9 +127,14 @@ function run_example()
         - Checking flight status
         - Changing flights
         Use the available tools to assist customers.
-        """,
-        tool_map = tool_map
+        """
     )
+
+    # Add tools to the agent
+    add_tools!(agent, [
+        Tool(check_flight_status),
+        Tool(change_flight)
+    ])
 
     # Create a session with proper context
     session = Session(agent; context=to_session_dict(SessionContext(context=context)))
