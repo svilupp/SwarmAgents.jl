@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0]
 
+### Added
+- Added PrivateMessage type and agent.private flag to control message visibility between agents
+- Implemented flow restrictions to guide proper state transitions and tool usage patterns
+- Added termination checks through session to catch issues like tool usage cycles
+- Introduced AgentRef to allow referring to agents by symbols for easier agent definitions
+- Added customizable progress printing with print_progress and session.io argument (set to nothing to stop printing)
+
 ### Fixed
 - Messages were not collated correctly when multiple messages were sent in a single request.
 

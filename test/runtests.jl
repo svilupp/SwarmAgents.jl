@@ -9,8 +9,10 @@ using Aqua
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(SwarmAgents)
     end
-    include("test_types.jl")
+    include("test_core_types.jl")
     include("test_utils.jl")
-    include("test_swarm.jl")
     include("test_privacy.jl")
+    include("test_flow_rules.jl")
+    include("test_workflow.jl")
+    include("test_swarm.jl")
 end
