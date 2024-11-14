@@ -1,7 +1,7 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: UserMessage, AIToolRequestMessage, ToolMessage, Tool
+using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
 import Base.Logging
 
 @testset "Core Types" begin
