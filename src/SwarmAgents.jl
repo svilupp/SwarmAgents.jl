@@ -12,6 +12,11 @@ include("types.jl")
 export add_tools!, run_full_turn!, run_full_turn, get_used_tools
 include("utils.jl")
 
+export AbstractFlowRules, AbstractToolFlowRules, AbstractTerminationFlowRules,
+    TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
+    is_cycle, num_subsequent_repeats, run_termination_checks
+include("flow_rules.jl")
+
 include("privacy.jl")
 include("tools.jl")
 
