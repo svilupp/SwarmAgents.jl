@@ -129,19 +129,17 @@ function run_example()
     add_tools!(agent, [
         Tool(;
             name="check_status",
-            parameters=(msg=String,),
+            parameters=(none=Nothing,),  # Updated to match car_analysis.jl format
             return_type=String,
             description="Check the status of your current flight",
-            strict=false,
-            callable=wrapped_check_status
+            callable=(msg, session) -> wrapped_check_status(msg, session)
         ),
         Tool(;
             name="change_flight",
-            parameters=(msg=String,),
+            parameters=(none=Nothing,),  # Updated to match car_analysis.jl format
             return_type=String,
             description="Change your flight to a new flight number",
-            strict=false,
-            callable=wrapped_change_flight
+            callable=(msg, session) -> wrapped_change_flight(msg, session)
         )
     ])
 
