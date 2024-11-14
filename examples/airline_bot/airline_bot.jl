@@ -154,8 +154,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        PT.Tool(wrapped_check_status; name="check_flight_status", description="Check the status of the current flight"),
-        PT.Tool(wrapped_change_flight; name="change_flight", description="Change the current flight to a new flight number")
+        PT.Tool(wrapped_check_status; name="check_flight_status", docs="Check the status of the current flight"),
+        PT.Tool(wrapped_change_flight; name="change_flight", docs="Change the current flight to a new flight number")
     ])
 
     # Create a session with proper context
