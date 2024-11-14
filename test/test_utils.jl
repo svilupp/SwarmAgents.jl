@@ -18,14 +18,14 @@ using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
 
         # Test with io = nothing
         io = nothing
-        msg = AIMessage(content="Testing tool call", tool_calls=[Dict("name" => "test", "args" => "")])
+        msg = AIMessage(content="Testing tool call")
         @test isnothing(print_progress(io, agent, msg))
 
         # Test with StringIO to capture output
         io = IOBuffer()
 
         # Test AIMessage with content
-        msg = AIMessage(content="Testing tool call", tool_calls=[Dict("name" => "test", "args" => "")])
+        msg = AIMessage(content="Testing tool call")
         print_progress(io, agent, msg)
         output = String(take!(io))
         @test contains(output, "TestAgent")

@@ -1,7 +1,8 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: ToolMessage, UserMessage, AIToolRequestMessage, ToolCall
+using PromptingTools: ToolMessage, UserMessage, AIMessage, Tool
+using SwarmAgents: ToolFlowRules, PrivateMessage
 
 @testset "Flow Rules" begin
     @testset "TerminationCycleCheck" begin
@@ -109,7 +110,7 @@ using PromptingTools: ToolMessage, UserMessage, AIToolRequestMessage, ToolCall
         @test first(filtered_tools).name == "tool1"
 
         # Test after using first tool
-        push!(history, PT.AIToolRequestMessage(tool_calls=[PT.ToolCall(name="tool1", args="")]))
+        push!(history, AIMessage(content="Using tool tool1"))
         filtered_tools = apply_rules(history, agent, tools)
         @test length(filtered_tools) == 1
         @test first(filtered_tools).name == "tool2"
@@ -140,7 +141,7 @@ using PromptingTools: ToolMessage, UserMessage, AIToolRequestMessage, ToolCall
         @test first(filtered_tools).name == "tool1"
 
         # Test after using first tool (first and second allowed)
-        push!(history, PT.AIToolRequestMessage(tool_calls=[PT.ToolCall(name="tool1", args="")]))
+        push!(history, AIMessage(content="Using tool tool1"))
         filtered_tools = apply_rules(history, agent, tools)
         @test length(filtered_tools) == 2
         @test Set(t.name for t in filtered_tools) == Set(["tool1", "tool2"])
@@ -189,8 +190,8 @@ using PromptingTools: ToolMessage, UserMessage, AIToolRequestMessage, ToolCall
     @testset "get_used_tools" begin
         # Create history with tool usage
         history = PT.AbstractMessage[]
-        push!(history, PT.AIToolRequestMessage(tool_calls=[PT.ToolCall(name="tool1", args="")]))
-        push!(history, PT.AIToolRequestMessage(tool_calls=[PT.ToolCall(name="tool2", args="")]))
+        push!(history, AIMessage(content="Using tool tool1"))
+        push!(history, AIMessage(content="Using tool tool2"))
 
         used_tools = get_used_tools(history)
         @test used_tools == [:tool1, :tool2]
