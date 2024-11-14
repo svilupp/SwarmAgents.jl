@@ -1,4 +1,90 @@
+### Flow Rules
+"""
+    AbstractFlowRules
 
+Abstract type for flow control rules that manage tool usage order and prerequisites.
+
+Two concrete implementations are provided:
+- `FixedOrder`: Tools must be used in exact sequence specified
+- `FixedPrerequisites`: Tools can only be used after their prerequisites
+
+# Examples
+```julia
+# FixedOrder Example:
+# Tools must be used in exact sequence: prepare -> process -> finish
+fixed_order = FixedOrder([:prepare, :process, :finish])
+# Only :prepare will be available initially
+# After using :prepare, only :process will be available
+# After using :process, only :finish will be available
+
+# FixedPrerequisites Example:
+# Tools can be used once their prerequisites are met
+prerequisites = FixedPrerequisites([:setup, :analyze, :report])
+# Initially only :setup is available
+# After using :setup, both :setup and :analyze become available
+# After using both :setup and :analyze, all tools become available
+```
+"""
+abstract type AbstractFlowRules end
+
+"""
+    FixedOrder <: AbstractFlowRules
+
+Enforces tools to be used in exact sequence specified.
+Tools can only be used in the order they appear in the `tools` vector.
+
+# Fields
+- `tools::Vector{Symbol}`: Ordered sequence of tool names that must be followed
+
+# Example
+```julia
+# Create agent with fixed order tools
+agent = Agent(name="SequentialAgent")
+add_tools!(agent, [Tool(setup), Tool(process), Tool(finish)])
+fixed_order = FixedOrder([:setup, :process, :finish])
+add_rules!(agent, fixed_order)
+
+# Now tools must be used in sequence:
+# 1. Only setup() is available initially
+# 2. After setup(), only process() becomes available
+# 3. After process(), only finish() becomes available
+```
+"""
+Base.@kwdef struct FixedOrder <: AbstractFlowRules
+    tools::Vector{Symbol}
+end
+
+"""
+    FixedPrerequisites <: AbstractFlowRules
+
+Enforces prerequisite requirements for tool usage.
+A tool becomes available only after all previous tools in the sequence have been used.
+
+# Fields
+- `tools::Vector{Symbol}`: Tool names in prerequisite order
+
+# Example
+```julia
+# Create agent with prerequisite-based tools
+agent = Agent(name="PrereqAgent")
+add_tools!(agent, [Tool(configure), Tool(analyze), Tool(report)])
+prereqs = FixedPrerequisites([:configure, :analyze, :report])
+add_rules!(agent, prereqs)
+
+# Tools become available progressively:
+# 1. Initially only configure() is available
+# 2. After configure(), both configure() and analyze() are available
+# 3. After both configure() and analyze(), all tools become available
+```
+"""
+Base.@kwdef struct FixedPrerequisites <: AbstractFlowRules
+    tools::Vector{Symbol}
+end
+
+FixedOrder(tools::Vector{String}) = FixedOrder(Symbol.(tools))
+FixedPrerequisites(tools::Vector{String}) = FixedPrerequisites(Symbol.(tools))
+
+### Agent Types
 abstract type AbstractAgent end
 isabstractagent(x) = x isa AbstractAgent
 
@@ -14,6 +100,7 @@ Agent is a stateless struct that holds the the reference to LLM, tools and the i
 - `tool_map::Dict{String, AbstractTool}`: A dictionary of tools available to the agent.
 - `tool_choice::Union{String, Nothing}`: The tool choice for the agent.
 - `parallel_tool_calls::Bool`: Whether to allow parallel tool calls. Defaults to `true` - NOT SUPPORTED YET.
+- `rules::Vector{AbstractFlowRules}`: Flow rules that control tool usage order and prerequisites.
 """
 Base.@kwdef struct Agent <: AbstractAgent
     name::String = "Agent"
@@ -22,6 +109,7 @@ Base.@kwdef struct Agent <: AbstractAgent
     tool_map::Dict{String, AbstractTool} = Dict()
     tool_choice::Union{String, Nothing} = nothing
     parallel_tool_calls::Bool = true
+    rules::Vector{AbstractFlowRules} = AbstractFlowRules[]
 end
 function Base.show(io::IO, t::AbstractAgent)
     print(io, t.name, " (Tools: ", length(t.tool_map), ")")
@@ -86,4 +174,272 @@ function add_tools!(agent::Agent, tool::AbstractTool; kwargs...)
 end
 function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
     add_tools!(agent, Tool(callable; kwargs...))
+end
+
+### Flow Rules Management
+
+"""
+    add_rules!(agent::Agent, rules::Vector{<:AbstractFlowRules})
+
+Adds flow rules to an agent. Flow rules control the order and prerequisites of tool usage.
+"""
+function add_rules!(agent::Agent, rules::Vector{<:AbstractFlowRules})
+    for rule in rules
+        add_rules!(agent, rule)
+    end
+end
+
+"""
+    add_rules!(agent::Agent, rule::AbstractFlowRules)
+
+Adds a single flow rule to an agent.
+"""
+function add_rules!(agent::Agent, rule::AbstractFlowRules)
+    # Validate that all tools in the rule exist in the agent's tool map
+    for tool in rule.tools
+        tool_name = String(tool)
+        @assert tool_name ∈ keys(agent.tool_map) "Tool $tool_name not found in agent $(agent.name)'s tool map."
+    end
+    push!(agent.rules, rule)
+end
+
+"""
+    get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
+
+Extract the list of tools that have been used from the message history.
+Returns a vector of tool names as symbols.
+"""
+function get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
+    used_tools = Symbol[]
+    for msg in history
+        if PT.isaitoolrequest(msg)
+            for tool in PT.tool_calls(msg)
+                push!(used_tools, Symbol(tool.name))
+            end
+        end
+    end
+    return used_tools
+end
+
+"""
+    get_allowed_tools(rule::AbstractFlowRules, used_tools::Vector{Symbol}; kwargs...)
+
+Get allowed tools for a specific rule type.
+Returns a vector of allowed tool names as strings.
+"""
+function get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
+    # If no tools used, only first tool is allowed
+    if isempty(used_tools)
+        return [String(first(rule.tools))]
+    end
+
+    # Find the last used tool in the sequence
+    last_idx = findlast(t -> t ∈ used_tools, rule.tools)
+    if isnothing(last_idx)
+        # If no tool from sequence was used, start with first
+        return [String(first(rule.tools))]
+    elseif last_idx < length(rule.tools)
+        # Allow next tool in sequence, but only if it hasn't been used yet
+        next_tool = rule.tools[last_idx + 1]
+        return next_tool ∈ used_tools ? String[] : [String(next_tool)]
+    end
+    return String[]
+end
+
+function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
+    allowed = String[]
+    used_tools_set = Set(used_tools)
+
+    # Find the highest index of a used tool
+    max_used_idx = maximum([findlast(==(t), rule.tools) for t in used_tools if t in rule.tools], init=0)
+
+    for (i, tool) in enumerate(rule.tools)
+        # Allow tools whose prerequisites are met
+        if i == 1 || all(t -> t ∈ used_tools_set, rule.tools[1:i-1])
+            # For used tools, only keep them if they're prerequisites for future tools
+            if tool ∈ used_tools_set
+                # Keep if it's a prerequisite for any future tool that hasn't been used
+                future_tools = rule.tools[i+1:end]
+                if any(t -> t ∉ used_tools_set, future_tools)
+                    push!(allowed, String(tool))
+                end
+            else
+                push!(allowed, String(tool))
+            end
+        end
+    end
+    return allowed
+end
+
+"""
+    get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
+
+Get allowed tools considering multiple rules.
+The combine function determines how to combine results from multiple rules (intersect or union).
+Returns a vector of allowed tool names as strings.
+
+# Examples
+```julia
+# Example: Data Pipeline with Multiple Rules
+agent = Agent(name="DataScientist")
+add_tools!(agent, [
+    Tool(load_data),     # Load data from source
+    Tool(clean_data),    # Clean and preprocess
+    Tool(analyze_data),  # Perform analysis
+    Tool(visualize),     # Create visualizations
+    Tool(export_report)  # Generate final report
+])
+
+# Rule 1: Strict pipeline order
+order_rule = FixedOrder([
+    :load_data,
+    :clean_data,
+    :analyze_data,
+    :visualize,
+    :export_report
+])
+
+# Rule 2: Can't visualize or export until data is loaded and cleaned
+prereq_rule = FixedPrerequisites([
+    :load_data,
+    :clean_data,
+    :visualize,
+    :export_report
+])
+
+# Add both rules to agent
+add_rules!(agent, [order_rule, prereq_rule])
+
+# Using different combine functions:
+
+# 1. intersect (default) - tools allowed by ALL rules
+# After loading data:
+used = [:load_data]
+allowed = get_allowed_tools([order_rule, prereq_rule], used)
+# Returns ["clean_data"] - both rules agree clean_data is next
+
+# 2. union - tools allowed by ANY rule
+# After loading and cleaning:
+used = [:load_data, :clean_data]
+allowed = get_allowed_tools([order_rule, prereq_rule], used, combine=union)
+# Returns ["analyze_data", "visualize", "export_report"]
+# - order_rule allows only analyze_data
+# - prereq_rule allows visualize and export_report
+```
+
+See also: [`FixedOrder`](@ref), [`FixedPrerequisites`](@ref), [`apply_rules`](@ref)
+"""
+function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
+    isempty(rules) && return String[]
+
+    # Split rules by type
+    fixed_order_rules = filter(r -> r isa FixedOrder, rules)
+    prereq_rules = filter(r -> r isa FixedPrerequisites, rules)
+
+    # Convert used_tools to strings for consistency
+    used_tools_str = Set(String.(used_tools))
+
+    # For union case, handle FixedOrder rules specially
+    if combine === union
+        # Get next tool from fixed order rules
+        fixed_order_allowed = Set{String}()
+        for rule in fixed_order_rules
+            last_idx = findlast(t -> t ∈ used_tools, rule.tools)
+            next_idx = isnothing(last_idx) ? 1 : last_idx + 1
+            if next_idx <= length(rule.tools)
+                push!(fixed_order_allowed, String(rule.tools[next_idx]))
+            end
+        end
+
+        # Get valid prerequisites for unused tools
+        prereq_allowed = Set{String}()
+        for rule in prereq_rules
+            for (i, tool) in enumerate(rule.tools)
+                tool_str = String(tool)
+                # If this is a used tool and there's an unused tool right after it
+                if tool_str ∈ used_tools_str && i < length(rule.tools)
+                    next_tool = String(rule.tools[i + 1])
+                    if next_tool ∉ used_tools_str
+                        push!(prereq_allowed, tool_str)
+                    end
+                end
+            end
+        end
+
+        # Combine allowed tools from both rule types
+        return collect(union(fixed_order_allowed, prereq_allowed))
+    else
+        # For intersect case, use standard reduction with all rules
+        allowed_per_rule = vcat(
+            [Set(get_allowed_tools(r, used_tools)) for r in fixed_order_rules],
+            [Set(get_allowed_tools(r, used_tools)) for r in prereq_rules]
+        )
+        allowed = reduce(combine, allowed_per_rule)
+        return collect(allowed)
+    end
+end
+
+"""
+    apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent, tools::Vector{<:AbstractTool})
+
+Apply flow rules to filter available tools based on usage history and rule types.
+Returns a filtered vector of tools that are allowed to be used in the current turn.
+
+# Example
+```julia
+# Create an ML training pipeline agent
+agent = Agent(name="MLTrainer")
+add_tools!(agent, [
+    Tool(prepare_data),   # Data preparation
+    Tool(train_model),    # Model training
+    Tool(evaluate),       # Model evaluation
+    Tool(deploy),         # Model deployment
+    Tool(monitor)         # Model monitoring
+])
+
+# Rule 1: Must follow strict ML lifecycle
+order_rule = FixedOrder([
+    :prepare_data,
+    :train_model,
+    :evaluate,
+    :deploy,
+    :monitor
+])
+
+# Rule 2: Can't deploy without evaluation
+prereq_rule = FixedPrerequisites([
+    :evaluate,
+    :deploy
+])
+
+# Add rules to agent
+add_rules!(agent, [order_rule, prereq_rule])
+
+# Create a session
+session = Session(agent=agent)
+
+# Initially only prepare_data is available
+available_tools = apply_rules(session.messages, agent, collect(values(agent.tool_map)))
+# Returns [Tool(prepare_data)]
+
+# After preparing data and training
+push!(session.messages, create_tool_message("prepare_data"))
+push!(session.messages, create_tool_message("train_model"))
+available_tools = apply_rules(session.messages, agent, collect(values(agent.tool_map)))
+# Returns [Tool(evaluate)] - both rules require evaluation next
+```
+
+See also: [`get_allowed_tools`](@ref), [`get_used_tools`](@ref)
+"""
+function apply_rules(history::AbstractVector{<:PT.AbstractMessage}, agent::Agent, tools::Vector{<:AbstractTool})
+    isempty(agent.rules) && return tools
+
+    # Get used tools from history
+    used_tools = get_used_tools(history)
+
+    # Get allowed tools based on rules
+    allowed_tools = get_allowed_tools(agent.rules, used_tools)
+
+    # Return only tools that are allowed by the rules
+    return filter(t -> t.name ∈ allowed_tools, tools)
 end

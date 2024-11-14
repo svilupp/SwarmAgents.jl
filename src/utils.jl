@@ -73,7 +73,7 @@ function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessa
     init_len = length(messages)
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
-        tools = collect(values(active_agent.tool_map))
+        tools = apply_rules(history, active_agent, collect(values(active_agent.tool_map)))
         update_system_message!(history, active_agent)
         history = PT.aitools(history; model = active_agent.model,
             tools, name_user = "User", name_assistant = scrub_agent_name(active_agent),

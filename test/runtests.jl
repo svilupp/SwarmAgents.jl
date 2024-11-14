@@ -1,6 +1,7 @@
 using SwarmAgents
 using PromptingTools
-const PT = PromptingTools
+using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
+                     ToolMessage, TestEchoOpenAISchema
 using JSON3
 using Test
 using Aqua
@@ -11,4 +12,5 @@ using Aqua
     end
     include("types.jl")
     include("utils.jl")
+    include("flow_rules_test.jl")
 end
