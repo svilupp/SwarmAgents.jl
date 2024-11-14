@@ -28,6 +28,13 @@ Base.@kwdef mutable struct AirlineContext
 end
 
 """
+Session context wrapper for type safety
+"""
+Base.@kwdef mutable struct SessionContext
+    context::AirlineContext
+end
+
+"""
 Check if a flight exists in our database
 """
 function flight_exists(flight_number::String)
@@ -57,22 +64,20 @@ function change_flight!(context::AirlineContext, new_flight::String)
 end
 
 # Define our tools
-function check_flight_status(context::Dict{Symbol,Any})
-    airline_context = context[:context]::AirlineContext
-    if isnothing(airline_context.current_flight)
+function check_flight_status(context::SessionContext)
+    if isnothing(context.context.current_flight)
         return "No flight currently booked"
     end
-    get_flight_details(airline_context.current_flight)
+    get_flight_details(context.context.current_flight)
 end
 
-function change_flight(msg::String, context::Dict{Symbol,Any})
-    airline_context = context[:context]::AirlineContext
+function change_flight(msg::String, context::SessionContext)
     flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
     if isnothing(flight_match)
         return "Please specify the new flight number (e.g., 'change flight to FL124')"
     end
     new_flight = flight_match[1]
-    change_flight!(airline_context, new_flight)
+    change_flight!(context.context, new_flight)
 end
 
 # Example usage:
@@ -112,8 +117,8 @@ function run_example()
         tool_map = tool_map
     )
 
-    # Create a session with converted context
-    session = Session(agent; context=Dict{Symbol,Any}(:context => context))
+    # Create a session with proper context
+    session = Session(agent; context=SessionContext(context=context))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
