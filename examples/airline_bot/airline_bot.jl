@@ -125,14 +125,14 @@ function run_example()
     add_tools!(agent, [
         Tool(
             name="check_status",
-            parameters=Dict{Symbol,Type}(:message => String),
+            parameters=Dict(),
             description="Check the status of your current flight",
             strict=false,
             callable=wrapped_check_status
         ),
         Tool(
             name="change_flight",
-            parameters=Dict{Symbol,Type}(:message => String),
+            parameters=Dict(),
             description="Change your flight to a new flight number",
             strict=false,
             callable=wrapped_change_flight
