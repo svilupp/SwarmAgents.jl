@@ -1,7 +1,7 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool, ToolCall
+using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
 import Base.Logging
 
 # Define test utility functions at module level

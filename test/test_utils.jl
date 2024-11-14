@@ -1,7 +1,7 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool, ToolCall
+using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
 
 @testset "Utilities" begin
     @testset "scrub_agent_name" begin
@@ -18,14 +18,14 @@ using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool, ToolCall
 
         # Test with io = nothing
         io = nothing
-        msg = AIMessage(tool_calls=[ToolCall(name="test", args="")])
+        msg = AIMessage(content="Testing tool call", tool_calls=[Dict("name" => "test", "args" => "")])
         @test isnothing(print_progress(io, agent, msg))
 
         # Test with StringIO to capture output
         io = IOBuffer()
 
         # Test AIMessage with content
-        msg = AIMessage(tool_calls=[ToolCall(name="test", args="")])
+        msg = AIMessage(content="Testing tool call", tool_calls=[Dict("name" => "test", "args" => "")])
         print_progress(io, agent, msg)
         output = String(take!(io))
         @test contains(output, "TestAgent")
