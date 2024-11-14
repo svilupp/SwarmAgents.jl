@@ -7,7 +7,8 @@ function print_progress(io::IO, agent::Union{Agent, Nothing}, msg)
     agent_name = isnothing(agent) ? "System" : agent.name
     printstyled(io, ">> $agent_name: ", color=:light_blue)
     if PT.isaitoolrequest(msg)
-        printstyled(io, "Using tool: $(msg.tool_calls[1].name)\n", color=:light_yellow)
+        tool_calls = msg.tool_calls
+        printstyled(io, "Using tool: $(length(tool_calls) > 0 ? tool_calls[1].name : "unknown")\n", color=:light_yellow)
     elseif PT.istoolmessage(msg)
         printstyled(io, "Tool response: $(msg.name)\n", color=:light_green)
         printstyled(io, msg.content, "\n", color=:light_green)
