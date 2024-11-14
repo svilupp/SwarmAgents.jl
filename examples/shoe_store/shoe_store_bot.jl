@@ -274,8 +274,29 @@ function run_example()
     )
 
     # Add tools to the agent
-    tool_map = PT.tool_call_signature([wrapped_authenticate, wrapped_show_inventory, wrapped_check_size])
-    add_tools!(agent, collect(values(tool_map)))
+    add_tools!(agent, [
+        Tool(
+            name="authenticate",
+            parameters=[:message => String],
+            return_type=String,
+            description="Authenticate user with name and email",
+            callable=wrapped_authenticate
+        ),
+        Tool(
+            name="show_inventory",
+            parameters=[:message => String],
+            return_type=String,
+            description="Show available shoe inventory",
+            callable=wrapped_show_inventory
+        ),
+        Tool(
+            name="check_size",
+            parameters=[:message => String],
+            return_type=String,
+            description="Check if a specific shoe size is available",
+            callable=wrapped_check_size
+        )
+    ])
 
     # Create a session with proper context
     session = Session(agent; context=to_session_dict(ShoeStoreSessionContext(context=context)))

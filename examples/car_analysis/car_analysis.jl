@@ -175,25 +175,29 @@ function run_example()
     add_tools!(agent, [
         Tool(
             name="show_stats",
-            parameters=Dict{Symbol,Type}(:none => Nothing),
+            parameters=[:none => Nothing],
+            return_type=String,
             description="Show basic statistics about the car dataset",
             callable=(msg, session) -> show_stats(ShowStatsParams(), session.context)
         ),
         Tool(
             name="show_insights",
-            parameters=Dict{Symbol,Type}(:none => Nothing),
+            parameters=[:none => Nothing],
+            return_type=String,
             description="Show insights generated from the car dataset",
             callable=(msg, session) -> show_insights(ShowInsightsParams(), session.context)
         ),
         Tool(
             name="show_plots",
-            parameters=Dict{Symbol,Type}(:none => Nothing),
+            parameters=[:none => Nothing],
+            return_type=String,
             description="Show visualizations of the car dataset",
             callable=(msg, session) -> show_plots(ShowPlotsParams(), session.context)
         ),
         Tool(
             name="reset_data",
-            parameters=Dict{Symbol,Type}(:none => Nothing),
+            parameters=[:none => Nothing],
+            return_type=String,
             description="Reset/create new car dataset",
             callable=(msg, session) -> reset_data(ResetDataParams(), session.context)
         )
