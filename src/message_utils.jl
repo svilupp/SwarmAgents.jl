@@ -10,39 +10,46 @@ This is an internal utility function to handle message type conversions without 
 # Notes
 - Preserves tool-specific fields when converting between tool message types
 - Handles conversion between UserMessage, SystemMessage, AIToolRequest, and ToolMessage
+- Preserves type parameters when converting between message types
 """
 # Base case: converting to same type is a no-op
 convert_message(::Type{T}, msg::T) where T <: AbstractMessage = msg
 
 # Specific conversions to AbstractMessage
-convert_message(::Type{AbstractMessage}, msg::SystemMessage) = msg
-convert_message(::Type{AbstractMessage}, msg::UserMessage) = msg
-convert_message(::Type{AbstractMessage}, msg::AIToolRequest) = msg
-convert_message(::Type{AbstractMessage}, msg::ToolMessage) = msg
+convert_message(::Type{AbstractMessage}, msg::SystemMessage{T}) where T = msg
+convert_message(::Type{AbstractMessage}, msg::UserMessage{T}) where T = msg
+convert_message(::Type{AbstractMessage}, msg::AIToolRequest{T}) where T = msg
+convert_message(::Type{AbstractMessage}, msg::ToolMessage{T}) where T = msg
 
 # Specific conversions between types
-function convert_message(::Type{SystemMessage}, msg::AbstractMessage)
-    SystemMessage(msg.content)
+function convert_message(::Type{SystemMessage{T}}, msg::AbstractMessage) where T
+    SystemMessage{T}(convert(T, msg.content))
 end
 
-function convert_message(::Type{UserMessage}, msg::AbstractMessage)
-    UserMessage(msg.content)
+function convert_message(::Type{UserMessage{T}}, msg::AbstractMessage) where T
+    UserMessage{T}(convert(T, msg.content))
 end
 
-function convert_message(::Type{AIToolRequest}, msg::AbstractMessage)
+function convert_message(::Type{AIToolRequest{T}}, msg::AbstractMessage) where T
     if msg isa ToolMessage
-        AIToolRequest(msg.name, msg.args, msg.content, msg.tool_call_id)
+        AIToolRequest{T}(msg.name, msg.args, convert(T, msg.content), msg.tool_call_id)
     else
-        AIToolRequest(msg.content)
+        AIToolRequest{T}(convert(T, msg.content))
     end
 end
 
-function convert_message(::Type{ToolMessage}, msg::AbstractMessage)
+function convert_message(::Type{ToolMessage{T}}, msg::AbstractMessage) where T
     if msg isa AIToolRequest
-        ToolMessage(msg.name, msg.args, msg.content, msg.tool_call_id)
+        ToolMessage{T}(msg.name, msg.args, convert(T, msg.content), msg.tool_call_id)
     else
-        ToolMessage(msg.content)
+        ToolMessage{T}(convert(T, msg.content))
     end
 end
+
+# Convenience methods for non-parameterized types
+convert_message(::Type{SystemMessage}, msg::AbstractMessage) = convert_message(SystemMessage{String}, msg)
+convert_message(::Type{UserMessage}, msg::AbstractMessage) = convert_message(UserMessage{String}, msg)
+convert_message(::Type{AIToolRequest}, msg::AbstractMessage) = convert_message(AIToolRequest{String}, msg)
+convert_message(::Type{ToolMessage}, msg::AbstractMessage) = convert_message(ToolMessage{String}, msg)
 
 export convert_message
