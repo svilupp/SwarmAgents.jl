@@ -1,17 +1,20 @@
 """
-    print_progress(io::IO, agent::Union{Agent, Nothing}, msg::AbstractMessage)
+    print_progress(io::IO, agent::Union{AbstractAgent, Nothing}, msg::AbstractMessage)
 
 Print progress messages for agent actions.
 """
-function print_progress(io::IO, agent::Union{Agent, Nothing}, msg)
+function print_progress(io::IO, agent::Union{AbstractAgent, Nothing}, msg)
+    isnothing(io) && return
     agent_name = isnothing(agent) ? "System" : agent.name
     printstyled(io, ">> $agent_name: ", color=:light_blue)
     if PT.isaitoolrequest(msg)
         tool_calls = msg.tool_calls
         printstyled(io, "Using tool: $(length(tool_calls) > 0 ? tool_calls[1].name : "unknown")\n", color=:light_yellow)
     elseif PT.istoolmessage(msg)
-        printstyled(io, "Tool response: $(msg.name)\n", color=:light_green)
-        printstyled(io, msg.content, "\n", color=:light_green)
+        printstyled(io, "Using tool: $(msg.name)\n", color=:light_yellow)
+        if !isnothing(msg.content)
+            printstyled(io, "Tool response: $(msg.content)\n", color=:light_green)
+        end
     else
         content = PT.last_output(msg)
         isnothing(content) && return
@@ -20,11 +23,11 @@ function print_progress(io::IO, agent::Union{Agent, Nothing}, msg)
 end
 
 """
-    scrub_agent_name(agent::Agent)
+    scrub_agent_name(agent::AbstractAgent)
 
 Clean up agent name for display.
 """
-function scrub_agent_name(agent::Agent)
+function scrub_agent_name(agent::AbstractAgent)
     return replace(agent.name, r"[^a-zA-Z0-9]" => "_")
 end
 
