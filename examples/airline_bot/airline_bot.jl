@@ -57,20 +57,22 @@ function change_flight!(context::AirlineContext, new_flight::String)
 end
 
 # Define our tools
-function check_flight_status(context::AirlineContext)
-    if isnothing(context.current_flight)
+function check_flight_status(context::Dict{Symbol,Any})
+    airline_context = context[:context]::AirlineContext
+    if isnothing(airline_context.current_flight)
         return "No flight currently booked"
     end
-    get_flight_details(context.current_flight)
+    get_flight_details(airline_context.current_flight)
 end
 
-function change_flight(msg::String, context::AirlineContext)
+function change_flight(msg::String, context::Dict{Symbol,Any})
+    airline_context = context[:context]::AirlineContext
     flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
     if isnothing(flight_match)
         return "Please specify the new flight number (e.g., 'change flight to FL124')"
     end
     new_flight = flight_match[1]
-    change_flight!(context, new_flight)
+    change_flight!(airline_context, new_flight)
 end
 
 # Example usage:
@@ -110,8 +112,8 @@ function run_example()
         tool_map = tool_map
     )
 
-    # Create a session
-    session = Session(agent; context=context)
+    # Create a session with converted context
+    session = Session(agent; context=Dict{Symbol,Any}(:context => context))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
