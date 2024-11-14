@@ -19,7 +19,7 @@ function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Un
         actual_msg = msg isa PrivateMessage ? msg.object : msg
         # Then check if the actual message is a tool message
         if PT.istoolmessage(actual_msg)
-            push!(tools, Symbol(actual_msg.name))
+            push!(tools, Symbol(actual_msg.tool_name))
         end
     end
     unique!(tools)
