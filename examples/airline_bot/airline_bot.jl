@@ -71,9 +71,24 @@ function change_flight!(context::Dict{Symbol, Any}, new_flight::String)
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-# Tool functions with parameter structs are defined at the top of the file
+# Tool functions
+function check_status(params::CheckStatusParams, context::Dict{Symbol, Any})
+    if !haskey(context, :current_flight)
+        return "No flight found in context"
+    end
+    flight_number = context[:current_flight]
+    return get_flight_details(flight_number)
+end
 
-# Removed old wrapped functions as they are no longer needed
+function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, context::Dict{Symbol, Any})
+    # Extract flight number from message content
+    m = match(r"FL\d+", msg.content)
+    if isnothing(m)
+        return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
+    end
+    new_flight = m.match
+    return change_flight!(context, new_flight)
+end
 
 # Example usage:
 function run_example()
