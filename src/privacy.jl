@@ -19,6 +19,8 @@ end
 Base.getproperty(msg::PrivateMessage, name::Symbol) = name === :content ? msg.object.content :
                                                      name === :role ? msg.object.role :
                                                      name === :name ? msg.object.name :
+                                                     name === :tool_call_id ? msg.object.tool_call_id :
+                                                     name === :tool_calls ? PT.tool_calls(msg.object) :
                                                      getfield(msg, name)
 PT.tool_calls(msg::PrivateMessage) = PT.tool_calls(msg.object)  # Keep this as a method since it's defined as one
 PT.last_output(msg::PrivateMessage) = PT.last_output(msg.object)
