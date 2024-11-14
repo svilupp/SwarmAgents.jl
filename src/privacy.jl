@@ -16,20 +16,12 @@ struct PrivateMessage <: PT.AbstractMessage
 end
 
 # Forward all AbstractMessage interface methods to the underlying object
-Base.getproperty(msg::PrivateMessage, name::Symbol) = name === :content ? msg.object.content :
-                                                     name === :role ? msg.object.role :
-                                                     name === :name ? msg.object.name :
-                                                     name === :tool_call_id ? msg.object.tool_call_id :
-                                                     name === :tool_calls ? PT.tool_calls(msg.object) :
-                                                     getfield(msg, name)
+Base.getproperty(msg::PrivateMessage, name::Symbol) = name in (:content, :role, :name, :tool_call_id, :tool_calls, :last_output, :istoolmessage) ?
+    getproperty(msg.object, name) : getfield(msg, name)
 
-# Forward all required methods
-PT.content(msg::PrivateMessage) = PT.content(msg.object)
-PT.role(msg::PrivateMessage) = PT.role(msg.object)
-PT.name(msg::PrivateMessage) = PT.name(msg.object)
+# Keep only the essential method forwarding that's definitely defined in PT
 PT.tool_calls(msg::PrivateMessage) = PT.tool_calls(msg.object)
 PT.last_output(msg::PrivateMessage) = PT.last_output(msg.object)
-PT.istoolmessage(msg::PrivateMessage) = PT.istoolmessage(msg.object)
 
 """
     is_visible(message::PT.AbstractMessage, agent::Agent)::Bool
