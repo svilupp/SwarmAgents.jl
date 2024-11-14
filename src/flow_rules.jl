@@ -114,43 +114,25 @@ function is_cycle(history; n::Int, span::Int)
         if msg isa PrivateMessage
             msg = msg.object
         end
-        if PT.istoolmessage(msg) && isnothing(msg.content)
+        if PT.istoolmessage(msg) && !isnothing(msg.name)
             push!(tool_sequence, msg.name)
         end
     end
 
     isempty(tool_sequence) && return false
+    length(tool_sequence) < n * 2 && return false  # Need at least n*2 tools for a cycle
 
-    # Check for cycles of different lengths
-    for cycle_length in 2:min(span, length(tool_sequence))
-        # Get all possible cycles starting from the end
-        for start_idx in (length(tool_sequence) - cycle_length * n + 1):-1:1
-            # Extract the potential cycle pattern
-            pattern = tool_sequence[start_idx:start_idx + cycle_length - 1]
+    # Check for cycles of different lengths, starting from the largest possible
+    for cycle_length in min(span, div(length(tool_sequence), n)):-1:2
+        # Get the last n * cycle_length tools
+        recent_tools = tool_sequence[end-(cycle_length*n-1):end]
 
-            # Check if this pattern repeats n times consecutively
-            is_repeating = true
-            for i in 1:n-1
-                next_start = start_idx + i * cycle_length
-                next_end = next_start + cycle_length - 1
+        # Split into potential cycles
+        cycles = [recent_tools[i:i+cycle_length-1] for i in 1:cycle_length:length(recent_tools)]
 
-                # Break if we don't have enough elements left
-                if next_end > length(tool_sequence)
-                    is_repeating = false
-                    break
-                end
-
-                # Check if the next segment matches the pattern
-                if tool_sequence[next_start:next_end] != pattern
-                    is_repeating = false
-                    break
-                end
-            end
-
-            # If we found a repeating pattern, return true
-            if is_repeating
-                return true
-            end
+        # Check if all cycles are identical
+        if length(cycles) >= n && all(cycle -> cycle == cycles[1], cycles[2:end])
+            return true
         end
     end
     return false
@@ -177,7 +159,7 @@ function num_subsequent_repeats(history)
         if msg isa PrivateMessage
             msg = msg.object
         end
-        if PT.istoolmessage(msg) && isnothing(msg.content)
+        if PT.istoolmessage(msg) && !isnothing(msg.name)
             push!(tool_sequence, msg.name)
         end
     end
@@ -191,11 +173,11 @@ function num_subsequent_repeats(history)
     for tool in tool_sequence[2:end]
         if tool == current_tool
             current_repeats += 1
+            max_repeats = max(max_repeats, current_repeats)
         else
             current_tool = tool
             current_repeats = 1
         end
-        max_repeats = max(max_repeats, current_repeats)
     end
 
     return max_repeats
