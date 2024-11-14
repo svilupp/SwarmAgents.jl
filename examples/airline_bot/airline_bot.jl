@@ -106,32 +106,6 @@ end
 
 # Example usage:
 function run_example()
-    # Set up mock response for testing
-    response = Dict(
-        :id => "123",
-        :choices => [
-            Dict(
-                :message => Dict(
-                    :content => "Let me check your flight status.",
-                    :tool_calls => [
-                        Dict(
-                            :id => "call_123",
-                            :type => "function",
-                            :function => Dict(
-                                :name => "check_status",
-                                :arguments => "{\"message\": \"What's my flight status?\"}"
-                            )
-                        )
-                    ]
-                ),
-                :finish_reason => "tool_calls"
-            )
-        ],
-        :usage => Dict(:total_tokens => 20, :prompt_tokens => 15, :completion_tokens => 5)
-    )
-    schema = TestEchoOpenAISchema(; response = response, status = 200)
-    PT.register_model!(; name = "mocktools", schema)
-
     # Initialize the context as Dict{Symbol, Any}
     context = Dict{Symbol, Any}(
         :current_flight => "FL123",  # User's current flight
@@ -142,7 +116,7 @@ function run_example()
     # Create tools and agent
     agent = Agent(;
         name = "Airline Bot",
-        model = "mocktools",  # Use our mock model
+        model = PT.MODEL_GPT35,  # Use OpenAI GPT-3.5
         instructions = """
         You are an airline customer service bot. You can help with:
         - Checking flight status
@@ -187,6 +161,8 @@ function run_example()
         run_full_turn!(session, msg)
         # The response is already printed by run_full_turn!
     end
+
+    return true
 end
 
 # Run the example if this file is run directly

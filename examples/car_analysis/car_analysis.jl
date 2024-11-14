@@ -157,36 +157,70 @@ end
 
 # Example usage
 function run_example()
-    # Initialize the bot with our rules and empty context
-    bot = Agent(
-        CarAnalysisFlowRules(),
-        Dict{String, Any}()
+    # Create agent with analysis capabilities
+    agent = Agent(;
+        name = "Car Analysis Bot",
+        model = PT.MODEL_GPT35,  # Use OpenAI GPT-3.5
+        instructions = """
+        You are a data science agent specialized in analyzing car data.
+        You can:
+        - Show basic statistics
+        - Generate insights
+        - Create visualizations
+        Use the available tools to assist users.
+        """
     )
 
-    # Add tools
-    add_tools!(bot, [
-        (show_stats, ShowStatsParams, "Show basic statistics about the car dataset"),
-        (show_insights, ShowInsightsParams, "Show insights generated from the car dataset"),
-        (show_plots, ShowPlotsParams, "Show visualizations of the car dataset"),
-        (reset_data, ResetDataParams, "Reset/create new car dataset")
+    # Add tools to the agent
+    add_tools!(agent, [
+        Tool(
+            name="show_stats",
+            parameters=Dict{Symbol,Type}(:none => Nothing),
+            description="Show basic statistics about the car dataset",
+            callable=(msg, session) -> show_stats(ShowStatsParams(), session.context)
+        ),
+        Tool(
+            name="show_insights",
+            parameters=Dict{Symbol,Type}(:none => Nothing),
+            description="Show insights generated from the car dataset",
+            callable=(msg, session) -> show_insights(ShowInsightsParams(), session.context)
+        ),
+        Tool(
+            name="show_plots",
+            parameters=Dict{Symbol,Type}(:none => Nothing),
+            description="Show visualizations of the car dataset",
+            callable=(msg, session) -> show_plots(ShowPlotsParams(), session.context)
+        ),
+        Tool(
+            name="reset_data",
+            parameters=Dict{Symbol,Type}(:none => Nothing),
+            description="Reset/create new car dataset",
+            callable=(msg, session) -> reset_data(ResetDataParams(), session.context)
+        )
     ])
 
+    # Initialize context with fresh data
+    context = Dict{String,Any}()
+    reset_data(ResetDataParams(), context)
+
+    # Create session
+    session = Session(agent; context=context)
+
     # Example conversation
-    println("Bot: Welcome to the car data analysis bot! I'll create some mock data for analysis.")
-    response = run_full_turn(bot, "reset data")
-    println("Bot: ", response)
+    println("Bot: Welcome to the car data analysis bot! Let's analyze some car data.")
 
-    println("\nUser: show stats")
-    response = run_full_turn(bot, "show stats")
-    println("Bot: ", response)
+    messages = [
+        "Can you show me the basic statistics?",
+        "Generate some insights about the data",
+        "Show me the visualizations"
+    ]
 
-    println("\nUser: show insights")
-    response = run_full_turn(bot, "show insights")
-    println("Bot: ", response)
+    for msg in messages
+        println("\nUser: $msg")
+        run_full_turn!(session, msg)
+    end
 
-    println("\nUser: show plots")
-    response = run_full_turn(bot, "show plots")
-    println("Bot: ", response)
+    return true
 end
 
 # Run the example if this file is run directly
