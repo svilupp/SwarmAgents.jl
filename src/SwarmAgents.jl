@@ -4,7 +4,7 @@ module SwarmAgents
 using JSON3
 using PromptingTools
 const PT = PromptingTools
-using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIToolRequest, ToolMessage
+using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIToolRequestMessage, ToolMessage
 using PromptingTools: AbstractTool, isabstracttool, Tool
 using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 # Note: ToolCall is accessed via PT.ToolCall
@@ -16,7 +16,7 @@ export AbstractAgent, AbstractAgentActor, AbstractAgentRef,
 
 # Core types (agent, session)
 include("core_types.jl")
-export Agent, Session, isabstractagent, isabstractagentref, isabstractagentactor, add_rules!
+export Agent, AgentRef, Session, isabstractagent, isabstractagentref, isabstractagentactor, add_rules!, add_agent!, find_agent
 
 # Utilities (shared functions)
 include("utils.jl")
