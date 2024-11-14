@@ -113,13 +113,13 @@ function run_example()
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
     println("\nUser: What's my flight status?")
-    println("Bot: ", process_message(bot, "What's my flight status?"))
+    println("Bot: ", process_message(bot.rules, "What's my flight status?", bot.context))
 
     println("\nUser: Change flight to FL124")
-    println("Bot: ", process_message(bot, "Change flight to FL124"))
+    println("Bot: ", process_message(bot.rules, "Change flight to FL124", bot.context))
 
     println("\nUser: What's my flight status?")
-    println("Bot: ", process_message(bot, "What's my flight status?"))
+    println("Bot: ", process_message(bot.rules, "What's my flight status?", bot.context))
 end
 
 # Run the example if this file is run directly
