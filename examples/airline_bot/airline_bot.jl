@@ -123,37 +123,37 @@ end
 
 # Create wrapper functions that handle parameter construction
 """
-    wrapped_check_status(context::Dict{Symbol,Any})::String
+    wrapped_check_status(session::Session)::String
 
 Tool function to check the status of the current flight.
 
 # Arguments
-- `context::Dict{Symbol,Any}`: The session context containing flight information
+- `session::Session`: The current session containing context
 
 # Returns
 - `String`: A message containing the flight details or status
 """
-function wrapped_check_status(context::Dict{Symbol,Any})::String
-    airline_context = context[:context]::AirlineContext
+function wrapped_check_status(session::Session)::String
+    airline_context = session.context[:context]::AirlineContext
     session_context = SessionContext(context=airline_context)
     params = CheckFlightStatusParams(context=session_context)
     check_flight_status(params)
 end
 
 """
-    wrapped_change_flight(msg::String, context::Dict{Symbol,Any})::String
+    wrapped_change_flight(msg::String, session::Session)::String
 
 Tool function to change the current flight based on the message.
 
 # Arguments
 - `msg::String`: The user message containing the new flight number
-- `context::Dict{Symbol,Any}`: The session context containing flight information
+- `session::Session`: The current session containing context
 
 # Returns
 - `String`: A confirmation message or error message
 """
-function wrapped_change_flight(msg::String, context::Dict{Symbol,Any})::String
-    airline_context = context[:context]::AirlineContext
+function wrapped_change_flight(msg::String, session::Session)::String
+    airline_context = session.context[:context]::AirlineContext
     session_context = SessionContext(context=airline_context)
     params = ChangeFlightParams(msg=msg, context=session_context)
     change_flight(params)
