@@ -86,7 +86,7 @@ Main container for managing agent interactions and state.
 - `context::Dict{Symbol, Any}`: Context variables
 - `artifacts::Vector{Any}`: Tool outputs
 - `io::Union{Nothing,IO}`: Output stream
-- `rules::Dict{String, AbstractTool}`: Session rules
+- `rules::Dict{String, AbstractFlowRules}`: Session rules
 - `agent_map::Dict{Symbol, <:AbstractAgent}`: Agent reference map
 """
 Base.@kwdef mutable struct Session
@@ -95,13 +95,13 @@ Base.@kwdef mutable struct Session
     context::Dict{Symbol, Any} = Dict{Symbol, Any}()
     artifacts::Vector{Any} = Any[]
     io::Union{Nothing,IO} = stdout
-    rules::Dict{String, AbstractTool} = Dict{String, AbstractTool}()
+    rules::Dict{String, AbstractFlowRules} = Dict{String, AbstractFlowRules}()
     agent_map::Dict{Symbol, <:AbstractAgent} = Dict{Symbol, AbstractAgent}()
 end
 
 # Constructor for Session with agent
 Session(agent::AbstractAgent; io::Union{Nothing,IO}=stdout, context::Dict{Symbol,Any}=Dict{Symbol,Any}()) =
-    Session(PT.AbstractMessage[], agent, context, Any[], io, Dict{String,AbstractTool}(), Dict{Symbol,AbstractAgent}())
+    Session(PT.AbstractMessage[], agent, context, Any[], io, Dict{String,AbstractFlowRules}(), Dict{Symbol,AbstractAgent}())
 
 # Show methods
 function Base.show(io::IO, t::AbstractAgent)

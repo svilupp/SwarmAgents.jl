@@ -5,7 +5,7 @@ using JSON3
 using PromptingTools
 const PT = PromptingTools
 using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIToolRequest, ToolMessage
-using PromptingTools: AbstractTool, isabstracttool, Tool
+using PromptingTools: AbstractTool, isabstracttool, Tool, ToolCall
 using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 
 # Core types (abstract types, agent, session)

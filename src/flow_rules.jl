@@ -10,38 +10,38 @@ abstract type AbstractToolFlowRules <: AbstractFlowRules end
 abstract type AbstractTerminationFlowRules <: AbstractFlowRules end
 
 """
-    add_rules!(session::Session, rules::Vector{<:AbstractTool})
+    add_rules!(session::Session, rules::Vector{<:AbstractFlowRules})
 
 Add flow rules to a session.
 
 # Arguments
 - `session::Session`: The session to add rules to
-- `rules::Vector{<:AbstractTool}`: Vector of rules to add
+- `rules::Vector{<:AbstractFlowRules}`: Vector of rules to add
 
 # Notes
 - Rules are added to session.rules
 - Duplicate rule names will be overwritten with a warning
 """
-function add_rules!(session::Session, rules::Vector{<:AbstractTool})
+function add_rules!(session::Session, rules::Vector{<:AbstractFlowRules})
     for rule in rules
         add_rules!(session, rule)
     end
 end
 
 """
-    add_rules!(session::Session, rule::AbstractTool)
+    add_rules!(session::Session, rule::AbstractFlowRules)
 
 Add a single flow rule to a session.
 
 # Arguments
 - `session::Session`: The session to add the rule to
-- `rule::AbstractTool`: Rule to add
+- `rule::AbstractFlowRules`: Rule to add
 
 # Notes
 - Rule is added to session.rules
 - Duplicate rule names will be overwritten with a warning
 """
-function add_rules!(session::Session, rule::AbstractTool)
+function add_rules!(session::Session, rule::AbstractFlowRules)
     if haskey(session.rules, rule.name)
         @warn "Overwriting existing rule '$(rule.name)' in session rules"
     end
