@@ -14,31 +14,34 @@ This is an internal utility function to handle message type conversions without 
 # Base case: converting to same type is a no-op
 convert_message(::Type{T}, msg::T) where T <: AbstractMessage = msg
 
-# Converting to AbstractMessage returns the original message
-convert_message(::Type{AbstractMessage}, msg::AbstractMessage) = msg
+# Specific conversions to AbstractMessage
+convert_message(::Type{AbstractMessage}, msg::SystemMessage) = msg
+convert_message(::Type{AbstractMessage}, msg::UserMessage) = msg
+convert_message(::Type{AbstractMessage}, msg::AIToolRequest) = msg
+convert_message(::Type{AbstractMessage}, msg::ToolMessage) = msg
 
-# Specific conversions
-function convert_message(::Type{T}, msg::SystemMessage) where T <: AbstractMessage
-    T(msg.content)
+# Specific conversions between types
+function convert_message(::Type{SystemMessage}, msg::AbstractMessage)
+    SystemMessage(msg.content)
 end
 
-function convert_message(::Type{T}, msg::UserMessage) where T <: AbstractMessage
-    T(msg.content)
+function convert_message(::Type{UserMessage}, msg::AbstractMessage)
+    UserMessage(msg.content)
 end
 
-function convert_message(::Type{T}, msg::AIToolRequest) where T <: AbstractMessage
-    if T <: ToolMessage
-        ToolMessage(msg.name, msg.args, msg.content, msg.tool_call_id)
+function convert_message(::Type{AIToolRequest}, msg::AbstractMessage)
+    if msg isa ToolMessage
+        AIToolRequest(msg.name, msg.args, msg.content, msg.tool_call_id)
     else
-        T(msg.content)
+        AIToolRequest(msg.content)
     end
 end
 
-function convert_message(::Type{T}, msg::ToolMessage) where T <: AbstractMessage
-    if T <: AIToolRequest
-        AIToolRequest(msg.name, msg.args, msg.content, msg.tool_call_id)
+function convert_message(::Type{ToolMessage}, msg::AbstractMessage)
+    if msg isa AIToolRequest
+        ToolMessage(msg.name, msg.args, msg.content, msg.tool_call_id)
     else
-        T(msg.content)
+        ToolMessage(msg.content)
     end
 end
 
