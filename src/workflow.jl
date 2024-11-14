@@ -72,8 +72,10 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
     init_len = length(messages)
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
-        # Combine tools from agent and session
-        tools = vcat(collect(values(active_agent.tool_map)), collect(values(session.rules)))
+        # Combine tools from agent and session, ensuring we only have Tool objects
+        agent_tools = collect(values(active_agent.tool_map))
+        session_tools = [rule isa ToolFlowRules ? rule.tool : rule for rule in values(session.rules) if rule isa Union{Tool, ToolFlowRules}]
+        tools = vcat(agent_tools, session_tools)
 
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)
