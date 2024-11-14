@@ -18,7 +18,7 @@ Agent is a stateless struct that holds the the reference to LLM, tools and the i
 - `parallel_tool_calls::Bool`: Whether to allow parallel tool calls. Defaults to `true` - NOT SUPPORTED YET.
 - `private::Bool`: Whether agent's messages should be private by default.
 """
-Base.@kwdef struct Agent <: AbstractAgentActor
+Base.@kwdef struct Agent <: AbstractAgent
     name::String = "Agent"
     model::String = "gpt-4o"
     instructions::String = "You are a helpful agent."
@@ -160,30 +160,3 @@ end
 function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
     add_tools!(agent, Tool(callable; kwargs...))
 end
-
-"""
-    add_agent!(session::Session, agent::AbstractAgent)
-
-Add an agent to the session's agent map. If an agent with the same name already exists,
-a warning is issued before overwriting.
-
-# Arguments
-- `session::Session`: The session to add the agent to
-- `agent::AbstractAgent`: The agent to add
-
-# Returns
-- `Session`: The modified session
-
-# Notes
-- Issues a warning if overwriting an existing agent
-"""
-function add_agent!(session::Session, agent::AbstractAgent)
-    agent_name = Symbol(agent.name)
-    if haskey(session.agent_map, agent_name)
-        @warn "Overwriting existing agent '$(agent.name)' in agent map"
-    end
-    session.agent_map[agent_name] = agent
-    return session
-end
-
-export add_agent!

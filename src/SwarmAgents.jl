@@ -6,8 +6,8 @@ const PT = PromptingTools
 using PromptingTools: AbstractTool, isabstracttool, Tool
 using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 
-# First include agent_utils.jl which defines AbstractAgent types
-include("agent_utils.jl")
+# First include agent_types.jl which defines AbstractAgent types
+include("agent_types.jl")
 
 # Then include types.jl which uses Agent type
 include("types.jl")
@@ -21,8 +21,8 @@ include("tools.jl")
 
 # Export all public interfaces
 export Agent, Session, Response, add_rules!, add_tools!
-export AbstractAgent, AbstractAgentActor, AbstractAgentRef, AgentRef,
-    isabstractagent, isabstractagentref, isabstractagentactor,
+export AbstractAgent, AgentRef,
+    isabstractagentref, isabstractagentactor,
     find_agent, add_agent!
 export PrivateMessage, is_visible, filter_history, maybe_private_message
 export add_tools!, run_full_turn!, run_full_turn, get_used_tools

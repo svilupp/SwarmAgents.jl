@@ -1,13 +1,15 @@
 using PromptingTools
-using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIToolRequest
+using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIToolRequest, ToolMessage
 
 """
-    convert_message(T::Type{<:AbstractMessage}, msg::SystemMessage)
-    convert_message(T::Type{<:AbstractMessage}, msg::UserMessage)
-    convert_message(T::Type{<:AbstractMessage}, msg::AIToolRequest)
+    convert_message(T::Type{<:AbstractMessage}, msg::AbstractMessage)
 
 Convert a message from one type to another within the PromptingTools ecosystem.
 This is an internal utility function to handle message type conversions without type piracy.
+
+# Notes
+- Preserves tool-specific fields when converting between tool message types
+- Handles conversion between UserMessage, SystemMessage, AIToolRequest, and ToolMessage
 """
 function convert_message(::Type{T}, msg::SystemMessage) where T <: AbstractMessage
     T(msg.content)
@@ -18,7 +20,22 @@ function convert_message(::Type{T}, msg::UserMessage) where T <: AbstractMessage
 end
 
 function convert_message(::Type{T}, msg::AIToolRequest) where T <: AbstractMessage
-    T(msg.content)
+    if T <: ToolMessage
+        ToolMessage(msg.name, msg.args, msg.content, msg.tool_call_id)
+    else
+        T(msg.content)
+    end
 end
+
+function convert_message(::Type{T}, msg::ToolMessage) where T <: AbstractMessage
+    if T <: AIToolRequest
+        AIToolRequest(msg.name, msg.args, msg.content, msg.tool_call_id)
+    else
+        T(msg.content)
+    end
+end
+
+# Passthrough for same type
+convert_message(::Type{T}, msg::T) where T <: AbstractMessage = msg
 
 export convert_message
