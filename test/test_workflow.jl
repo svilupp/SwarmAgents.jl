@@ -4,9 +4,11 @@ using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
                      ToolMessage, TestEchoOpenAISchema
 
+# Define test functions at module level
+func1() = nothing
+func5() = "test"
+
 @testset "Workflow" begin
-    func1() = nothing
-    func5() = "test"
 
     @testset "handle_tool_calls!" begin
         agent = Agent(name = "TestAgent")

@@ -10,6 +10,64 @@ abstract type AbstractToolFlowRules <: AbstractFlowRules end
 abstract type AbstractTerminationFlowRules <: AbstractFlowRules end
 
 """
+    ToolFlowRules <: AbstractToolFlowRules
+
+A concrete implementation of tool flow rules that manages a single tool.
+
+# Fields
+- `name::String`: Name of the rule (defaults to tool's name)
+- `tool::Tool`: The tool this rule manages
+
+# Examples
+```julia
+rule = ToolFlowRules(Tool(my_function))
+```
+"""
+Base.@kwdef struct ToolFlowRules <: AbstractToolFlowRules
+    tool::Tool
+    name::String = tool.name
+end
+
+"""
+    FixedOrder <: AbstractToolFlowRules
+
+Enforces a fixed order of tool execution.
+
+# Fields
+- `name::String`: Name of the rule
+- `order::Vector{Symbol}`: List of tools in required execution order
+
+# Examples
+```julia
+rule = FixedOrder([:tool1, :tool2, :tool3])
+```
+
+# Notes
+- Only allows one tool at a time in strict sequence
+- Returns empty list when all tools have been used
+"""
+struct FixedOrder <: AbstractToolFlowRules
+    name::String
+    order::Vector{Symbol}
+    function FixedOrder(order::Vector{Symbol})
+        new("FixedOrder", order)
+    end
+end
+
+function get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
+    isempty(rule.order) && return String[]
+    used_set = Set(used_tools)
+
+    # Find the first tool in order that hasn't been used
+    for tool in rule.order
+        if tool ∉ used_set
+            return [String(tool)]
+        end
+    end
+    return String[]
+end
+
+"""
     add_rules!(session::Session, rules::Vector{<:AbstractFlowRules})
 
 Add flow rules to a session.
@@ -295,3 +353,44 @@ end
 
 export get_used_tools
 export add_rules!
+
+struct FixedPrerequisites <: AbstractToolFlowRules
+    name::String
+    prerequisites::Dict{Symbol,Vector{Symbol}}
+    function FixedPrerequisites(prerequisites::Dict{Symbol,Vector{Symbol}})
+        new("FixedPrerequisites", prerequisites)
+    end
+    function FixedPrerequisites(tools::Vector{Symbol})
+        # Convert ordered list to prerequisites where each tool requires all previous tools
+        prereqs = Dict{Symbol,Vector{Symbol}}()
+        for (i, tool) in enumerate(tools)
+            prereqs[tool] = i > 1 ? tools[1:i-1] : Symbol[]
+        end
+        new("FixedPrerequisites", prereqs)
+    end
+end
+
+function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
+    allowed = String[]
+    used_set = Set(used_tools)
+
+    # Check each tool's prerequisites
+    for (tool, prereqs) in rule.prerequisites
+        # If all prerequisites are met, add tool to allowed list
+        if all(p -> p ∈ used_set, prereqs)
+            push!(allowed, String(tool))
+        end
+    end
+
+    # Add all tools that don't have prerequisites
+    for tool in used_tools
+        if !haskey(rule.prerequisites, Symbol(tool))
+            push!(allowed, String(tool))
+        end
+    end
+
+    unique!(allowed)
+    return allowed
+end
+
+export FixedPrerequisites

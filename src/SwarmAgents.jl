@@ -28,8 +28,8 @@ export PrivateMessage, is_visible, filter_history, maybe_private_message
 
 # Flow rules (termination and tool selection)
 include("flow_rules.jl")
-export TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
-    is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools
+export TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck, ToolFlowRules,
+    FixedOrder, FixedPrerequisites, is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools
 
 # Workflow (run_full_turn, handle tool calls)
 include("workflow.jl")
