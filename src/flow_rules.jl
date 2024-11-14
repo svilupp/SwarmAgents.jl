@@ -115,7 +115,7 @@ function is_cycle(history; n::Int, span::Int)
             msg = msg.object
         end
         if PT.istoolmessage(msg) && !isnothing(msg.content)
-            push!(tool_sequence, msg.tool_name)
+            push!(tool_sequence, msg.name)
         end
     end
 
@@ -161,7 +161,7 @@ function num_subsequent_repeats(history)
             msg = msg.object
         end
         if PT.istoolmessage(msg) && !isnothing(msg.content)
-            push!(tool_sequence, msg.tool_name)
+            push!(tool_sequence, msg.name)
         end
     end
 
