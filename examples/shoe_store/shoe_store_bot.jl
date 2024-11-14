@@ -284,7 +284,7 @@ function run_example()
         ),
         Tool(;
             name="show_inventory",
-            parameters=(msg=String,),
+            parameters=NamedTuple(),  # No parameters needed as wrapper doesn't use any
             return_type=String,
             description="Show available shoe inventory",
             callable=wrapped_show_inventory
