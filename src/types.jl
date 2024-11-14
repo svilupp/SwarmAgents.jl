@@ -1,6 +1,14 @@
-
 abstract type AbstractAgent end
+abstract type AbstractAgentActor <: AbstractAgent end
+abstract type AbstractAgentRef <: AbstractAgent end
+
+Base.@kwdef struct AgentRef <: AbstractAgentRef
+    name::String
+end
+
 isabstractagent(x) = x isa AbstractAgent
+isabstractagentref(x) = x isa AbstractAgentRef
+isabstractagentactor(x) = x isa AbstractAgentActor
 
 """
     Agent
@@ -16,7 +24,7 @@ Agent is a stateless struct that holds the the reference to LLM, tools and the i
 - `parallel_tool_calls::Bool`: Whether to allow parallel tool calls. Defaults to `true` - NOT SUPPORTED YET.
 - `private::Bool`: Whether agent's messages should be private by default.
 """
-Base.@kwdef struct Agent <: AbstractAgent
+Base.@kwdef struct Agent <: AbstractAgentActor
     name::String = "Agent"
     model::String = "gpt-4o"
     instructions::String = "You are a helpful agent."
@@ -46,18 +54,20 @@ Session is a mutable struct that holds the `messages`, `agent` and `context`.
 - `artifacts::Vector{Any}`: Collects all tool outputs in their full extent.
 - `io::Union{Nothing,IO}`: The sink for printing the outputs.
 - `rules::Dict{String, AbstractTool}`: The rules for the session.
+- `agent_map::Dict{Symbol, AbstractAgent}`: Map of agent references to actual agents.
 """
 Base.@kwdef mutable struct Session
     messages::Vector = PT.AbstractMessage[]
-    agent::Union{Agent, Nothing} = nothing
+    agent::Union{AbstractAgent, Nothing} = nothing
     context::Dict{Symbol, Any} = Dict{Symbol, Any}()
     artifacts::Vector{Any} = Any[]
     io::Union{Nothing,IO} = stdout
     rules::Dict{String, AbstractTool} = Dict{String, AbstractTool}()
+    agent_map::Dict{Symbol, AbstractAgent} = Dict{Symbol, AbstractAgent}()
 end
 
-Session(agent::Agent; io::Union{Nothing,IO}=stdout, context::Dict{Symbol,Any}=Dict{Symbol,Any}()) =
-    Session(PT.AbstractMessage[], agent, context, Any[], io, Dict{String,AbstractTool}())
+Session(agent::AbstractAgent; io::Union{Nothing,IO}=stdout, context::Dict{Symbol,Any}=Dict{Symbol,Any}()) =
+    Session(PT.AbstractMessage[], agent, context, Any[], io, Dict{String,AbstractTool}(), Dict{Symbol,AbstractAgent}())
 
 function Base.show(io::IO, t::Session)
     agent_str = isnothing(t.agent) ? "None" : t.agent.name

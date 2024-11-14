@@ -78,10 +78,10 @@ end
 
 Runs a full turn of an agent (executes all tool calls).
 """
-function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessage},
+function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage},
         session::Session; max_turns::Int = 5,
         kwargs...)
-    active_agent = agent
+    active_agent = isabstractagentref(agent) ? find_agent(session.agent_map, agent) : agent
     history = deepcopy(messages)
     init_len = length(messages)
 
