@@ -2,7 +2,7 @@ using Test
 using SwarmAgents
 using PromptingTools
 using PromptingTools: UserMessage
-using Logging
+import Base.Logging
 
 @testset "Agent Utils" begin
     @testset "Agent Type Checks" begin
