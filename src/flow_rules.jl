@@ -10,6 +10,45 @@ abstract type AbstractToolFlowRules <: AbstractFlowRules end
 abstract type AbstractTerminationFlowRules <: AbstractFlowRules end
 
 """
+    add_rules!(session::Session, rules::Vector{<:AbstractTool})
+
+Add flow rules to a session.
+
+# Arguments
+- `session::Session`: The session to add rules to
+- `rules::Vector{<:AbstractTool}`: Vector of rules to add
+
+# Notes
+- Rules are added to session.rules
+- Duplicate rule names will be overwritten with a warning
+"""
+function add_rules!(session::Session, rules::Vector{<:AbstractTool})
+    for rule in rules
+        add_rules!(session, rule)
+    end
+end
+
+"""
+    add_rules!(session::Session, rule::AbstractTool)
+
+Add a single flow rule to a session.
+
+# Arguments
+- `session::Session`: The session to add the rule to
+- `rule::AbstractTool`: Rule to add
+
+# Notes
+- Rule is added to session.rules
+- Duplicate rule names will be overwritten with a warning
+"""
+function add_rules!(session::Session, rule::AbstractTool)
+    if haskey(session.rules, rule.name)
+        @warn "Overwriting existing rule '$(rule.name)' in session rules"
+    end
+    session.rules[rule.name] = rule
+end
+
+"""
     TerminationCycleCheck(n_cycles::Int=3, span::Int=3)
 
 Checks for repeated cycles of tool calls in the message history.
@@ -255,3 +294,4 @@ function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Un
 end
 
 export get_used_tools
+export add_rules!

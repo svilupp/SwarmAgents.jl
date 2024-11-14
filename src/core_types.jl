@@ -36,6 +36,22 @@ struct AgentRef <: AbstractAgentRef
 end
 
 """
+    Response
+
+Container for the results of a workflow operation.
+
+# Fields
+- `messages::Vector{<:PT.AbstractMessage}`: New messages generated during the operation
+- `agent::Union{AbstractAgent, Nothing}`: The resulting agent state
+- `context::Dict{Symbol, Any}`: The resulting context state
+"""
+Base.@kwdef struct Response
+    messages::Vector{<:PT.AbstractMessage} = PT.AbstractMessage[]
+    agent::Union{AbstractAgent, Nothing} = nothing
+    context::Dict{Symbol, Any} = Dict{Symbol, Any}()
+end
+
+"""
     Agent <: AbstractAgentActor
 
 A concrete agent implementation that can perform actions.
