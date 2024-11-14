@@ -22,8 +22,14 @@ Base.getproperty(msg::PrivateMessage, name::Symbol) = name === :content ? msg.ob
                                                      name === :tool_call_id ? msg.object.tool_call_id :
                                                      name === :tool_calls ? PT.tool_calls(msg.object) :
                                                      getfield(msg, name)
-PT.tool_calls(msg::PrivateMessage) = PT.tool_calls(msg.object)  # Keep this as a method since it's defined as one
+
+# Forward all required methods
+PT.content(msg::PrivateMessage) = PT.content(msg.object)
+PT.role(msg::PrivateMessage) = PT.role(msg.object)
+PT.name(msg::PrivateMessage) = PT.name(msg.object)
+PT.tool_calls(msg::PrivateMessage) = PT.tool_calls(msg.object)
 PT.last_output(msg::PrivateMessage) = PT.last_output(msg.object)
+PT.istoolmessage(msg::PrivateMessage) = PT.istoolmessage(msg.object)
 
 """
     is_visible(message::PT.AbstractMessage, agent::Agent)::Bool
