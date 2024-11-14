@@ -44,7 +44,7 @@ function handle_tool_calls!(
         end
         # Create a new ToolMessage with the output content and wrap if agent is private
         output_msg = ToolMessage(string(output), nothing, tool.tool_call_id, tool.tool_call_id, Dict{Symbol,Any}(), tool.name, :default)
-        output_msg = wrap_message(output_msg, active_agent)
+        output_msg = maybe_private_message(output_msg, active_agent)
         print_progress(session.io, active_agent, output_msg)
         push!(history, output_msg)
     end
@@ -99,10 +99,8 @@ function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessa
             tools, name_user = "User", name_assistant = scrub_agent_name(active_agent),
             return_all = true, verbose = false, kwargs...)
 
-        # Wrap response in PrivateMessage if agent is private
-        if active_agent.private
-            response[end] = wrap_message(response[end], active_agent)
-        end
+        # Wrap response using maybe_private_message (handles privacy automatically)
+        response[end] = maybe_private_message(response[end], active_agent)
 
         # Update full history with response
         append!(history, response[length(visible_history)+1:end])

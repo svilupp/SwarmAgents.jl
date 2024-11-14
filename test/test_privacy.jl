@@ -92,18 +92,18 @@ using Test
         @test :tool3 in tools2  # Should see own private tool
     end
 
-    @testset "Message Wrapping" begin
+    @testset "Message Privacy Handling" begin
         agent = Agent(name="PrivateAgent", private=true)
         public_agent = Agent(name="PublicAgent", private=false)
 
-        # Test wrapping for private agent
+        # Test privacy handling for private agent
         msg = PT.UserMessage("Test message")
-        wrapped = wrap_message(msg, agent)
-        @test wrapped isa PrivateMessage
-        @test wrapped.visible == [agent.name]
+        private_msg = maybe_private_message(msg, agent)
+        @test private_msg isa PrivateMessage
+        @test private_msg.visible == [agent.name]
 
-        # Test no wrapping for public agent
-        public_wrapped = wrap_message(msg, public_agent)
-        @test public_wrapped === msg  # Should return original message
+        # Test no privacy wrapping for public agent
+        public_msg = maybe_private_message(msg, public_agent)
+        @test public_msg === msg  # Should return original message
     end
 end

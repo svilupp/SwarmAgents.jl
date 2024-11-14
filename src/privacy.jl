@@ -47,13 +47,29 @@ function filter_history(history::AbstractVector{<:PT.AbstractMessage}, agent::Ag
 end
 
 """
-    wrap_message(message::PT.AbstractMessage, agent::Agent)
+    maybe_private_message(message::PT.AbstractMessage, agent::Agent)
 
 Wrap a message in a PrivateMessage if the agent is private.
 """
-function wrap_message(message::PT.AbstractMessage, agent::Agent)
+# Add method for nothing case
+function maybe_private_message(message::PT.AbstractMessage, agent::Nothing)
+    return message  # When no agent, return message as-is
+end
+
+function maybe_private_message(message::PT.AbstractMessage, agent::Agent)
     return agent.private ? PrivateMessage(message, [agent.name]) : message
 end
 
+# Pretty printing
+function Base.show(io::IO, msg::PrivateMessage)
+    print(io, "PrivateMessage(visible=[", join(msg.visible, ", "), "])")
+    print(io, "\n  └─ ", typeof(msg.object), ": ", PT.content(msg.object))
+end
+
+function PT.pprint(io::IO, msg::PrivateMessage; kwargs...)
+    printstyled(io, "🔒 Private Message (visible to: ", join(msg.visible, ", "), ")\n", color=:light_black)
+    PT.pprint(io, msg.object; kwargs...)
+end
+
 # Export the new functions
-export PrivateMessage, is_visible, filter_history, wrap_message
+export PrivateMessage, is_visible, filter_history, maybe_private_message
