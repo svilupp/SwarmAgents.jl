@@ -114,7 +114,7 @@ function is_cycle(history; n::Int, span::Int)
         if msg isa PrivateMessage
             msg = msg.object
         end
-        if PT.istoolmessage(msg) && !isnothing(msg.content)
+        if PT.istoolmessage(msg) && isnothing(msg.content)
             push!(tool_sequence, msg.name)
         end
     end
@@ -160,7 +160,7 @@ function num_subsequent_repeats(history)
         if msg isa PrivateMessage
             msg = msg.object
         end
-        if PT.istoolmessage(msg) && !isnothing(msg.content)
+        if PT.istoolmessage(msg) && isnothing(msg.content)
             push!(tool_sequence, msg.name)
         end
     end
