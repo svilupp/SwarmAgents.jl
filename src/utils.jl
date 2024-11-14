@@ -86,24 +86,27 @@ function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessa
     init_len = length(messages)
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
-        # Filter history for visible messages
-        visible_history = filter_history(history, active_agent)
-
         # Combine tools from agent and session
         tools = vcat(
             collect(values(active_agent.tool_map)),
             collect(values(session.rules))
         )
-        update_system_message!(visible_history, active_agent)
-        response = PT.aitools(visible_history; model = active_agent.model,
+
+        # Create a filtered copy of history for AI processing
+        filtered_history = filter_history(history, active_agent)
+        update_system_message!(filtered_history, active_agent)
+
+        # Get AI response using filtered history
+        response = PT.aitools(filtered_history; model = active_agent.model,
             tools, name_user = "User", name_assistant = scrub_agent_name(active_agent),
             return_all = true, verbose = false, kwargs...)
 
-        # Wrap response using maybe_private_message (handles privacy automatically)
-        response[end] = maybe_private_message(response[end], active_agent)
-
-        # Update full history with response
-        append!(history, response[length(visible_history)+1:end])
+        # Add only new messages to history with privacy handling
+        filtered_len = length(filtered_history)
+        for msg in response[filtered_len+1:end]
+            private_msg = maybe_private_message(msg, active_agent)
+            push!(history, private_msg)
+        end
 
         # Print assistant response
         if !isnothing(PT.last_output(response))
