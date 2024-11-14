@@ -1,7 +1,7 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: UserMessage, AIMessage, ToolMessage, ToolCall
+using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool, ToolCall
 
 @testset "Utilities" begin
     @testset "scrub_agent_name" begin

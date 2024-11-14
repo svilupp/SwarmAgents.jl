@@ -1,7 +1,7 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
+using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool, ToolCall
 import Base.Logging
 
 # Define test utility functions at module level
@@ -94,14 +94,14 @@ func2() = nothing
         @test session.agent === agent
 
         # Test session rules management
-        tools = [Tool(func1), Tool(func2)]
+        flow_rules = [ToolFlowRules(Tool(func1)), ToolFlowRules(Tool(func2))]
 
-        add_rules!(session, tools)
+        add_rules!(session, flow_rules)
         @test length(session.rules) == 2
-        @test "func1" in keys(session.rules)
-        @test "func2" in keys(session.rules)
+        @test any(rule -> rule isa ToolFlowRules && rule.tool.name == "func1", session.rules)
+        @test any(rule -> rule isa ToolFlowRules && rule.tool.name == "func2", session.rules)
 
         # Test error on duplicate rule
-        @test_throws AssertionError add_rules!(session, Tool(func1))
+        @test_throws AssertionError add_rules!(session, ToolFlowRules(Tool(func1)))
     end
 end
