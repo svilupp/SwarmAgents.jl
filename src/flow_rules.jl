@@ -2,11 +2,15 @@ using PromptingTools
 using PromptingTools: AbstractMessage
 
 """
-Abstract type hierarchy for flow rules
+Abstract type hierarchy for flow rules in SwarmAgents.
+
+# Notes
+- Flow rules, including tool flow rules and termination checks, ignore PrivateMessage visibility
+- They operate on the underlying messages regardless of privacy settings
 """
-abstract type AbstractFlowRule end
-abstract type AbstractToolFlowRule <: AbstractFlowRule end
-abstract type AbstractTerminationFlowRule <: AbstractFlowRule end
+abstract type AbstractFlowRules end
+abstract type AbstractToolFlowRules <: AbstractFlowRules end
+abstract type AbstractTerminationFlowRules <: AbstractFlowRules end
 
 """
     TerminationCycleCheck(n_cycles::Int=3, span::Int=3)
@@ -17,13 +21,17 @@ Checks for repeated cycles of tool calls in the message history.
 - `n_cycles::Int=3`: Number of cycles required to trigger termination
 - `span::Int=3`: Maximum width of cycle to be considered
 
+# Notes
+- Ignores PrivateMessage visibility, operates on all messages
+- Ignores AIToolRequests and non-tool messages
+
 # Example
 ```julia
 # Check for 3 repetitions of cycles up to length 3
 rule = TerminationCycleCheck(3, 3)
 ```
 """
-Base.@kwdef struct TerminationCycleCheck <: AbstractTerminationFlowRule
+Base.@kwdef struct TerminationCycleCheck <: AbstractTerminationFlowRules
     n_cycles::Int = 3
     span::Int = 3
     function TerminationCycleCheck(n_cycles::Int=3, span::Int=3)
@@ -41,13 +49,17 @@ Checks for consecutive repetitions of the same tool.
 # Fields
 - `n::Int`: Number of consecutive repeats required to trigger termination
 
+# Notes
+- Ignores PrivateMessage visibility, operates on all messages
+- Ignores AIToolRequests and non-tool messages
+
 # Example
 ```julia
 # Terminate if same tool is used 5 times in a row
 rule = TerminationRepeatCheck(5)
 ```
 """
-Base.@kwdef struct TerminationRepeatCheck <: AbstractTerminationFlowRule
+Base.@kwdef struct TerminationRepeatCheck <: AbstractTerminationFlowRules
     n::Int
     function TerminationRepeatCheck(n::Int)
         n > 1 || throw(ArgumentError("n must be > 1"))
@@ -63,6 +75,10 @@ Custom termination check using a provided function.
 # Fields
 - `callable::Function`: Function that takes (history, active_agent) and returns active_agent
 
+# Notes
+- Ignores PrivateMessage visibility by default, but custom function can implement visibility checks
+- Function should return nothing to trigger termination
+
 # Example
 ```julia
 # Custom termination check
@@ -70,7 +86,7 @@ check = (history, agent) -> length(history) > 10 ? nothing : agent
 rule = TerminationGenericCheck(check)
 ```
 """
-struct TerminationGenericCheck <: AbstractTerminationFlowRule
+struct TerminationGenericCheck <: AbstractTerminationFlowRules
     callable::Function
 end
 
@@ -86,6 +102,10 @@ Check if there has been a repeated cycle of tool calls.
 
 # Returns
 - `Bool`: true if a cycle is detected
+
+# Notes
+- Ignores PrivateMessage visibility, operates on underlying messages
+- Ignores AIToolRequests and non-tool messages
 """
 function is_cycle(history; n::Int, span::Int)
     # Extract tool names from history, ignoring AIToolRequests and unwrapping PrivateMessages
@@ -95,7 +115,7 @@ function is_cycle(history; n::Int, span::Int)
             msg = msg.object
         end
         if PT.istoolmessage(msg) && !isnothing(msg.content)
-            push!(tool_sequence, msg.name)
+            push!(tool_sequence, msg.tool_name)
         end
     end
 
@@ -129,6 +149,10 @@ Count maximum number of subsequent repeats of any tool.
 
 # Returns
 - `Int`: Maximum number of subsequent repeats
+
+# Notes
+- Ignores PrivateMessage visibility, operates on underlying messages
+- Ignores AIToolRequests and non-tool messages
 """
 function num_subsequent_repeats(history)
     tool_sequence = String[]
@@ -137,7 +161,7 @@ function num_subsequent_repeats(history)
             msg = msg.object
         end
         if PT.istoolmessage(msg) && !isnothing(msg.content)
-            push!(tool_sequence, msg.name)
+            push!(tool_sequence, msg.tool_name)
         end
     end
 
@@ -173,6 +197,10 @@ Run all termination checks on the message history.
 
 # Returns
 - `Union{AbstractAgent, Nothing}`: Updated active agent (nothing if terminated)
+
+# Notes
+- Ignores PrivateMessage visibility for all checks
+- Prints termination messages to io when triggered
 """
 function run_termination_checks(history, active_agent, io, checks)
     for check in checks
@@ -198,6 +226,6 @@ function run_termination_checks(history, active_agent, io, checks)
     return active_agent
 end
 
-export AbstractFlowRule, AbstractToolFlowRule, AbstractTerminationFlowRule,
+export AbstractFlowRules, AbstractToolFlowRules, AbstractTerminationFlowRules,
     TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
     is_cycle, num_subsequent_repeats, run_termination_checks
