@@ -25,14 +25,10 @@ export PrivateMessage, is_visible, filter_history, maybe_private_message
 include("flow_rules.jl")
 export AbstractFlowRules, AbstractToolFlowRules, AbstractTerminationFlowRules,
     TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
-    is_cycle, num_subsequent_repeats, run_termination_checks
+    is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools
 
 # Workflow (run_full_turn, handle tool calls)
 include("workflow.jl")
 export run_full_turn, run_full_turn!, Response, add_tools!
-
-# Tools functionality
-include("tools.jl")
-export get_used_tools
 
 end # module
