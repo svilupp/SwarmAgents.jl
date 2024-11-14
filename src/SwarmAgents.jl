@@ -13,6 +13,7 @@ include("agent_utils.jl")
 include("types.jl")
 
 # Include other functionality
+include("message_utils.jl")
 include("utils.jl")
 include("flow_rules.jl")
 include("privacy.jl")
