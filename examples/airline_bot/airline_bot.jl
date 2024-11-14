@@ -115,17 +115,21 @@ function run_example()
     add_tools!(agent, [
         Tool(;
             name="check_status",
-            parameters=(none=Nothing,),
+            parameters=Dict{String,Any}(),  # Empty dictionary instead of named tuple
             return_type=String,
             description="Check the status of your current flight",
-            callable=(msg, session) -> check_status(CheckStatusParams(), session.context)
+            callable=function(msg::PT.AIToolRequest, session)
+                check_status(CheckStatusParams(), session.context)
+            end
         ),
         Tool(;
             name="change_flight",
-            parameters=(none=Nothing,),
+            parameters=Dict{String,Any}(),  # Empty dictionary instead of named tuple
             return_type=String,
             description="Change your flight to a new flight number",
-            callable=(msg, session) -> change_flight(ChangeFlightParams(), msg, session.context)
+            callable=function(msg::PT.AIToolRequest, session)
+                change_flight(ChangeFlightParams(), msg, session.context)
+            end
         )
     ])
 
