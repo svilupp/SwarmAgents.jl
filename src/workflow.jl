@@ -103,7 +103,7 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         for msg in response[filtered_len+1:end]
             converted_msg = convert_message(eltype(history), msg)
             # Make the message public if it's an assistant message with no tool calls
-            is_last = PT.isassistantmessage(msg) && isempty(tool_calls(msg))
+            is_last = PT.isaimessage(msg) && isempty(tool_calls(msg))
             private_msg = maybe_private_message(converted_msg, active_agent; last_turn=is_last)
             push!(history, private_msg)
         end
