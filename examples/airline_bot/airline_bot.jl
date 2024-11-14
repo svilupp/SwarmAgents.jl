@@ -73,71 +73,83 @@ end
 # Define our tools
 
 # Parameter structures for tools
-Base.@kwdef struct CheckFlightStatusParams
-    context::SessionContext
+Base.@kwdef struct CheckFlightParams
+    flight_number::Union{String, Nothing} = nothing
 end
 
 Base.@kwdef struct ChangeFlightParams
-    msg::String
-    context::SessionContext
+    new_flight::String
 end
 
 """
-    check_flight_status(params::CheckFlightStatusParams)::String
+    check_flight_status(params::CheckFlightParams, session::Session)::String
 
 Check the status of the current flight in the session context.
 
 # Arguments
-- `params.context::SessionContext`: The session context containing flight information
-
-# Returns
-- `String`: A message containing the flight details or status
-"""
-function check_flight_status(params::CheckFlightStatusParams)::String
-    if isnothing(params.context.context.current_flight)
-        return "No flight currently booked"
-    end
-    get_flight_details(params.context.context.current_flight)
-end
-
-"""
-    change_flight(params::ChangeFlightParams)::String
-
-Change the current flight based on the message content.
-
-# Arguments
-- `params.msg::String`: The user message containing the new flight number
-- `params.context::SessionContext`: The session context containing flight information
-
-# Returns
-- `String`: A confirmation message or error message
-"""
-function change_flight(params::ChangeFlightParams)::String
-    flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", params.msg)
-    if isnothing(flight_match)
-        return "Please specify the new flight number (e.g., 'change flight to FL124')"
-    end
-    new_flight = flight_match[1]
-    change_flight!(params.context.context, new_flight)
-end
-
-# Create wrapper functions that handle parameter construction
-"""
-    wrapped_check_status(session::Session)::String
-
-Tool function to check the status of the current flight.
-
-# Arguments
+- `params::CheckFlightParams`: Parameters for checking flight status
 - `session::Session`: The current session containing context
 
 # Returns
 - `String`: A message containing the flight details or status
 """
-function wrapped_check_status(session::Session)::String
+function check_flight_status(params::CheckFlightParams, session::Session)::String
     airline_context = session.context[:context]::AirlineContext
-    session_context = SessionContext(context=airline_context)
-    params = CheckFlightStatusParams(context=session_context)
-    check_flight_status(params)
+    if isnothing(airline_context.current_flight)
+        return "No flight currently booked"
+    end
+    get_flight_details(airline_context.current_flight)
+end
+
+"""
+    change_flight(params::ChangeFlightParams, session::Session)::String
+
+Change the current flight to a new flight number.
+
+# Arguments
+- `params::ChangeFlightParams`: Parameters containing the new flight number
+- `session::Session`: The current session containing context
+
+# Returns
+- `String`: A confirmation message or error message
+"""
+function change_flight(params::ChangeFlightParams, session::Session)::String
+    airline_context = session.context[:context]::AirlineContext
+    change_flight!(airline_context, params.new_flight)
+end
+
+# Create wrapper functions that handle parameter extraction from messages
+"""
+    extract_flight_number(msg::String)::Union{String, Nothing}
+
+Extract flight number from a message string.
+
+# Arguments
+- `msg::String`: The message to extract from
+
+# Returns
+- `Union{String, Nothing}`: The extracted flight number or nothing
+"""
+function extract_flight_number(msg::String)::Union{String, Nothing}
+    flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
+    isnothing(flight_match) ? nothing : flight_match[1]
+end
+
+"""
+    wrapped_check_status(msg::String, session::Session)::String
+
+Tool function to check the status of the current flight.
+
+# Arguments
+- `msg::String`: The user message (unused in this case)
+- `session::Session`: The current session containing context
+
+# Returns
+- `String`: A message containing the flight details or status
+"""
+function wrapped_check_status(msg::String, session::Session)::String
+    params = CheckFlightParams()
+    check_flight_status(params, session)
 end
 
 """
@@ -153,10 +165,12 @@ Tool function to change the current flight based on the message.
 - `String`: A confirmation message or error message
 """
 function wrapped_change_flight(msg::String, session::Session)::String
-    airline_context = session.context[:context]::AirlineContext
-    session_context = SessionContext(context=airline_context)
-    params = ChangeFlightParams(msg=msg, context=session_context)
-    change_flight(params)
+    flight_number = extract_flight_number(msg)
+    if isnothing(flight_number)
+        return "Please specify the new flight number (e.g., 'change flight to FL124')"
+    end
+    params = ChangeFlightParams(new_flight=flight_number)
+    change_flight(params, session)
 end
 
 # Example usage:
@@ -180,8 +194,10 @@ function run_example()
     )
 
     # Add tools to the agent
-    tool_map = PT.tool_call_signature([wrapped_check_status, wrapped_change_flight])
-    add_tools!(agent, collect(values(tool_map)))
+    add_tools!(agent, [
+        (wrapped_check_status, "Check the status of your current flight"),
+        (wrapped_change_flight, "Change your flight to a new flight number")
+    ])
 
     # Create a session with proper context
     session = Session(agent; context=to_session_dict(SessionContext(context=context)))
