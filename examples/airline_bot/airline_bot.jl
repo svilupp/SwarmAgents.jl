@@ -129,7 +129,7 @@ function run_example()
     add_tools!(agent, [
         Tool(
             name="check_status",
-            parameters=[:message => String],
+            parameters=[:msg => String],
             return_type=String,
             description="Check the status of your current flight",
             strict=false,
@@ -137,7 +137,7 @@ function run_example()
         ),
         Tool(
             name="change_flight",
-            parameters=[:message => String],
+            parameters=[:msg => String],
             return_type=String,
             description="Change your flight to a new flight number",
             strict=false,
