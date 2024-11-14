@@ -15,7 +15,7 @@ using PromptingTools: ToolMessage, UserMessage
         # Create repeating cycle
         tool_sequence = ["tool1", "tool2", "tool3"]
         for _ in 1:3, tool in tool_sequence
-            push!(history, ToolMessage("output", nothing, "id", "id", Dict(), tool, :default))
+            push!(history, ToolMessage("", nothing, "id", "id", Dict(), tool, :default))
         end
 
         @test is_cycle(history, n=3, span=3)
@@ -34,13 +34,13 @@ using PromptingTools: ToolMessage, UserMessage
 
         # Create repeated tools
         for _ in 1:4
-            push!(history, ToolMessage("output", nothing, "id", "id", Dict(), "repeated_tool", :default))
+            push!(history, ToolMessage("", nothing, "id", "id", Dict(), "repeated_tool", :default))
         end
 
         @test num_subsequent_repeats(history) == 4
 
         # Test with mixed tools
-        push!(history, ToolMessage("output", nothing, "id", "id", Dict(), "different_tool", :default))
+        push!(history, ToolMessage("", nothing, "id", "id", Dict(), "different_tool", :default))
         @test num_subsequent_repeats(history) == 4
 
         # Test with privacy wrapper
@@ -79,8 +79,8 @@ using PromptingTools: ToolMessage, UserMessage
 
         # Test cycle termination
         for _ in 1:2
-            push!(history, ToolMessage("output", nothing, "id", "id", Dict(), "tool1", :default))
-            push!(history, ToolMessage("output", nothing, "id", "id", Dict(), "tool2", :default))
+            push!(history, ToolMessage("", nothing, "id", "id", Dict(), "tool1", :default))
+            push!(history, ToolMessage("", nothing, "id", "id", Dict(), "tool2", :default))
         end
         @test isnothing(run_termination_checks(history, agent, io, checks))
 

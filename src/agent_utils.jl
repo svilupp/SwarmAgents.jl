@@ -23,6 +23,8 @@ A reference to another agent in the system.
 """
 struct AgentRef <: AbstractAgentRef
     name::String
+    AgentRef(name::String) = new(name)
+    AgentRef(; name::String) = new(name)
 end
 
 """
