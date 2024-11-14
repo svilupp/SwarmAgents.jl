@@ -97,8 +97,9 @@ end
 """
 Process user message and update context accordingly
 """
-function SwarmAgents.process_message(rules::CarAnalysisFlowRules, message::String, context::Dict)
+function SwarmAgents.process_message(rules::CarAnalysisFlowRules, message::String, session::Session)
     msg = lowercase(message)
+    context = session.context
 
     # First message or reset - create new dataset
     if !haskey(context, "data") || contains(msg, "reset data")
@@ -150,7 +151,7 @@ function SwarmAgents.process_message(rules::CarAnalysisFlowRules, message::Strin
     end
 end
 
-# Example usage:
+# Example usage
 function run_example()
     # Initialize the bot with our rules and context
     bot = Agent(
@@ -160,16 +161,16 @@ function run_example()
 
     # Example conversation
     println("Bot: Welcome to the car data analysis bot! I'll create some mock data for analysis.")
-    println("Bot: ", process_message(bot, "reset data"))
+    println("Bot: ", SwarmAgents.process_message(bot.rules, "reset data", bot))
 
     println("\nUser: show stats")
-    println("Bot: ", process_message(bot, "show stats"))
+    println("Bot: ", SwarmAgents.process_message(bot.rules, "show stats", bot))
 
     println("\nUser: show insights")
-    println("Bot: ", process_message(bot, "show insights"))
+    println("Bot: ", SwarmAgents.process_message(bot.rules, "show insights", bot))
 
     println("\nUser: show plots")
-    println("Bot: ", process_message(bot, "show plots"))
+    println("Bot: ", SwarmAgents.process_message(bot.rules, "show plots", bot))
 end
 
 # Run the example if this file is run directly
