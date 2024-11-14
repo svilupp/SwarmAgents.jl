@@ -69,12 +69,12 @@ using Test
         history = PT.AbstractMessage[
             PT.UserMessage("Start"),
             PrivateMessage(
-                ToolMessage("output", nothing, "authenticate", "authenticate", Dict(), "auth", :default),
+                ToolMessage("output", nothing, "auth", "auth", Dict(), "auth", :default),
                 ["Agent1"]
             ),
-            ToolMessage("output", nothing, "public_tool", "public_tool", Dict(), "public", :default),
+            ToolMessage("output", nothing, "public", "public", Dict(), "public", :default),
             PrivateMessage(
-                ToolMessage("output", nothing, "private_tool", "private_tool", Dict(), "private", :default),
+                ToolMessage("output", nothing, "private", "private", Dict(), "private", :default),
                 ["Agent2"]
             )
         ]
