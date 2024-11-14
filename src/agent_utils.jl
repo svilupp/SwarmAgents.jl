@@ -151,6 +151,8 @@ function add_agent!(session::Session, agent::AbstractAgent)
     agent_sym = Symbol(agent.name)
     if haskey(session.agent_map, agent_sym)
         @warn "Overwriting existing agent '$(agent.name)' in agent map"
+        # Ensure the new agent completely replaces the old one
+        delete!(session.agent_map, agent_sym)
     end
     session.agent_map[agent_sym] = agent
     return nothing

@@ -104,7 +104,9 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         # Add only new messages to history with privacy handling
         filtered_len = length(filtered_history)
         for msg in response[filtered_len+1:end]
-            private_msg = maybe_private_message(msg, active_agent)
+            # Convert message to the same type as the history elements
+            converted_msg = convert_message(eltype(history), msg)
+            private_msg = maybe_private_message(converted_msg, active_agent)
             push!(history, private_msg)
         end
 

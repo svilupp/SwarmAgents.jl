@@ -2,6 +2,7 @@ using Test
 using SwarmAgents
 using PromptingTools
 using PromptingTools: UserMessage
+using Logging
 
 @testset "Agent Utils" begin
     @testset "Agent Type Checks" begin
@@ -21,7 +22,7 @@ using PromptingTools: UserMessage
     @testset "Agent Map Management" begin
         session = Session()
         agent1 = Agent(name="Agent1")
-        agent2 = Agent(name="Agent2")
+        agent2 = Agent(name="Agent1")  # Create agent2 with same name as agent1
         ref1 = AgentRef(name="Agent1")
 
         # Test add_agent!
@@ -29,10 +30,13 @@ using PromptingTools: UserMessage
         @test haskey(session.agent_map, Symbol("Agent1"))
         @test session.agent_map[Symbol("Agent1")] === agent1
 
-        # Test overwrite warning
-        @test_logs (:warn, "Overwriting existing agent 'Agent1' in agent map") add_agent!(session, agent2)
+        # Test overwrite warning and behavior
+        @test_logs (:warn, "Overwriting existing agent 'Agent1' in agent map") begin
+            add_agent!(session, agent2)
+        end
 
-        # Test find_agent
+        # Verify agent2 replaced agent1
+        @test session.agent_map[Symbol("Agent1")] === agent2
         @test find_agent(session.agent_map, ref1) === agent2
 
         # Test nested references
