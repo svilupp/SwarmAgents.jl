@@ -14,7 +14,7 @@ func5() = "test"
 
     # Test tool from agent's tool_map
     history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
-        tool_call_id = "1", raw = "",
+        tool_call_id = "1", raw = "{}",
         name = "func1", args = Dict())])]
 
     result = handle_tool_calls!(agent, history, session)
@@ -24,7 +24,7 @@ func5() = "test"
 
     # Test tool from session rules
     history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
-        tool_call_id = "2", raw = "",
+        tool_call_id = "2", raw = "{}",
         name = "func5", args = Dict())])]
 
     result = handle_tool_calls!(agent, history, session)
@@ -53,7 +53,7 @@ func5() = "test"
         content="Testing tool execution",  # Add content for assistant message
         tool_calls = [ToolMessage(
             content=nothing,  # Explicitly set content to nothing for tool request
-            raw="",
+            raw="{}",
             tool_call_id="test",
             name="func5",
             args=Dict{Symbol,Any}(),
