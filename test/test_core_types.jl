@@ -99,10 +99,12 @@ func2() = nothing
 
         add_rules!(session, flow_rules)
         @test length(session.rules) == 2
-        @test any(rule -> rule isa ToolFlowRules && rule.tool.name == "func1", session.rules)
-        @test any(rule -> rule isa ToolFlowRules && rule.tool.name == "func2", session.rules)
+        @test haskey(session.rules, "func1")
+        @test haskey(session.rules, "func2")
+        @test session.rules["func1"] isa ToolFlowRules
+        @test session.rules["func2"] isa ToolFlowRules
 
         # Test error on duplicate rule
-        @test_throws AssertionError add_rules!(session, ToolFlowRules(Tool(func1)))
+        @test_logs (:warn, "Overwriting existing rule 'func1' in session rules") add_rules!(session, ToolFlowRules(Tool(func1)))
     end
 end

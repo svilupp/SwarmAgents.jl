@@ -1,26 +1,13 @@
 # Core types for SwarmAgents.jl
 
 """
-    AbstractAgent
+Core type implementations for SwarmAgents.
 
-Abstract type for all agent types in SwarmAgents.
+This file contains concrete type implementations and their associated functions.
+Abstract types are defined in abstract_types.jl
 """
-abstract type AbstractAgent end
 
-"""
-    AbstractAgentActor <: AbstractAgent
-
-Abstract type for agent actors that can perform actions.
-"""
-abstract type AbstractAgentActor <: AbstractAgent end
-
-"""
-    AbstractAgentRef <: AbstractAgent
-
-Abstract type for agent references that point to other agents.
-"""
-abstract type AbstractAgentRef <: AbstractAgent end
-
+# Agent reference implementation
 """
     AgentRef <: AbstractAgentRef
 

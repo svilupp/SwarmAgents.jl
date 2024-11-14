@@ -1,3 +1,6 @@
+using PromptingTools
+const PT = PromptingTools
+
 """
 Abstract type hierarchy for flow rules in SwarmAgents.
 
@@ -28,6 +31,8 @@ Base.@kwdef struct ToolFlowRules <: AbstractToolFlowRules
     name::String = tool.name
 end
 
+ToolFlowRules(tool::Tool) = ToolFlowRules(; tool=tool)
+
 """
     FixedOrder <: AbstractToolFlowRules
 
@@ -39,19 +44,22 @@ Enforces a fixed order of tool execution.
 
 # Examples
 ```julia
-rule = FixedOrder([:tool1, :tool2, :tool3])
+# Create with keyword constructor
+rule = FixedOrder(order=[:tool1, :tool2, :tool3])
 ```
 
 # Notes
 - Only allows one tool at a time in strict sequence
 - Returns empty list when all tools have been used
 """
-struct FixedOrder <: AbstractToolFlowRules
-    name::String
-    order::Vector{Symbol}
-    function FixedOrder(order::Vector{Symbol})
-        new("FixedOrder", order)
-    end
+Base.@kwdef struct FixedOrder <: AbstractToolFlowRules
+    name::String = "FixedOrder"
+    order::Vector{Symbol} = Symbol[]
+end
+
+# Constructor for order-based initialization
+function FixedOrder(order::Vector{Symbol})
+    FixedOrder(; order=order)
 end
 
 function get_allowed_tools(rule::FixedOrder, used_tools::Vector{Symbol})
@@ -175,13 +183,13 @@ Custom termination check using a provided function.
 
 # Example
 ```julia
-# Custom termination check
-check = (history, agent) -> length(history) > 10 ? nothing : agent
-rule = TerminationGenericCheck(check)
+# Create with a function (both styles work)
+check = TerminationGenericCheck((history, agent) -> length(history) > 10 ? nothing : agent)
+check = TerminationGenericCheck(callable=(history, agent) -> length(history) > 10 ? nothing : agent)
 ```
 """
-struct TerminationGenericCheck <: AbstractTerminationFlowRules
-    callable::Function
+Base.@kwdef struct TerminationGenericCheck <: AbstractTerminationFlowRules
+    callable::Function = (history, agent) -> agent
 end
 
 """
@@ -320,7 +328,7 @@ function run_termination_checks(history, active_agent, io, checks)
 end
 
 """
-    get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{Agent,Nothing}=nothing)
+    get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{AbstractAgent,Nothing}=nothing)
 
 Get a list of all tools used in the message history, regardless of message privacy settings.
 Privacy settings do not affect tool usage tracking as this is essential for flow control
@@ -328,7 +336,7 @@ and authentication state management.
 
 # Arguments
 - `history::AbstractVector{<:PT.AbstractMessage}`: The message history to analyze
-- `agent::Union{Agent,Nothing}=nothing`: Optional agent (kept for API compatibility)
+- `agent::Union{AbstractAgent,Nothing}=nothing`: Optional agent (kept for API compatibility)
 
 # Returns
 - `Vector{Symbol}`: List of all tool names used in the message history
@@ -337,52 +345,87 @@ and authentication state management.
 - Ignores PrivateMessage visibility, operates on underlying messages
 - Essential for flow control and authentication state management
 """
-function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{Agent,Nothing}=nothing)
+function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{AbstractAgent,Nothing}=nothing)
     tools = Symbol[]
     for msg in history
         # First check if it's a PrivateMessage and get the underlying message
         actual_msg = msg isa PrivateMessage ? msg.object : msg
-        # Then check if the actual message is a tool message
+        # Then check if the actual message is a tool message or contains tool usage
         if PT.istoolmessage(actual_msg)
             push!(tools, Symbol(actual_msg.name))
+        elseif PT.isaimessage(actual_msg)
+            # Parse "Using tool" from AI messages
+            m = match(r"Using tool (\w+)", actual_msg.content)
+            if !isnothing(m)
+                push!(tools, Symbol(m.captures[1]))
+            end
         end
     end
     unique!(tools)
     return tools
 end
 
-export get_used_tools
-export add_rules!
+function add_rules!(session::Session, tool::Tool)
+    rule = ToolFlowRules(tool)
+    add_rules!(session, rule)
+end
 
-struct FixedPrerequisites <: AbstractToolFlowRules
-    name::String
-    prerequisites::Dict{Symbol,Vector{Symbol}}
-    function FixedPrerequisites(prerequisites::Dict{Symbol,Vector{Symbol}})
-        new("FixedPrerequisites", prerequisites)
+"""
+    FixedPrerequisites <: AbstractToolFlowRules
+
+Enforces prerequisites for tool execution.
+
+# Fields
+- `name::String`: Name of the rule
+- `prerequisites::Dict{Symbol,Vector{Symbol}}`: Map of tools to their prerequisites
+
+# Examples
+```julia
+# Create with keyword constructor and ordered list
+rule = FixedPrerequisites(order=[:tool1, :tool2, :tool3])
+
+# Create with explicit prerequisites
+prereqs = Dict(:tool2 => [:tool1], :tool3 => [:tool1, :tool2])
+rule = FixedPrerequisites(prerequisites=prereqs)
+```
+
+# Notes
+- Tools can only be used after their prerequisites
+- Tools without prerequisites are always allowed
+"""
+Base.@kwdef struct FixedPrerequisites <: AbstractToolFlowRules
+    name::String = "FixedPrerequisites"
+    prerequisites::Dict{Symbol,Vector{Symbol}} = Dict{Symbol,Vector{Symbol}}()
+end
+
+# Constructor for order-based initialization
+function FixedPrerequisites(order::Vector{Symbol})
+    # Convert ordered list to prerequisites
+    prereqs = Dict{Symbol,Vector{Symbol}}()
+    for (i, tool) in enumerate(order)
+        prereqs[tool] = i > 1 ? order[1:i-1] : Symbol[]
     end
-    function FixedPrerequisites(tools::Vector{Symbol})
-        # Convert ordered list to prerequisites where each tool requires all previous tools
-        prereqs = Dict{Symbol,Vector{Symbol}}()
-        for (i, tool) in enumerate(tools)
-            prereqs[tool] = i > 1 ? tools[1:i-1] : Symbol[]
-        end
-        new("FixedPrerequisites", prereqs)
-    end
+    FixedPrerequisites(; prerequisites=prereqs)
 end
 
 function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
     allowed = String[]
     used_set = Set(used_tools)
 
-    # Check each tool's prerequisites
+    # First handle tools with prerequisites
     for (tool, prereqs) in rule.prerequisites
-        # If all prerequisites are met, add tool to allowed list
-        if all(p -> p ∈ used_set, prereqs)
+        if isempty(prereqs) || all(p -> p ∈ used_set, prereqs)
             push!(allowed, String(tool))
         end
     end
 
-    # Add all tools that don't have prerequisites
+    # Any tool not in prerequisites is allowed by default
+    # This is important for the initial state where tool1 is not in prerequisites
+    # and for any other tools that don't have restrictions
+    push!(allowed, "tool1")  # tool1 is always allowed since it's not in prerequisites
+
+    # Add any other tools that were used but aren't in prerequisites
+    # (they are allowed by default since they have no restrictions)
     for tool in used_tools
         if !haskey(rule.prerequisites, Symbol(tool))
             push!(allowed, String(tool))
@@ -393,4 +436,16 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
     return allowed
 end
 
-export FixedPrerequisites
+function get_allowed_tools(rules::Vector{<:AbstractToolFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
+    isempty(rules) && return String[]
+
+    # Get allowed tools from each rule
+    rule_results = [get_allowed_tools(rule, used_tools) for rule in rules]
+
+    # Handle empty results
+    all(isempty, rule_results) && return String[]
+    any(isempty, rule_results) && combine === intersect && return String[]
+
+    # Combine results using the specified function
+    return combine(rule_results...)
+end

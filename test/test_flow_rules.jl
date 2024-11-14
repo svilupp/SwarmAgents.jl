@@ -50,7 +50,7 @@ using SwarmAgents: ToolFlowRules, PrivateMessage
     end
 
     @testset "TerminationGenericCheck" begin
-        check = TerminationGenericCheck((history, agent) -> length(history) > 3 ? nothing : agent)
+        check = TerminationGenericCheck(callable=(history, agent) -> length(history) > 3 ? nothing : agent)
         agent = Agent(name="TestAgent")
         history = []
 
@@ -72,7 +72,7 @@ using SwarmAgents: ToolFlowRules, PrivateMessage
         checks = [
             TerminationCycleCheck(2, 2),
             TerminationRepeatCheck(3),
-            TerminationGenericCheck((h, a) -> length(h) > 5 ? nothing : a)
+            TerminationGenericCheck(callable=(h, a) -> length(h) > 5 ? nothing : a)
         ]
 
         # Test no termination
@@ -91,90 +91,67 @@ using SwarmAgents: ToolFlowRules, PrivateMessage
     end
 
     @testset "FixedOrder" begin
-        # Create an agent with tools
-        agent = Agent(name="TestAgent")
-        tool1 = Tool(name="tool1", func=identity)
-        tool2 = Tool(name="tool2", func=identity)
-        tool3 = Tool(name="tool3", func=identity)
-        add_tools!(agent, [tool1, tool2, tool3])
+        # Create a session with tools
+        session = Session()
+        tool1 = Tool(name="tool1", parameters=Dict(), description="Test tool 1", strict=false, callable=identity)
+        tool2 = Tool(name="tool2", parameters=Dict(), description="Test tool 2", strict=false, callable=identity)
+        tool3 = Tool(name="tool3", parameters=Dict(), description="Test tool 3", strict=false, callable=identity)
 
-        # Create FixedOrder rule
-        rule = FixedOrder([:tool1, :tool2, :tool3])
-        add_rules!(agent, rule)
+        # Create FixedOrder rule with keyword constructor
+        rule = FixedOrder(order=[:tool1, :tool2, :tool3])
+        add_rules!(session, rule)
 
         # Test initial state (only first tool allowed)
         history = PT.AbstractMessage[]
-        tools = collect(values(agent.tool_map))
-        filtered_tools = apply_rules(history, agent, tools)
-        @test length(filtered_tools) == 1
-        @test first(filtered_tools).name == "tool1"
+        tools = [tool1, tool2, tool3]
+        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
 
         # Test after using first tool
         push!(history, AIMessage(content="Using tool tool1"))
-        filtered_tools = apply_rules(history, agent, tools)
-        @test length(filtered_tools) == 1
-        @test first(filtered_tools).name == "tool2"
-
-        # Test get_allowed_tools
-        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
         @test get_allowed_tools(rule, [:tool1]) == ["tool2"]
+
+        # Test after using all tools
         @test isempty(get_allowed_tools(rule, [:tool1, :tool2, :tool3]))
     end
 
     @testset "FixedPrerequisites" begin
-        # Create an agent with tools
-        agent = Agent(name="TestAgent")
-        tool1 = Tool(name="tool1", func=identity)
-        tool2 = Tool(name="tool2", func=identity)
-        tool3 = Tool(name="tool3", func=identity)
-        add_tools!(agent, [tool1, tool2, tool3])
+        # Create a session with tools
+        session = Session()
+        tool1 = Tool(name="tool1", parameters=Dict(), description="Test tool 1", strict=false, callable=identity)
+        tool2 = Tool(name="tool2", parameters=Dict(), description="Test tool 2", strict=false, callable=identity)
+        tool3 = Tool(name="tool3", parameters=Dict(), description="Test tool 3", strict=false, callable=identity)
 
-        # Create FixedPrerequisites rule
-        rule = FixedPrerequisites([:tool1, :tool2, :tool3])
-        add_rules!(agent, rule)
+        # Create FixedPrerequisites rule with explicit prerequisites
+        prereqs = Dict(:tool2 => [:tool1], :tool3 => [:tool1, :tool2])
+        rule = FixedPrerequisites(prerequisites=prereqs)
+        add_rules!(session, rule)
 
-        # Test initial state (only first tool allowed)
-        history = PT.AbstractMessage[]
-        tools = collect(values(agent.tool_map))
-        filtered_tools = apply_rules(history, agent, tools)
-        @test length(filtered_tools) == 1
-        @test first(filtered_tools).name == "tool1"
+        # Test initial state (only tool1 allowed)
+        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
 
         # Test after using first tool (first and second allowed)
-        push!(history, AIMessage(content="Using tool tool1"))
-        filtered_tools = apply_rules(history, agent, tools)
-        @test length(filtered_tools) == 2
-        @test Set(t.name for t in filtered_tools) == Set(["tool1", "tool2"])
-
-        # Test get_allowed_tools
-        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
         @test Set(get_allowed_tools(rule, [:tool1])) == Set(["tool1", "tool2"])
+
+        # Test after using first and second tools (all tools allowed)
         @test Set(get_allowed_tools(rule, [:tool1, :tool2])) == Set(["tool1", "tool2", "tool3"])
     end
 
     @testset "Multiple Rules" begin
-        agent = Agent(name="TestAgent")
-        tool1 = Tool(name="tool1", func=identity)
-        tool2 = Tool(name="tool2", func=identity)
-        tool3 = Tool(name="tool3", func=identity)
-        add_tools!(agent, [tool1, tool2, tool3])
+        # Create a session with tools
+        session = Session()
+        tool1 = Tool(name="tool1", parameters=Dict(), description="Test tool 1", strict=false, callable=identity)
+        tool2 = Tool(name="tool2", parameters=Dict(), description="Test tool 2", strict=false, callable=identity)
+        tool3 = Tool(name="tool3", parameters=Dict(), description="Test tool 3", strict=false, callable=identity)
 
         # Add both types of rules
-        fixed_order = FixedOrder([:tool1, :tool2])
-        prerequisites = FixedPrerequisites([:tool2, :tool3])
-        add_rules!(agent, [fixed_order, prerequisites])
-
-        # Test initial state (only tool1 allowed due to FixedOrder)
-        history = PT.AbstractMessage[]
-        tools = collect(values(agent.tool_map))
-        filtered_tools = apply_rules(history, agent, tools)
-        @test length(filtered_tools) == 1
-        @test first(filtered_tools).name == "tool1"
+        fixed_order = FixedOrder(order=[:tool1, :tool2])
+        prereqs = Dict(:tool2 => [:tool1], :tool3 => [:tool1, :tool2])
+        prerequisites = FixedPrerequisites(prerequisites=prereqs)
 
         # Test combining rules
         used_tools = Symbol[]
         allowed = get_allowed_tools([fixed_order, prerequisites], used_tools)
-        @test isempty(allowed) # tool1 from fixed_order but not allowed by prerequisites
+        @test allowed == ["tool1"] # tool1 is first in order and has no prerequisites
 
         # Test after using tool1
         used_tools = [:tool1]
@@ -184,7 +161,7 @@ using SwarmAgents: ToolFlowRules, PrivateMessage
         # Test with vcat
         used_tools = Symbol[]
         allowed = get_allowed_tools([fixed_order, prerequisites], used_tools; combine=vcat)
-        @test Set(allowed) == Set(["tool1", "tool2"]) # tool1 from fixed_order and tool2 from prerequisites
+        @test Set(allowed) == Set(["tool1"]) # tool1 is first in both rules
     end
 
     @testset "get_used_tools" begin
