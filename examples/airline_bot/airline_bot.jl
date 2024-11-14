@@ -1,5 +1,4 @@
 using SwarmAgents
-using SwarmAgents: process_message
 using PromptingTools
 const PT = PromptingTools
 using Dates
@@ -140,8 +139,8 @@ function run_example()
 
     for (i, msg) in enumerate(messages)
         println("\nUser: $msg")
-        response = process_message(session, msg)
-        println("Bot: $response")
+        run_full_turn!(session, msg)
+        # The response is already printed by run_full_turn!
     end
 end
 
