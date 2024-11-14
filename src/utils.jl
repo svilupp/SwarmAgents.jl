@@ -42,8 +42,9 @@ function handle_tool_calls!(
             !isempty(args) && merge!(payload, args)
             output = JSON3.write(payload)
         end
-        # Create a new ToolMessage with the output content
+        # Create a new ToolMessage with the output content and wrap if agent is private
         output_msg = ToolMessage(string(output), nothing, tool.tool_call_id, tool.tool_call_id, Dict{Symbol,Any}(), tool.name, :default)
+        output_msg = maybe_private_message(output_msg, active_agent)
         print_progress(session.io, active_agent, output_msg)
         push!(history, output_msg)
     end
@@ -90,15 +91,28 @@ function run_full_turn(agent::Agent, messages::AbstractVector{<:PT.AbstractMessa
             collect(values(active_agent.tool_map)),
             collect(values(session.rules))
         )
-        update_system_message!(history, active_agent)
-        history = PT.aitools(history; model = active_agent.model,
+
+        # Create a filtered copy of history for AI processing
+        filtered_history = filter_history(history, active_agent)
+        update_system_message!(filtered_history, active_agent)
+
+        # Get AI response using filtered history
+        response = PT.aitools(filtered_history; model = active_agent.model,
             tools, name_user = "User", name_assistant = scrub_agent_name(active_agent),
             return_all = true, verbose = false, kwargs...)
-        # Print assistant response
-        if !isnothing(PT.last_output(history))
-            print_progress(session.io, active_agent, history[end])
+
+        # Add only new messages to history with privacy handling
+        filtered_len = length(filtered_history)
+        for msg in response[filtered_len+1:end]
+            private_msg = maybe_private_message(msg, active_agent)
+            push!(history, private_msg)
         end
-        isempty(tool_calls(history[end])) && break
+
+        # Print assistant response
+        if !isnothing(PT.last_output(response))
+            print_progress(session.io, active_agent, response[end])
+        end
+        isempty(tool_calls(response[end])) && break
         # Run tool calls
         (; active_agent, history) = handle_tool_calls!(
             active_agent, history, session)
