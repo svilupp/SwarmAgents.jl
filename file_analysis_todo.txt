@@ -1,0 +1,30 @@
+# Source Files to Analyze
+- [x] src/SwarmAgents.jl (Main module file - keep) - DONE: Centralized imports, organized exports
+- [x] src/agent_management.jl (New file - keep) - DONE: Contains agent management functionality
+- [x] src/agent_types.jl (New file - keep) - DONE: Contains agent type definitions
+- [x] src/core_types.jl (New file - keep) - DONE: Contains core type definitions
+- [x] src/flow_rules.jl (New file - keep) - DONE: Contains flow rule implementations
+- [x] src/privacy.jl (New file - keep) - DONE: Contains privacy functionality
+- [x] src/tools.jl (Analyze for potential merge) - DONE: Contains tool-specific functionality
+- [x] src/types.jl (Likely redundant with core_types.jl) - DONE: Removed, content distributed
+- [x] src/utils.jl (Keep but review contents) - DONE: Contains utility functions
+- [x] src/workflow.jl (New file - keep) - DONE: Contains workflow management, added add_tools!
+
+# Test Files to Analyze
+- [x] test/Project.toml (Keep - project file) - DONE: Required for test environment
+- [x] test/runtests.jl (Keep - main test file) - DONE: Updated with new test organization
+- [x] test/flow_rules.jl (Likely redundant) - DONE: Removed, merged into test_flow_rules.jl
+- [x] test/flow_rules_test.jl (Likely redundant) - DONE: Removed, merged into test_flow_rules.jl
+- [x] test/test_core_types.jl (New file - keep) - DONE: Contains core type tests
+- [x] test/test_flow_rules.jl (Keep - main flow rules test) - DONE: Contains flow rule tests
+- [x] test/test_privacy.jl (Keep - privacy tests) - DONE: Contains privacy tests
+- [x] test/test_swarm.jl (Keep - integration tests) - DONE: Contains integration tests
+- [x] test/test_utils.jl (Keep - utility tests) - DONE: Contains utility tests
+- [x] test/test_workflow.jl (Keep - workflow tests) - DONE: Contains workflow tests
+
+Notes:
+- All files have been analyzed and organized according to logical blocks
+- Imports centralized in SwarmAgents.jl
+- Exports placed next to associated include statements
+- Redundant files removed and content properly distributed
+- Test files organized to mirror source structure
