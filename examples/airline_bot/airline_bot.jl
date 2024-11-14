@@ -96,6 +96,9 @@ function run_example()
     )
 
     # Initialize the agent with tools
+    tool_map = Dict{String, PromptingTools.AbstractTool}(
+        tool.name => tool for tool in [check_status_tool, change_flight_tool]
+    )
     agent = Agent(;
         name = "Airline Bot",
         instructions = """
@@ -104,7 +107,7 @@ function run_example()
         - Changing flights
         Use the available tools to assist customers.
         """,
-        tools = [check_status_tool, change_flight_tool]
+        tool_map = tool_map
     )
 
     # Create a session
