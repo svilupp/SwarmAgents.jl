@@ -15,8 +15,7 @@ export AbstractAgent, AbstractAgentActor, AbstractAgentRef, Agent, Session,
 
 # Utilities (shared functions)
 include("utils.jl")
-export print_progress, scrub_agent_name, convert_message,
-    add_tools!, add_rules!
+export print_progress, scrub_agent_name, convert_message
 
 # Privacy functionality
 include("privacy.jl")
@@ -30,7 +29,7 @@ export AbstractFlowRules, AbstractToolFlowRules, AbstractTerminationFlowRules,
 
 # Workflow (run_full_turn, handle tool calls)
 include("workflow.jl")
-export run_full_turn, run_full_turn!, Response
+export run_full_turn, run_full_turn!, Response, add_tools!
 
 # Tools functionality
 include("tools.jl")

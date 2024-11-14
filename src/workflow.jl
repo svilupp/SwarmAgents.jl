@@ -131,3 +131,24 @@ function run_full_turn!(session::Session, user_prompt::AbstractString; kwargs...
 
     return session
 end
+
+### Tools Management
+"""
+    add_tools!(agent::Agent, tools::Vector)
+
+Adds `tools` to an `agent`.
+"""
+function add_tools!(agent::Agent, tools::Vector; kwargs...)
+    for tool in tools
+        add_tools!(agent, tool; kwargs...)
+    end
+end
+
+function add_tools!(agent::Agent, tool::AbstractTool; kwargs...)
+    @assert tool.name∉keys(agent.tool_map) "Tool $(tool.name) already exists. Only unique tool names are allowed."
+    agent.tool_map[tool.name] = tool
+end
+
+function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
+    add_tools!(agent, Tool(callable; kwargs...))
+end
