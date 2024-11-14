@@ -28,20 +28,6 @@ Base.@kwdef mutable struct AirlineContext
 end
 
 """
-Session context wrapper for type safety
-"""
-Base.@kwdef mutable struct SessionContext
-    context::AirlineContext
-end
-
-"""
-Convert SessionContext to Dict format required by SwarmAgents.Session
-"""
-function to_session_dict(ctx::SessionContext)::Dict{Symbol,Any}
-    Dict{Symbol,Any}(:context => ctx.context)
-end
-
-"""
 Check if a flight exists in our database
 """
 function flight_exists(flight_number::String)
@@ -70,71 +56,6 @@ function change_flight!(context::AirlineContext, new_flight::String)
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-# Define our tools
-
-# Parameter structures for tools
-Base.@kwdef struct CheckFlightParams
-    flight_number::Union{String, Nothing} = nothing
-end
-
-Base.@kwdef struct ChangeFlightParams
-    new_flight::String
-end
-
-"""
-    check_flight_status(params::CheckFlightParams, session::Session)::String
-
-Check the status of the current flight in the session context.
-
-# Arguments
-- `params::CheckFlightParams`: Parameters for checking flight status
-- `session::Session`: The current session containing context
-
-# Returns
-- `String`: A message containing the flight details or status
-"""
-function check_flight_status(params::CheckFlightParams, session::Session)::String
-    airline_context = session.context[:context]::AirlineContext
-    if isnothing(airline_context.current_flight)
-        return "No flight currently booked"
-    end
-    get_flight_details(airline_context.current_flight)
-end
-
-"""
-    change_flight(params::ChangeFlightParams, session::Session)::String
-
-Change the current flight to a new flight number.
-
-# Arguments
-- `params::ChangeFlightParams`: Parameters containing the new flight number
-- `session::Session`: The current session containing context
-
-# Returns
-- `String`: A confirmation message or error message
-"""
-function change_flight(params::ChangeFlightParams, session::Session)::String
-    airline_context = session.context[:context]::AirlineContext
-    change_flight!(airline_context, params.new_flight)
-end
-
-# Create wrapper functions that handle parameter extraction from messages
-"""
-    extract_flight_number(msg::String)::Union{String, Nothing}
-
-Extract flight number from a message string.
-
-# Arguments
-- `msg::String`: The message to extract from
-
-# Returns
-- `Union{String, Nothing}`: The extracted flight number or nothing
-"""
-function extract_flight_number(msg::String)::Union{String, Nothing}
-    flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
-    isnothing(flight_match) ? nothing : flight_match[1]
-end
-
 """
     wrapped_check_status(msg::String, session::Session)::String
 
@@ -148,8 +69,11 @@ Tool function to check the status of the current flight.
 - `String`: A message containing the flight details or status
 """
 function wrapped_check_status(msg::String, session::Session)::String
-    params = CheckFlightParams()
-    check_flight_status(params, session)
+    context = session.context::AirlineContext
+    if isnothing(context.current_flight)
+        return "No flight currently booked"
+    end
+    get_flight_details(context.current_flight)
 end
 
 """
@@ -165,12 +89,13 @@ Tool function to change the current flight based on the message.
 - `String`: A confirmation message or error message
 """
 function wrapped_change_flight(msg::String, session::Session)::String
-    flight_number = extract_flight_number(msg)
-    if isnothing(flight_number)
+    flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
+    if isnothing(flight_match)
         return "Please specify the new flight number (e.g., 'change flight to FL124')"
     end
-    params = ChangeFlightParams(new_flight=flight_number)
-    change_flight(params, session)
+    new_flight = flight_match[1]
+    context = session.context::AirlineContext
+    change_flight!(context, new_flight)
 end
 
 # Example usage:
@@ -197,7 +122,7 @@ function run_example()
     add_tools!(agent, [wrapped_check_status, wrapped_change_flight])
 
     # Create a session with proper context
-    session = Session(agent; context=to_session_dict(SessionContext(context=context)))
+    session = Session(agent; context=context)
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
