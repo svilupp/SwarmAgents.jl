@@ -51,6 +51,7 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         push!(history, output_msg)
     end
     return (; active_agent = next_agent, history, context = session.context)
+end
 
 """
     update_system_message!(history::AbstractVector{<:PT.AbstractMessage}, active_agent::Union{Agent, Nothing})

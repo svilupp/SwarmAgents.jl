@@ -4,8 +4,8 @@ module SwarmAgents
 using JSON3
 using PromptingTools
 const PT = PromptingTools
-using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIMessage, ToolMessage
-using PromptingTools: AbstractTool, isabstracttool, Tool, istoolmessage, isaimessage, isusermessage, issystemmessage, isaitoolrequest
+using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIMessage, ToolMessage, AssistantMessage
+using PromptingTools: AbstractTool, isabstracttool, Tool, istoolmessage, isaimessage, isusermessage, issystemmessage, isaitoolrequest, isassistantmessage
 using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 # Note: ToolCall is accessed via PT.ToolCall
 
