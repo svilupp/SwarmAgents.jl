@@ -121,6 +121,44 @@ function change_flight(params::ChangeFlightParams)::String
     change_flight!(params.context.context, new_flight)
 end
 
+# Create wrapper functions that handle parameter construction
+"""
+    wrapped_check_status(context::Dict{Symbol,Any})::String
+
+Tool function to check the status of the current flight.
+
+# Arguments
+- `context::Dict{Symbol,Any}`: The session context containing flight information
+
+# Returns
+- `String`: A message containing the flight details or status
+"""
+function wrapped_check_status(context::Dict{Symbol,Any})::String
+    airline_context = context[:context]::AirlineContext
+    session_context = SessionContext(context=airline_context)
+    params = CheckFlightStatusParams(context=session_context)
+    check_flight_status(params)
+end
+
+"""
+    wrapped_change_flight(msg::String, context::Dict{Symbol,Any})::String
+
+Tool function to change the current flight based on the message.
+
+# Arguments
+- `msg::String`: The user message containing the new flight number
+- `context::Dict{Symbol,Any}`: The session context containing flight information
+
+# Returns
+- `String`: A confirmation message or error message
+"""
+function wrapped_change_flight(msg::String, context::Dict{Symbol,Any})::String
+    airline_context = context[:context]::AirlineContext
+    session_context = SessionContext(context=airline_context)
+    params = ChangeFlightParams(msg=msg, context=session_context)
+    change_flight(params)
+end
+
 # Example usage:
 function run_example()
     # Initialize the context
@@ -141,22 +179,9 @@ function run_example()
         """
     )
 
-    # Create wrapper functions that handle parameter construction
-    function wrapped_check_status(context::SessionContext)
-        params = CheckFlightStatusParams(context=context)
-        check_flight_status(params)
-    end
-
-    function wrapped_change_flight(msg::String, context::SessionContext)
-        params = ChangeFlightParams(msg=msg, context=context)
-        change_flight(params)
-    end
-
     # Add tools to the agent
-    add_tools!(agent, [
-        PT.Tool(wrapped_check_status; name="check_flight_status", docs="Check the status of the current flight"),
-        PT.Tool(wrapped_change_flight; name="change_flight", docs="Change the current flight to a new flight number")
-    ])
+    tool_map = PT.tool_call_signature([wrapped_check_status, wrapped_change_flight])
+    add_tools!(agent, collect(values(tool_map)))
 
     # Create a session with proper context
     session = Session(agent; context=to_session_dict(SessionContext(context=context)))
