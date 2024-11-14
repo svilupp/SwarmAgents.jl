@@ -70,7 +70,7 @@ isabstractagentactor(agent::AbstractAgent) = agent isa AbstractAgentActor
 isabstractagentactor(::Any) = false
 
 """
-    find_agent(agent_map::Dict{Symbol, AbstractAgent}, agent_ref)
+    find_agent(agent_map::Dict{Symbol, <:AbstractAgent}, agent_ref)
 
 Follow references through the agent map until finding a real agent that is not a reference.
 If a real agent (not AbstractAgentRef) is provided, it's returned as is.
@@ -91,40 +91,71 @@ If an AgentRef is provided, follows references until finding a real agent or err
 - If a real agent (not AbstractAgentRef) is provided, it's returned as-is
 - Agent structs do not have to be in agent_map, only AgentRefs must be there
 """
-function find_agent(agent_map::Dict{Symbol, AbstractAgent}, agent_ref)
+function find_agent(agent_map::Dict{Symbol, <:AbstractAgent}, agent_ref)
+    # If it's already an actor, return it immediately
+    if isabstractagentactor(agent_ref)
+        return agent_ref
+    end
+
+    # Convert string to symbol if needed
+    if agent_ref isa String
+        agent_ref = Symbol(agent_ref)
+    end
+
+    # If it's a reference, get its name as symbol
+    if agent_ref isa AbstractAgentRef
+        agent_ref = Symbol(agent_ref.name)
+    end
+
+    # At this point, agent_ref should be a Symbol
+    if !(agent_ref isa Symbol)
+        throw(ArgumentError("Invalid agent reference type: $(typeof(agent_ref))"))
+    end
+
     # Track visited references to detect cycles
     visited = Set{Symbol}()
 
-    function resolve_ref(current_ref)
-        if current_ref isa String
-            current_ref = Symbol(current_ref)
+    # Follow the reference chain
+    current_ref = agent_ref
+    while true
+        # Check for cycles
+        if current_ref in visited
+            throw(ArgumentError("Circular reference detected in agent map"))
+        end
+        push!(visited, current_ref)
+
+        # Check if reference exists
+        if !haskey(agent_map, current_ref)
+            throw(ArgumentError("Agent reference not found: $current_ref"))
         end
 
-        if current_ref isa Symbol
-            if current_ref in visited
-                throw(ArgumentError("Circular reference detected in agent map"))
-            end
-            push!(visited, current_ref)
+        # Get the referenced agent
+        agent = agent_map[current_ref]
 
-            !haskey(agent_map, current_ref) &&
-                throw(ArgumentError("Agent reference not found: $current_ref"))
-            return resolve_ref(agent_map[current_ref])
+        # If it's an actor, we're done
+        if isabstractagentactor(agent)
+            return agent
         end
 
-        if current_ref isa AbstractAgent
-            if isabstractagentactor(current_ref)
-                return current_ref
-            elseif isabstractagentref(current_ref)
-                return resolve_ref(Symbol(current_ref.name))
-            end
+        # If it's a reference, continue following the chain
+        if isabstractagentref(agent)
+            current_ref = Symbol(agent.name)
+            continue
         end
 
-        throw(ArgumentError("Invalid agent reference type: $(typeof(current_ref))"))
+        throw(ArgumentError("Invalid agent type in map: $(typeof(agent))"))
     end
+end
 
-    resolve_ref(agent_ref)
+function add_agent!(session::Session, agent::AbstractAgent)
+    agent_sym = Symbol(agent.name)
+    if haskey(session.agent_map, agent_sym)
+        @warn "Overwriting existing agent '$(agent.name)' in agent map"
+    end
+    session.agent_map[agent_sym] = agent
+    return nothing
 end
 
 export AbstractAgent, AbstractAgentActor, AbstractAgentRef, AgentRef,
     isabstractagent, isabstractagentref, isabstractagentactor,
-    find_agent
+    find_agent, add_agent!
