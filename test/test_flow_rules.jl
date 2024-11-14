@@ -1,7 +1,7 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: ToolMessage, UserMessage
+using PromptingTools: ToolMessage, UserMessage, AIToolRequestMessage, ToolCall
 
 @testset "Flow Rules" begin
     @testset "TerminationCycleCheck" begin
