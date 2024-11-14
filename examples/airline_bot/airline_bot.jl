@@ -119,7 +119,22 @@ function run_example()
     )
 
     # Add tools to the agent
-    add_tools!(agent, [wrapped_check_status, wrapped_change_flight])
+    add_tools!(agent, [
+        Tool(
+            name="check_status",
+            parameters=Dict(),
+            description="Check the status of your current flight",
+            strict=false,
+            callable=wrapped_check_status
+        ),
+        Tool(
+            name="change_flight",
+            parameters=Dict(),
+            description="Change your flight to a new flight number",
+            strict=false,
+            callable=wrapped_change_flight
+        )
+    ])
 
     # Create a session with proper context
     session = Session(agent; context=context)
