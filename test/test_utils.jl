@@ -1,7 +1,7 @@
 using Test
 using SwarmAgents
 using PromptingTools
-using PromptingTools: UserMessage, AIToolRequest, ToolMessage
+using PromptingTools: UserMessage, AIToolRequestMessage, ToolMessage, ToolCall
 
 @testset "Utilities" begin
     @testset "scrub_agent_name" begin
@@ -18,31 +18,31 @@ using PromptingTools: UserMessage, AIToolRequest, ToolMessage
 
         # Test with io = nothing
         io = nothing
-        msg = AIToolRequest("content", Vector{ToolMessage}(), "test", nothing, (1,1), 0.0, nothing, nothing, nothing, nothing, nothing, nothing, :default)
+        msg = AIToolRequestMessage(tool_calls=[ToolCall(name="test", args="")])
         @test isnothing(print_progress(io, agent, msg))
 
         # Test with StringIO to capture output
         io = IOBuffer()
 
-        # Test AIToolRequest with content
-        msg = AIToolRequest("content", Vector{ToolMessage}(), "test", nothing, (1,1), 0.0, nothing, nothing, nothing, nothing, nothing, nothing, :default)
+        # Test AIToolRequestMessage with content
+        msg = AIToolRequestMessage(tool_calls=[ToolCall(name="test", args="")])
         print_progress(io, agent, msg)
         output = String(take!(io))
-        @test contains(output, "Assistant (TestAgent): content")
+        @test contains(output, "TestAgent")
         @test contains(output, ">>")
 
         # Test ToolMessage without content
-        msg = ToolMessage(nothing, nothing, "test_tool", "test_tool", Dict{Symbol,Any}(:arg1 => "value1"), nothing, :default)
+        msg = ToolMessage(nothing, nothing, "test_tool", "test_tool", Dict{Symbol,Any}(:arg1 => "value1"), "test_tool", :default)
         print_progress(io, agent, msg)
         output = String(take!(io))
-        @test contains(output, "Tool Request: test_tool")
-        @test contains(output, "args: ")
+        @test contains(output, "Using tool: test_tool")
         @test contains(output, "arg1")
+        @test contains(output, "value1")
 
         # Test ToolMessage with content
-        msg = ToolMessage("output", nothing, "test_tool", "test_tool", Dict{Symbol,Any}(), nothing, :default)
+        msg = ToolMessage("output", nothing, "test_tool", "test_tool", Dict{Symbol,Any}(), "test_tool", :default)
         print_progress(io, agent, msg)
         output = String(take!(io))
-        @test contains(output, "Tool Output: output")
+        @test contains(output, "Tool response: output")
     end
 end
