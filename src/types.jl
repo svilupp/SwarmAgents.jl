@@ -4,6 +4,9 @@ using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 
 export Agent, Session, Response, add_rules!, add_tools!
 
+"""
+    Agent
+
 Agent is a stateless struct that holds the the reference to LLM, tools and the instructions.
 
 # Fields
@@ -45,7 +48,7 @@ Session is a mutable struct that holds the `messages`, `agent` and `context`.
 - `artifacts::Vector{Any}`: Collects all tool outputs in their full extent.
 - `io::Union{Nothing,IO}`: The sink for printing the outputs.
 - `rules::Dict{String, AbstractTool}`: The rules for the session.
-- `agent_map::Dict{Symbol, AbstractAgent}`: Map of agent references to actual agents.
+- `agent_map::Dict{Symbol, AbstractAgent}`: Map of agent references to actual agents. Used for resolving agent references.
 """
 Base.@kwdef mutable struct Session
     messages::Vector = PT.AbstractMessage[]
@@ -157,3 +160,30 @@ end
 function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
     add_tools!(agent, Tool(callable; kwargs...))
 end
+
+"""
+    add_agent!(session::Session, agent::AbstractAgent)
+
+Add an agent to the session's agent map. If an agent with the same name already exists,
+a warning is issued before overwriting.
+
+# Arguments
+- `session::Session`: The session to add the agent to
+- `agent::AbstractAgent`: The agent to add
+
+# Returns
+- `Session`: The modified session
+
+# Notes
+- Issues a warning if overwriting an existing agent
+"""
+function add_agent!(session::Session, agent::AbstractAgent)
+    agent_name = Symbol(agent.name)
+    if haskey(session.agent_map, agent_name)
+        @warn "Overwriting existing agent '$(agent.name)' in agent map"
+    end
+    session.agent_map[agent_name] = agent
+    return session
+end
+
+export add_agent!

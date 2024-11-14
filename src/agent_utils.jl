@@ -123,31 +123,6 @@ function find_agent(agent_map::Dict{Symbol, AbstractAgent}, agent_ref)
     resolve_ref(agent_ref)
 end
 
-"""
-    add_agent!(session::Session, agent::AbstractAgent)
-
-Add an agent to the session's agent map. If an agent with the same name already exists,
-a warning is issued before overwriting.
-
-# Arguments
-- `session::Session`: The session to add the agent to
-- `agent::AbstractAgent`: The agent to add
-
-# Returns
-- `Session`: The modified session
-
-# Notes
-- Issues a warning if overwriting an existing agent
-"""
-function add_agent!(session::Session, agent::AbstractAgent)
-    agent_name = Symbol(agent.name)
-    if haskey(session.agent_map, agent_name)
-        @warn "Overwriting existing agent '$(agent.name)' in agent map"
-    end
-    session.agent_map[agent_name] = agent
-    return session
-end
-
 export AbstractAgent, AbstractAgentActor, AbstractAgentRef, AgentRef,
     isabstractagent, isabstractagentref, isabstractagentactor,
-    find_agent, add_agent!
+    find_agent
