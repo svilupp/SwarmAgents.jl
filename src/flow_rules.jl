@@ -122,18 +122,35 @@ function is_cycle(history; n::Int, span::Int)
     isempty(tool_sequence) && return false
 
     # Check for cycles of different lengths
-    for cycle_length in 2:span
-        length(tool_sequence) < cycle_length * n && continue
+    for cycle_length in 2:min(span, length(tool_sequence))
+        # Get all possible cycles starting from the end
+        for start_idx in (length(tool_sequence) - cycle_length * n + 1):-1:1
+            # Extract the potential cycle pattern
+            pattern = tool_sequence[start_idx:start_idx + cycle_length - 1]
 
-        # Get the last n * cycle_length tools
-        recent_tools = tool_sequence[end-(cycle_length*n-1):end]
+            # Check if this pattern repeats n times consecutively
+            is_repeating = true
+            for i in 1:n-1
+                next_start = start_idx + i * cycle_length
+                next_end = next_start + cycle_length - 1
 
-        # Split into potential cycles
-        cycles = [recent_tools[i:i+cycle_length-1] for i in 1:cycle_length:length(recent_tools)]
+                # Break if we don't have enough elements left
+                if next_end > length(tool_sequence)
+                    is_repeating = false
+                    break
+                end
 
-        # Check if all cycles are the same
-        if all(cycle -> cycle == cycles[1], cycles)
-            return true
+                # Check if the next segment matches the pattern
+                if tool_sequence[next_start:next_end] != pattern
+                    is_repeating = false
+                    break
+                end
+            end
+
+            # If we found a repeating pattern, return true
+            if is_repeating
+                return true
+            end
         end
     end
     return false
@@ -174,11 +191,11 @@ function num_subsequent_repeats(history)
     for tool in tool_sequence[2:end]
         if tool == current_tool
             current_repeats += 1
-            max_repeats = max(max_repeats, current_repeats)
         else
-            current_repeats = 1
             current_tool = tool
+            current_repeats = 1
         end
+        max_repeats = max(max_repeats, current_repeats)
     end
 
     return max_repeats
