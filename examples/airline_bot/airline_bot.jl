@@ -1,4 +1,5 @@
 using SwarmAgents
+using SwarmAgents: Tool
 using PromptingTools
 const PT = PromptingTools
 using Dates
