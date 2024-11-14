@@ -13,4 +13,6 @@ using Aqua
     include("test_utils.jl")
     include("test_swarm.jl")
     include("test_privacy.jl")
+    include("test_agent_utils.jl")
+    include("test_flow_rules.jl")
 end
