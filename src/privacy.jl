@@ -68,6 +68,15 @@ function maybe_private_message(message::PT.AbstractMessage, agent::Agent; last_t
     return agent.private ? PrivateMessage(message, [agent.name], last_turn) : message
 end
 
+# Special handling for AIMessage with no tool calls
+function maybe_private_message(message::PT.AIMessage, agent::Agent; last_turn::Bool=false)
+    # If there are no tool calls, make the message public to explain why tool calls stopped
+    if isempty(PT.tool_calls(message))
+        return message
+    end
+    return agent.private ? PrivateMessage(message, [agent.name], last_turn) : message
+end
+
 # Pretty printing
 function Base.show(io::IO, msg::PrivateMessage)
     print(io, "PrivateMessage(visible=[", join(msg.visible, ", "), "], last_turn=", msg.last_turn, ")")
