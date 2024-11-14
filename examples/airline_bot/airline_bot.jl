@@ -100,22 +100,23 @@ function run_example()
     check_status_tool = PT.Tool(
         check_flight_status;
         name = "check_flight_status",
-        description = "Check the status of the current flight",
-        return_type = String,
-        parameters = [
-            :context => SessionContext => "The session context containing flight information"
-        ]
+        docs = """
+        Check the status of the current flight.
+        Input: SessionContext containing flight information
+        Output: String with flight status
+        """
     )
 
     change_flight_tool = PT.Tool(
         change_flight;
         name = "change_flight",
-        description = "Change the current flight to a new flight",
-        return_type = String,
-        parameters = [
-            :msg => String => "The message containing the new flight number",
-            :context => SessionContext => "The session context containing flight information"
-        ]
+        docs = """
+        Change the current flight to a new flight.
+        Input:
+        - msg: String containing the new flight number
+        - context: SessionContext containing flight information
+        Output: String with confirmation message
+        """
     )
 
     # Initialize the agent with tools
