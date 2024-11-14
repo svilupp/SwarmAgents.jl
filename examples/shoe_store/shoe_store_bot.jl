@@ -275,23 +275,23 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(
+        Tool(;
             name="authenticate",
-            parameters=[:msg => String],
+            parameters=(msg=String,),
             return_type=String,
             description="Authenticate user with name and email",
             callable=wrapped_authenticate
         ),
-        Tool(
+        Tool(;
             name="show_inventory",
-            parameters=[:msg => String],
+            parameters=(msg=String,),
             return_type=String,
             description="Show available shoe inventory",
             callable=wrapped_show_inventory
         ),
-        Tool(
+        Tool(;
             name="check_size",
-            parameters=[:msg => String],
+            parameters=(msg=String,),
             return_type=String,
             description="Check if a specific shoe size is available",
             callable=wrapped_check_size
