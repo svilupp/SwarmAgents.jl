@@ -116,7 +116,7 @@ function run_example()
     # Create tools and agent
     agent = Agent(;
         name = "Airline Bot",
-        model = PT.MODEL_GPT35,  # Use OpenAI GPT-3.5
+        model = "gpt-3.5-turbo",  # Use OpenAI GPT-3.5
         instructions = """
         You are an airline customer service bot. You can help with:
         - Checking flight status

@@ -160,7 +160,7 @@ function run_example()
     # Create agent with analysis capabilities
     agent = Agent(;
         name = "Car Analysis Bot",
-        model = PT.MODEL_GPT35,  # Use OpenAI GPT-3.5
+        model = "gpt-3.5-turbo",  # Use OpenAI GPT-3.5
         instructions = """
         You are a data science agent specialized in analyzing car data.
         You can:

@@ -262,7 +262,7 @@ function run_example()
     # Create tools and agent
     agent = Agent(;
         name = "Shoe Store Bot",
-        model = PT.MODEL_GPT35,  # Use OpenAI GPT-3.5
+        model = "gpt-3.5-turbo",  # Use OpenAI GPT-3.5
         instructions = """
         You are a shoe store customer service bot. You can help with:
         - Authentication: Users must authenticate first
