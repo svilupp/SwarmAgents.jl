@@ -1,2 +1,10 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+PromptingTools = "670122d1-9a5f-4b5c-8677-e4d82ea6afba"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+Aqua = "0.8"
+JSON3 = "1.14"
+PromptingTools = "0.63"
