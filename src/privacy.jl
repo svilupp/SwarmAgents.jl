@@ -1,6 +1,3 @@
-using PromptingTools
-const PT = PromptingTools
-
 """
     PrivateMessage <: PT.AbstractMessage
 
@@ -66,6 +63,3 @@ function PT.pprint(io::IO, msg::PrivateMessage; kwargs...)
     printstyled(io, "🔒 Private Message (visible to: ", join(msg.visible, ", "), ")\n", color=:light_black)
     PT.pprint(io, msg.object; kwargs...)
 end
-
-# Export the new functions
-export PrivateMessage, is_visible, filter_history, maybe_private_message
