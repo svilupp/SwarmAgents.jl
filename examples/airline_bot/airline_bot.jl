@@ -1,4 +1,5 @@
 using SwarmAgents
+using SwarmAgents: process_message
 using PromptingTools
 const PT = PromptingTools
 using Dates
