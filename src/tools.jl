@@ -15,14 +15,11 @@ and authentication state management.
 function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{Agent,Nothing}=nothing)
     tools = Symbol[]
     for msg in history
-        # Handle both direct tool messages and tool messages wrapped in PrivateMessage
-        if msg isa PrivateMessage
-            underlying_msg = msg.object
-            if PT.istoolmessage(underlying_msg)
-                push!(tools, Symbol(underlying_msg.name))
-            end
-        elseif PT.istoolmessage(msg)
-            push!(tools, Symbol(msg.name))
+        # First check if it's a PrivateMessage and get the underlying message
+        actual_msg = msg isa PrivateMessage ? msg.object : msg
+        # Then check if the actual message is a tool message
+        if PT.istoolmessage(actual_msg)
+            push!(tools, Symbol(actual_msg.name))
         end
     end
     unique!(tools)
