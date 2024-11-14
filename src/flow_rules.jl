@@ -31,9 +31,9 @@ Checks for repeated cycles of tool calls in the message history.
 rule = TerminationCycleCheck(3, 3)
 ```
 """
-Base.@kwdef struct TerminationCycleCheck <: AbstractTerminationFlowRules
-    n_cycles::Int = 3
-    span::Int = 3
+struct TerminationCycleCheck <: AbstractTerminationFlowRules
+    n_cycles::Int
+    span::Int
     function TerminationCycleCheck(n_cycles::Int=3, span::Int=3)
         n_cycles > 1 || throw(ArgumentError("n_cycles must be > 1"))
         span > 1 || throw(ArgumentError("span must be > 1"))
