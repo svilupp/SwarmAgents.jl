@@ -16,12 +16,9 @@ This is an internal utility function to handle message type conversions without 
 convert_message(::Type{T}, msg::T) where T <: AbstractMessage = msg
 
 # Specific conversions to AbstractMessage
-convert_message(::Type{AbstractMessage}, msg::SystemMessage{T}) where T = msg
-convert_message(::Type{AbstractMessage}, msg::UserMessage{T}) where T = msg
-convert_message(::Type{AbstractMessage}, msg::AIToolRequest{T}) where T = msg
-convert_message(::Type{AbstractMessage}, msg::ToolMessage{T}) where T = msg
+convert_message(::Type{AbstractMessage}, msg::AbstractMessage) = msg
 
-# Specific conversions between types
+# Specific conversions between types with type parameters
 function convert_message(::Type{SystemMessage{T}}, msg::AbstractMessage) where T
     SystemMessage{T}(convert(T, msg.content))
 end
@@ -47,9 +44,9 @@ function convert_message(::Type{ToolMessage{T}}, msg::AbstractMessage) where T
 end
 
 # Convenience methods for non-parameterized types
-convert_message(::Type{SystemMessage}, msg::AbstractMessage) = convert_message(SystemMessage{String}, msg)
-convert_message(::Type{UserMessage}, msg::AbstractMessage) = convert_message(UserMessage{String}, msg)
-convert_message(::Type{AIToolRequest}, msg::AbstractMessage) = convert_message(AIToolRequest{String}, msg)
-convert_message(::Type{ToolMessage}, msg::AbstractMessage) = convert_message(ToolMessage{String}, msg)
+function convert_message(::Type{M}, msg::AbstractMessage) where M <: AbstractMessage
+    T = eltype(M)
+    convert_message(M{T}, msg)
+end
 
 export convert_message
