@@ -1,7 +1,6 @@
 using SwarmAgents
 using PromptingTools
-using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                     ToolMessage, TestEchoOpenAISchema
+const PT = PromptingTools
 using JSON3
 using Test
 using Aqua
@@ -10,7 +9,7 @@ using Aqua
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(SwarmAgents)
     end
-    include("types.jl")
-    include("utils.jl")
-    include("flow_rules_test.jl")
+    include("test_types.jl")
+    include("test_utils.jl")
+    include("test_swarm.jl")
 end
