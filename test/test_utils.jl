@@ -56,8 +56,7 @@ func5() = "test"
             raw="{}",
             tool_call_id="test",
             name="func5",
-            args=Dict{Symbol,Any}(),
-            role=:default)])]
+            args=Dict{Symbol,Any}())])]
     # Use session_with_io.agent to ensure consistent agent context
     result_io = handle_tool_calls!(session_with_io.agent, test_history, session_with_io)
     output = String(take!(io))
