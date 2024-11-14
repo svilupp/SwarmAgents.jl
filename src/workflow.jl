@@ -36,15 +36,21 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
             payload = Dict(:assistant => next_agent.name)
             !isempty(args) && merge!(payload, args)
             output = JSON3.write(payload)
+            # Mark previous messages in this turn as last_turn since we're changing agents
+            for i in (length(history)-length(tool_calls(history[end]))):length(history)
+                if i > 0 && history[i] isa PrivateMessage
+                    history[i] = PrivateMessage(history[i].object, history[i].visible, true)
+                end
+            end
         end
         # Create a new ToolMessage with the output content and wrap if agent is private
         output_msg = ToolMessage(string(output), nothing, tool.tool_call_id, tool.tool_call_id, Dict{Symbol,Any}(), tool.name, :default)
-        output_msg = maybe_private_message(output_msg, active_agent)
+        # Tool messages are private unless they're the last in a sequence (when next_agent changes)
+        output_msg = maybe_private_message(output_msg, active_agent; last_turn=(next_agent !== active_agent))
         print_progress(session.io, active_agent, output_msg)
         push!(history, output_msg)
     end
     return (; active_agent = next_agent, history, context = session.context)
-end
 
 """
     update_system_message!(history::AbstractVector{<:PT.AbstractMessage}, active_agent::Union{Agent, Nothing})
@@ -95,7 +101,9 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         filtered_len = length(filtered_history)
         for msg in response[filtered_len+1:end]
             converted_msg = convert_message(eltype(history), msg)
-            private_msg = maybe_private_message(converted_msg, active_agent)
+            # Make the message public if it's an assistant message with no tool calls
+            is_last = PT.isassistantmessage(msg) && isempty(tool_calls(msg))
+            private_msg = maybe_private_message(converted_msg, active_agent; last_turn=is_last)
             push!(history, private_msg)
         end
 
