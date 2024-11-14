@@ -114,16 +114,16 @@ using Test
         last_turn_msg = maybe_private_message(msg, agent; last_turn=true)
         @test last_turn_msg isa PrivateMessage
         @test last_turn_msg.last_turn == true
-        @test is_visible(last_turn_msg, Agent("OtherAgent", private=false))
+        @test is_visible(last_turn_msg, Agent(name="OtherAgent", private=false))
 
         # Test assistant message with no tool calls visibility
         assistant_msg = PT.AIMessage("Final response")
         private_assistant = maybe_private_message(assistant_msg, agent; last_turn=true)
-        @test is_visible(private_assistant, Agent("OtherAgent", private=false))
+        @test is_visible(private_assistant, Agent(name="OtherAgent", private=false))
 
         # Test agent handoff visibility
         tool_msg = ToolMessage("test", nothing, "id", "id", Dict{Symbol,Any}(), "test", :default)
         handoff_msg = maybe_private_message(tool_msg, agent; last_turn=true)
-        @test is_visible(handoff_msg, Agent("NextAgent", private=true))
+        @test is_visible(handoff_msg, Agent(name="NextAgent", private=true))
     end
 end
