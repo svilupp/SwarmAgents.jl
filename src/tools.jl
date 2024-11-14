@@ -1,21 +1,20 @@
 """
     get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{Agent,Nothing}=nothing)
 
-Get a list of tools used in the message history. If an agent is provided, only returns tools from messages visible to that agent.
+Get a list of all tools used in the message history, regardless of message privacy settings.
+Privacy settings do not affect tool usage tracking as this is essential for flow control
+and authentication state management.
 
 # Arguments
 - `history::AbstractVector{<:PT.AbstractMessage}`: The message history to analyze
-- `agent::Union{Agent,Nothing}=nothing`: Optional agent to filter messages by visibility
+- `agent::Union{Agent,Nothing}=nothing`: Optional agent (kept for API compatibility)
 
 # Returns
-- `Vector{Symbol}`: List of tool names used in the visible messages
+- `Vector{Symbol}`: List of all tool names used in the message history
 """
 function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{Agent,Nothing}=nothing)
-    # Filter history if agent is provided
-    visible_history = isnothing(agent) ? history : filter_history(history, agent)
-
     tools = Symbol[]
-    for msg in visible_history
+    for msg in history
         if PT.istoolmessage(msg)
             push!(tools, Symbol(msg.name))
         end

@@ -15,11 +15,7 @@ struct PrivateMessage <: PT.AbstractMessage
     visible::Vector{String}
 end
 
-# Forward all AbstractMessage interface methods to the underlying object
-Base.getproperty(msg::PrivateMessage, name::Symbol) = name in (:content, :role, :name, :tool_call_id, :tool_calls, :last_output, :istoolmessage) ?
-    getproperty(msg.object, name) : getfield(msg, name)
-
-# Keep only the essential method forwarding that's definitely defined in PT
+# Forward essential methods to the underlying object
 PT.tool_calls(msg::PrivateMessage) = PT.tool_calls(msg.object)
 PT.last_output(msg::PrivateMessage) = PT.last_output(msg.object)
 
@@ -63,7 +59,7 @@ end
 # Pretty printing
 function Base.show(io::IO, msg::PrivateMessage)
     print(io, "PrivateMessage(visible=[", join(msg.visible, ", "), "])")
-    print(io, "\n  └─ ", typeof(msg.object), ": ", PT.content(msg.object))
+    print(io, "\n  └─ ", typeof(msg.object))
 end
 
 function PT.pprint(io::IO, msg::PrivateMessage; kwargs...)

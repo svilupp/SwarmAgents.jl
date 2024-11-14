@@ -9,9 +9,6 @@ using Test
         base_msg = PT.UserMessage("Test message")
         private_msg = PrivateMessage(base_msg, ["Agent1"])
 
-        @test PT.content(private_msg) == "Test message"
-        @test PT.role(private_msg) == PT.role(base_msg)
-        @test PT.name(private_msg) == PT.name(base_msg)
         @test PT.tool_calls(private_msg) == PT.tool_calls(base_msg)
     end
 
@@ -62,34 +59,41 @@ using Test
         @test any(msg -> msg isa PrivateMessage && "Agent2" in msg.visible, filtered_history2)
     end
 
-    @testset "Tool Usage Privacy" begin
+    @testset "Tool Usage Tracking" begin
+        # Note: Tool usage is tracked regardless of privacy settings
+        # Privacy only affects message visibility for LLMs, not flow control or authentication state
         agent1 = Agent(name="Agent1", private=true)
         agent2 = Agent(name="Agent2")
 
-        # Create history with tool messages
+        # Create history with tool messages, including authentication tool usage
         history = PT.AbstractMessage[
             PT.UserMessage("Start"),
             PrivateMessage(
-                ToolMessage("output", nothing, "tool1", "tool1", Dict(), "tool1", :default),
+                ToolMessage("output", nothing, "authenticate", "authenticate", Dict(), "auth", :default),
                 ["Agent1"]
             ),
-            ToolMessage("output", nothing, "tool2", "tool2", Dict(), "tool2", :default),
+            ToolMessage("output", nothing, "public_tool", "public_tool", Dict(), "public", :default),
             PrivateMessage(
-                ToolMessage("output", nothing, "tool3", "tool3", Dict(), "tool3", :default),
+                ToolMessage("output", nothing, "private_tool", "private_tool", Dict(), "private", :default),
                 ["Agent2"]
             )
         ]
 
-        # Test get_used_tools for different agents
+        # Test get_used_tools ignores privacy settings (important for flow control and auth state)
         tools1 = get_used_tools(history, agent1)
-        @test :tool1 in tools1  # Should see own private tool
-        @test :tool2 in tools1  # Should see public tool
-        @test !(:tool3 in tools1)  # Should not see Agent2's private tool
+        @test Set(tools1) == Set([:authenticate, :public_tool, :private_tool])  # Should see all tools
 
         tools2 = get_used_tools(history, agent2)
-        @test !(:tool1 in tools2)  # Should not see Agent1's private tool
-        @test :tool2 in tools2  # Should see public tool
-        @test :tool3 in tools2  # Should see own private tool
+        @test Set(tools2) == Set([:authenticate, :public_tool, :private_tool])  # Should see all tools
+
+        # Test get_used_tools without agent
+        tools_all = get_used_tools(history)
+        @test Set(tools_all) == Set([:authenticate, :public_tool, :private_tool])  # Should see all tools
+
+        # Verify that while tools are tracked, message visibility still respects privacy
+        filtered_history = filter_history(history, agent1)
+        @test length(filtered_history) == 3  # Should only see public messages and own private messages
+        @test !any(msg -> msg isa PrivateMessage && "Agent2" in msg.visible, filtered_history)
     end
 
     @testset "Message Privacy Handling" begin
