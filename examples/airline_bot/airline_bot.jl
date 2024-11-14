@@ -19,6 +19,15 @@ const FLIGHTS = Dict(
 )
 
 """
+Context structure for the airline bot
+"""
+Base.@kwdef mutable struct AirlineContext
+    current_flight::Union{String, Nothing} = nothing
+    name::String = ""
+    booking_ref::String = ""
+end
+
+"""
 Check if a flight exists in our database
 """
 function flight_exists(flight_number::String)
@@ -39,24 +48,23 @@ end
 """
 Change flight in the context
 """
-function change_flight!(context::Dict{Symbol,Any}, new_flight::String)
+function change_flight!(context::AirlineContext, new_flight::String)
     if !flight_exists(new_flight)
         return "Flight $new_flight does not exist"
     end
-    context[:current_flight] = new_flight
+    context.current_flight = new_flight
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
 # Define our tools
-function check_flight_status(context::Dict{Symbol,Any})
-    current_flight = get(context, :current_flight, nothing)
-    if isnothing(current_flight)
+function check_flight_status(context::AirlineContext)
+    if isnothing(context.current_flight)
         return "No flight currently booked"
     end
-    get_flight_details(current_flight)
+    get_flight_details(context.current_flight)
 end
 
-function change_flight(msg::String, context::Dict{Symbol,Any})
+function change_flight(msg::String, context::AirlineContext)
     flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
     if isnothing(flight_match)
         return "Please specify the new flight number (e.g., 'change flight to FL124')"
@@ -68,10 +76,10 @@ end
 # Example usage:
 function run_example()
     # Initialize the context
-    context = Dict{Symbol,Any}(
-        :current_flight => "FL123",  # User's current flight
-        :name => "John Doe",         # User's name
-        :booking_ref => "ABC123"     # Booking reference
+    context = AirlineContext(
+        current_flight = "FL123",  # User's current flight
+        name = "John Doe",         # User's name
+        booking_ref = "ABC123"     # Booking reference
     )
 
     # Create tools
