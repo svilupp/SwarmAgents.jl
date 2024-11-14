@@ -18,36 +18,28 @@ convert_message(::Type{T}, msg::T) where T <: AbstractMessage = msg
 # Specific conversions to AbstractMessage
 convert_message(::Type{AbstractMessage}, msg::AbstractMessage) = msg
 
-# Helper to extract content type
-content_type(::Type{<:AbstractMessage{T}}) where T = T
-content_type(::Type{<:AbstractMessage}) = String
-
-# Specific conversions between message types with type parameter preservation
+# Specific conversions between message types
 function convert_message(T::Type{<:SystemMessage}, msg::AbstractMessage)
-    CT = content_type(T)
-    SystemMessage{CT}(convert(CT, msg.content))
+    T(msg.content)
 end
 
 function convert_message(T::Type{<:UserMessage}, msg::AbstractMessage)
-    CT = content_type(T)
-    UserMessage{CT}(convert(CT, msg.content))
+    T(msg.content)
 end
 
 function convert_message(T::Type{<:AIToolRequest}, msg::AbstractMessage)
-    CT = content_type(T)
     if msg isa ToolMessage
-        AIToolRequest{CT}(msg.name, msg.args, convert(CT, msg.content), msg.tool_call_id)
+        T(msg.name, msg.args, msg.content, msg.tool_call_id)
     else
-        AIToolRequest{CT}(convert(CT, msg.content))
+        T(msg.content)
     end
 end
 
 function convert_message(T::Type{<:ToolMessage}, msg::AbstractMessage)
-    CT = content_type(T)
     if msg isa AIToolRequest
-        ToolMessage{CT}(msg.name, msg.args, convert(CT, msg.content), msg.tool_call_id)
+        T(msg.name, msg.args, msg.content, msg.tool_call_id)
     else
-        ToolMessage{CT}("", nothing, convert(CT, msg.content), nothing, Dict(), :default)
+        T("", nothing, msg.content, nothing, Dict(), :default)
     end
 end
 
