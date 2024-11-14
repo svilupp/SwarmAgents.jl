@@ -126,8 +126,7 @@ function run_example()
         Tool(
             name="check_status",
             parameters=Dict{Symbol, Any}(
-                :message => String,
-                :return => String
+                :message => String
             ),
             description="Check the status of your current flight",
             strict=false,
@@ -136,8 +135,7 @@ function run_example()
         Tool(
             name="change_flight",
             parameters=Dict{Symbol, Any}(
-                :message => String,
-                :return => String
+                :message => String
             ),
             description="Change your flight to a new flight number",
             strict=false,
