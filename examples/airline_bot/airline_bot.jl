@@ -1,8 +1,11 @@
 using SwarmAgents
 using SwarmAgents: Tool
 using PromptingTools
+using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
+                     ToolMessage, TestEchoOpenAISchema
 const PT = PromptingTools
 using Dates
+using JSON3
 
 """
 Example of a simple airline customer service bot using SwarmAgents.jl
@@ -103,6 +106,25 @@ end
 
 # Example usage:
 function run_example()
+    # Set up mock response for testing
+    response = Dict(
+        :id => "123",
+        :choices => [
+            Dict(
+                :message => Dict(:content => "Let me check your flight status.",
+                    :tool_calls => [
+                        Dict(:id => "123",
+                            :function => Dict(
+                                :name => "check_status",
+                                :arguments => JSON3.write(Dict(:message => "What's my flight status?"))))
+                    ]),
+                :finish_reason => "tool_calls")
+        ],
+        :usage => Dict(:total_tokens => 20, :prompt_tokens => 15, :completion_tokens => 5)
+    )
+    schema = TestEchoOpenAISchema(; response = response, status = 200)
+    PT.register_model!(; name = "mocktools", schema)
+
     # Initialize the context as Dict{Symbol, Any}
     context = Dict{Symbol, Any}(
         :current_flight => "FL123",  # User's current flight
@@ -113,6 +135,7 @@ function run_example()
     # Create tools and agent
     agent = Agent(;
         name = "Airline Bot",
+        model = "mocktools",  # Use our mock model
         instructions = """
         You are an airline customer service bot. You can help with:
         - Checking flight status
