@@ -5,7 +5,7 @@ using JSON3
 using PromptingTools
 const PT = PromptingTools
 using PromptingTools: AbstractMessage, SystemMessage, UserMessage, AIToolRequest, ToolMessage
-using PromptingTools: AbstractTool, isabstracttool, Tool
+using PromptingTools: AbstractTool, isabstracttool, Tool, ToolCall
 using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 
 # Abstract types
@@ -19,7 +19,7 @@ export Agent, Session, isabstractagent, isabstractagentref, isabstractagentactor
 
 # Utilities (shared functions)
 include("utils.jl")
-export print_progress, scrub_agent_name, convert_message
+export print_progress, scrub_agent_name, convert_message, update_system_message!
 
 # Privacy functionality
 include("privacy.jl")
