@@ -11,7 +11,7 @@ using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 # Core types (abstract types, agent, session)
 include("core_types.jl")
 export AbstractAgent, AbstractAgentActor, AbstractAgentRef, Agent, Session,
-    isabstractagent, isabstractagentref, isabstractagentactor
+    isabstractagent, isabstractagentref, isabstractagentactor, add_rules!
 
 # Utilities (shared functions)
 include("utils.jl")
