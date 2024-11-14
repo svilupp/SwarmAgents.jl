@@ -71,14 +71,14 @@ function change_flight!(context::AirlineContext, new_flight::String)
 end
 
 # Define our tools
-function check_flight_status(context::SessionContext)
+function check_flight_status(context::SessionContext)::String
     if isnothing(context.context.current_flight)
         return "No flight currently booked"
     end
     get_flight_details(context.context.current_flight)
 end
 
-function change_flight(msg::String, context::SessionContext)
+function change_flight(msg::String, context::SessionContext)::String
     flight_match = match(r"(?i)change.*flight.*to\s+([A-Z0-9]+)", msg)
     if isnothing(flight_match)
         return "Please specify the new flight number (e.g., 'change flight to FL124')"
