@@ -98,22 +98,13 @@ function run_example()
 
     # Create tools
     check_status_tool = PT.Tool(
-        name = "check_flight_status",
-        parameters = Dict{Symbol,Any}(:context => SessionContext),
-        description = "Check the status of the current flight. Returns flight details or a message if no flight is booked.",
-        strict = false,
-        callable = check_flight_status
+        check_flight_status;
+        name = "check_flight_status"
     )
 
     change_flight_tool = PT.Tool(
-        name = "change_flight",
-        parameters = Dict{Symbol,Any}(
-            :msg => String,
-            :context => SessionContext
-        ),
-        description = "Change the current flight to a new flight. Takes a message containing the new flight number.",
-        strict = false,
-        callable = change_flight
+        change_flight;
+        name = "change_flight"
     )
 
     # Initialize the agent with tools
