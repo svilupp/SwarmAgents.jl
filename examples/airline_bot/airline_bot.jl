@@ -194,10 +194,7 @@ function run_example()
     )
 
     # Add tools to the agent
-    add_tools!(agent, [
-        (wrapped_check_status, "Check the status of your current flight"),
-        (wrapped_change_flight, "Change your flight to a new flight number")
-    ])
+    add_tools!(agent, [wrapped_check_status, wrapped_change_flight])
 
     # Create a session with proper context
     session = Session(agent; context=to_session_dict(SessionContext(context=context)))
