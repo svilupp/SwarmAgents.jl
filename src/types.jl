@@ -1,17 +1,8 @@
-abstract type AbstractAgent end
-abstract type AbstractAgentActor <: AbstractAgent end
-abstract type AbstractAgentRef <: AbstractAgent end
+using PromptingTools
+using PromptingTools: AbstractMessage, AbstractTool, isabstracttool, Tool
+using PromptingTools: tool_calls, execute_tool, parse_tool, tool_call_signature
 
-Base.@kwdef struct AgentRef <: AbstractAgentRef
-    name::String
-end
-
-isabstractagent(x) = x isa AbstractAgent
-isabstractagentref(x) = x isa AbstractAgentRef
-isabstractagentactor(x) = x isa AbstractAgentActor
-
-"""
-    Agent
+export Agent, Session, Response, add_rules!, add_tools!
 
 Agent is a stateless struct that holds the the reference to LLM, tools and the instructions.
 
