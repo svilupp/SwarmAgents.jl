@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Messages during agent handoff are visible
   - Only intermediate tool calls remain private
   - Added comprehensive test suite for privacy logic
+- Added `add_transfers!` function to automatically create transfer tools between agents with handover messages
 
 ### Fixed
 
