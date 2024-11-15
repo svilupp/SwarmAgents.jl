@@ -22,9 +22,12 @@ const FLIGHTS = Dict(
     "FL125" => Dict("from" => "Paris", "to" => "New York", "time" => DateTime(2024, 12, 3, 9, 15))
 )
 
-# Initialize context type as Dict{Symbol, Any}
-# This will store flight information, user details, and booking reference
-const CONTEXT_KEYS = [:current_flight, :name, :booking_ref]
+# Context and parameter structures
+Base.@kwdef mutable struct AirlineContext
+    current_flight::String = "FL123"
+    name::String = "John Doe"
+    booking_ref::String = "ABC123"
+end
 
 # Parameter structures for tools
 Base.@kwdef struct CheckStatusParams
@@ -32,15 +35,8 @@ Base.@kwdef struct CheckStatusParams
 end
 
 Base.@kwdef struct ChangeFlightParams
-    none::Nothing = nothing
+    new_flight::String = ""  # Will be populated from message content
 end
-
-# Example of required context structure:
-# context = Dict{Symbol, Any}(
-#     :current_flight => "FL123",
-#     :name => "John Doe",
-#     :booking_ref => "ABC123"
-# )
 
 """
 Check if a flight exists in our database
@@ -63,24 +59,21 @@ end
 """
 Change flight in the context
 """
-function change_flight!(context::Dict{Symbol, Any}, new_flight::String)
+function change_flight!(context::AirlineContext, new_flight::String)
     if !flight_exists(new_flight)
         return "Flight $new_flight does not exist"
     end
-    context[:current_flight] = new_flight
+    context.current_flight = new_flight
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
 # Core tool functions
-function check_status(params::CheckStatusParams, context::Dict{Symbol, Any})
-    if !haskey(context, :current_flight)
-        return "No flight found in context"
-    end
-    flight_number = context[:current_flight]
+function check_status(params::CheckStatusParams, context::AirlineContext)
+    flight_number = context.current_flight
     return get_flight_details(flight_number)
 end
 
-function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, context::Dict{Symbol, Any})
+function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, context::AirlineContext)
     # Extract flight number from message content
     m = match(r"FL\d+", msg.content)
     if isnothing(m)
@@ -107,11 +100,11 @@ function run_example()
     end
     PT.OPENAI_API_KEY = ENV["OPENAI_API_KEY"]
 
-    # Initialize the context as Dict{Symbol, Any}
-    context = Dict{Symbol, Any}(
-        :current_flight => "FL123",  # User's current flight
-        :name => "John Doe",         # User's name
-        :booking_ref => "ABC123"     # Booking reference
+    # Initialize the context with AirlineContext struct
+    context = AirlineContext(
+        current_flight = "FL123",  # User's current flight
+        name = "John Doe",         # User's name
+        booking_ref = "ABC123"     # Booking reference
     )
 
     # Create tools and agent
