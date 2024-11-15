@@ -207,8 +207,6 @@ Example:
 ```
 """
 function add_transfers!(session::Session)
-    @info "Starting add_transfers!" agent_count=length(session.agent_map)
-
     # Get all agents from the map
     agents = collect(values(session.agent_map))
     agent_names = [agent.name for agent in agents]
@@ -216,7 +214,6 @@ function add_transfers!(session::Session)
     # For each agent, create transfer tools to all other agents
     for source_agent in agents
         source_name = source_agent.name
-        @info "Processing source agent" source_name
 
         # Get available target agents (excluding self)
         available_targets = filter(name -> name != source_name, agent_names)
@@ -235,17 +232,9 @@ function add_transfers!(session::Session)
             # Create snake_case function name (e.g., "Booking Agent" -> "transfer_to_booking_agent")
             target_snake = lowercase(replace(target_name, r"[^a-zA-Z0-9]+" => "_"))
             function_name = "transfer_to_$target_snake"
-            @info "Creating transfer tool" function_name target_name
 
             try
-                # Log parameter creation
-                @debug "Creating parameters dictionary" handover_message_spec=Dict(
-                    "type" => "string",
-                    "description" => "Explanation for why the transfer is needed",
-                    "required" => true
-                )
-
-                # Create parameters with detailed logging
+                # Create parameters dictionary
                 parameters = Dict(
                     "handover_message" => Dict(
                         "type" => "string",
@@ -253,17 +242,11 @@ function add_transfers!(session::Session)
                         "required" => true
                     )
                 )
-                @info "Created parameters dictionary" parameters
-
-                # Log function creation and type conversion details
-                @debug "Creating transfer function" target_name Symbol(target_name) string_name=String(target_name)
-                @info "Agent name type details" original_type=typeof(target_name) symbol_type=typeof(Symbol(target_name))
 
                 # Use generic transfer_agent function with target_name binding
                 transfer_fn = (args...; kwargs...) -> transfer_agent(target_name, kwargs[:handover_message])
-                @info "Created transfer function using generic transfer_agent" fn_type=typeof(transfer_fn)
 
-                # Log docstring creation
+                # Create docstring
                 docs = """
                     Transfer conversation to $target_name.
 
@@ -275,19 +258,15 @@ function add_transfers!(session::Session)
                     Returns:
                     - AgentRef: Reference to $target_name agent
                 """
-                @debug "Created docstring" docs
 
-                @info "Creating tool with parameters" name=function_name fn_type=typeof(transfer_fn)
-                # Create tool with explicit kwargs and detailed logging
+                # Create tool with explicit kwargs
                 tool = Tool(;
                     name=function_name,
                     parameters=parameters,
                     description=docs,
                     callable=transfer_fn
                 )
-                @info "Successfully created tool" tool_name=tool.name tool_type=typeof(tool)
 
-                @info "Adding tool to agent" agent=source_name tool_name=tool.name
                 add_tools!(source_agent, tool)
             catch e
                 @error "Failed to create or add tool" exception=(e, catch_backtrace()) function_name target_name
@@ -297,6 +276,5 @@ function add_transfers!(session::Session)
             end
         end
     end
-    @info "Completed add_transfers!"
     return nothing
 end
