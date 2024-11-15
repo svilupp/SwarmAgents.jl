@@ -42,12 +42,18 @@ Base.@kwdef mutable struct AirlineContext
 end
 
 # Parameter structures for tools
+"""
+Parameters for checking flight status
+"""
 Base.@kwdef struct CheckStatusParams
-    none::Nothing = nothing
+    flight_number::String
 end
 
+"""
+Parameters for changing flight
+"""
 Base.@kwdef struct ChangeFlightParams
-    new_flight::String = ""  # Will be populated from message content
+    new_flight::String
 end
 
 """
@@ -79,57 +85,65 @@ function change_flight!(context::AirlineContext, new_flight::String)
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-# Core tool functions
-function check_status(flight_number::String)::String
-    get_flight_details(flight_number)
-end
-
-function change_flight(current_flight::String, new_flight::String)::String
-    if !flight_exists(new_flight)
-        return "Flight $new_flight does not exist"
-    end
-    "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
-end
-
-# Tool wrapper functions for Tool constructor
+# Pure tool functions with struct parameters
 """
 Check the status of a flight
-Input: String (flight number)
+Input: CheckStatusParams
 Output: String (flight details)
 """
-function check_status_tool(msg::PT.AIToolRequest, session)::String
-    # Extract flight number from context manually
-    current_flight = session.context[:current_flight]::String
-    get_flight_details(current_flight)
+function check_status_pure(params::CheckStatusParams)::String
+    get_flight_details(params.flight_number)
 end
 
 """
 Change flight to a new flight number
-Input: String (new flight number)
+Input: ChangeFlightParams
 Output: String (success/failure message)
 """
+function change_flight_pure(params::ChangeFlightParams)::String
+    if !flight_exists(params.new_flight)
+        return "Flight $(params.new_flight) does not exist"
+    end
+    "Flight changed successfully to $(params.new_flight)\n$(get_flight_details(params.new_flight))"
+end
+
+# SwarmAgents integration wrapper functions
+"""
+Wrapper for check_status_pure that handles SwarmAgents integration
+"""
+function check_status_tool(msg::PT.AIToolRequest, session)::String
+    context = session.context::AirlineContext
+    params = CheckStatusParams(flight_number=context.current_flight)
+    check_status_pure(params)
+end
+
+"""
+Wrapper for change_flight_pure that handles SwarmAgents integration
+"""
 function change_flight_tool(msg::PT.AIToolRequest, session)::String
-    # Extract flight number from message content
     m = match(r"FL\d+", msg.content)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
     new_flight = m.match
 
-    # Check if flight exists and update context
-    if !flight_exists(new_flight)
-        return "Flight $new_flight does not exist"
+    params = ChangeFlightParams(new_flight=new_flight)
+    result = change_flight_pure(params)
+
+    if flight_exists(new_flight)
+        context = session.context::AirlineContext
+        context.current_flight = new_flight
     end
 
-    # Update context manually
-    session.context[:current_flight] = new_flight
-    "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
+    return result
 end
 
 # Example usage:
 function run_example()
     # Set up OpenAI API key for PromptingTools
-    PT.OPENAI_API_KEY = ENV["OPENAI_API_KEY"]
+    if !haskey(ENV, "OPENAI_API_KEY")
+        ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
+    end
 
     # Initialize the context as a struct
     context = AirlineContext(
@@ -153,8 +167,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(check_status_tool),
-        Tool(change_flight_tool)
+        PT.Tool(check_status_pure),
+        PT.Tool(change_flight_pure)
     ])
 
     # Create a session with proper context
