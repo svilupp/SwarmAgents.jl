@@ -63,17 +63,21 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::ToolMessage)::String
-    # Use the message from the structured arguments
+function check_flight_status(args::Dict{String,Any})::String
+    # Extract message from args
+    message = args["message"]
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::ToolMessage)::String
+function change_flight(args::Dict{String,Any})::String
+    # Extract message from args
+    message = args["message"]
+
     # Extract flight number from message
-    m = match(r"FL\d+", args.message)
+    m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
