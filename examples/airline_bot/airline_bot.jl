@@ -30,65 +30,57 @@ Base.@kwdef struct FlightDatabase
 end
 
 # Define tool argument structures that match PromptingTools' expected schema
+Base.@kwdef struct ToolArgs
+    args::Dict{String,Any}
+end
+
 Base.@kwdef struct MessageArgs
     message::String
 end
-
-# Convert MessageArgs to Dict
-Base.convert(::Type{Dict{Symbol,Any}}, x::MessageArgs) = Dict{Symbol,Any}(:message => x.message)
 
 Base.@kwdef struct FlightStatusArgs
     args::MessageArgs
 end
 
-# Convert FlightStatusArgs to Dict - flatten the structure for PromptingTools
-Base.convert(::Type{Dict{Symbol,Any}}, x::FlightStatusArgs) = convert(Dict{Symbol,Any}, x.args)
-
 Base.@kwdef struct FlightChangeArgs
     args::MessageArgs
 end
 
-# Convert FlightChangeArgs to Dict - flatten the structure for PromptingTools
-Base.convert(::Type{Dict{Symbol,Any}}, x::FlightChangeArgs) = convert(Dict{Symbol,Any}, x.args)
-
 # Convert Dict to MessageArgs
-function dict_to_message_args(d::Dict{Symbol,Any})::MessageArgs
-    # Handle nested JSON structure from PromptingTools
-    args_obj = d[:args]
+function dict_to_message_args(d::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::MessageArgs
     try
-        if args_obj isa JSON3.Object
-            # Handle nested structure: args[:args]["args"]["message"]
-            if haskey(args_obj, "args")
-                inner_args = args_obj["args"]
-                if inner_args isa Dict || inner_args isa JSON3.Object
-                    return MessageArgs(message=inner_args["message"])
-                end
-            end
-            # Try direct access if not nested
-            if haskey(args_obj, "message")
+        # Handle nested structure from PromptingTools
+        if d isa Dict{Symbol,Any} && haskey(d, :args)
+            args_obj = d[:args]
+        elseif haskey(d, "args")
+            args_obj = d["args"]
+        else
+            args_obj = d
+        end
+
+        # Extract message from nested structure
+        if args_obj isa Dict || args_obj isa JSON3.Object
+            if haskey(args_obj, "args") && (args_obj["args"] isa Dict || args_obj["args"] isa JSON3.Object)
+                return MessageArgs(message=args_obj["args"]["message"])
+            elseif haskey(args_obj, "message")
                 return MessageArgs(message=args_obj["message"])
             end
-            @error "Message key not found in args object" args_obj
-            throw(KeyError("message"))
         end
-        # Fallback to direct access for Dict
-        return MessageArgs(message=args_obj[:message])
+
+        error("Unable to find message in arguments: $d")
     catch e
-        @error "Failed to parse message args" args_obj typeof(args_obj)
-        if args_obj isa JSON3.Object
-            @error "JSON3.Object structure" args_obj
-        end
+        @error "Failed to parse message args" d typeof(d)
         rethrow(e)
     end
 end
 
 # Convert Dict to FlightStatusArgs
-function dict_to_flight_status_args(d::Dict{Symbol,Any})::FlightStatusArgs
+function dict_to_flight_status_args(d::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::FlightStatusArgs
     FlightStatusArgs(args=dict_to_message_args(d))
 end
 
 # Convert Dict to FlightChangeArgs
-function dict_to_flight_change_args(d::Dict{Symbol,Any})::FlightChangeArgs
+function dict_to_flight_change_args(d::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::FlightChangeArgs
     FlightChangeArgs(args=dict_to_message_args(d))
 end
 
@@ -121,7 +113,9 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::FlightStatusArgs)::String
+function check_flight_status(args::ToolArgs)::String
+    # Convert tool args to our internal type
+    status_args = dict_to_flight_status_args(args.args)
     # Use the message from the structured arguments
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
@@ -129,9 +123,11 @@ end
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::FlightChangeArgs)::String
+function change_flight(args::ToolArgs)::String
+    # Convert tool args to our internal type
+    change_args = dict_to_flight_change_args(args.args)
     # Extract flight number from message
-    m = match(r"FL\d+", args.args.message)
+    m = match(r"FL\d+", change_args.args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -153,29 +149,8 @@ function run_example()
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
 
-    # Create wrapper functions that handle the argument conversion
-    function wrapped_check_flight_status(args::Dict{Symbol,Any})::String
-        try
-            struct_args = dict_to_flight_status_args(args)
-            return check_flight_status(struct_args)
-        catch e
-            @error "Failed to execute check_flight_status" exception=(e, catch_backtrace())
-            return "Sorry, I encountered an error checking your flight status. Please try again."
-        end
-    end
-
-    function wrapped_change_flight(args::Dict{Symbol,Any})::String
-        try
-            struct_args = dict_to_flight_change_args(args)
-            return change_flight(struct_args)
-        catch e
-            @error "Failed to execute change_flight" exception=(e, catch_backtrace())
-            return "Sorry, I encountered an error changing your flight. Please try again."
-        end
-    end
-
-    # Create tool map using wrapped functions
-    tool_map = PT.tool_call_signature([wrapped_check_flight_status, wrapped_change_flight])
+    # Create tool map using the functions directly (no wrappers needed now)
+    tool_map = PT.tool_call_signature([check_flight_status, change_flight])
     tools = collect(values(tool_map))
 
     # Example conversation
