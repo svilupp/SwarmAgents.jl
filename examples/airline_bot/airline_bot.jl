@@ -34,42 +34,24 @@ end
 # Initialize the flight database
 const FLIGHT_DB = FlightDatabase()
 
-# Context structure
-Base.@kwdef mutable struct AirlineContext
-    current_flight::String = "FL123"
-    name::String = "John Doe"
-    booking_ref::String = "ABC123"
+# Global session reference
+mutable struct GlobalSession
+    session::Union{Nothing, Session} = nothing
 end
 
-# Convert AirlineContext to Dict for SwarmAgents.Session
-function to_dict(ctx::AirlineContext)::Dict{Symbol, Any}
-    Dict{Symbol, Any}(
-        :current_flight => ctx.current_flight,
-        :name => ctx.name,
-        :booking_ref => ctx.booking_ref
-    )
-end
-
-# Create AirlineContext from Dict
-function from_dict(dict::Dict{Symbol, Any})::AirlineContext
-    AirlineContext(
-        current_flight = get(dict, :current_flight, "FL123"),
-        name = get(dict, :name, "John Doe"),
-        booking_ref = get(dict, :booking_ref, "ABC123")
-    )
-end
+const GLOBAL_SESSION = GlobalSession()
 
 """
 Check if a flight exists in our database
 """
-function flight_exists(flight_number::String)
+function flight_exists(flight_number::String)::Bool
     any(f -> f[1] == flight_number, FLIGHT_DB.flights)
 end
 
 """
 Get flight details as a formatted string
 """
-function get_flight_details(flight_number::String)
+function get_flight_details(flight_number::String)::String
     if !flight_exists(flight_number)
         return "Flight not found"
     end
@@ -84,15 +66,18 @@ Check the status of the current flight.
 Returns detailed information about the flight, including departure city, destination, and time.
 
 Parameters:
-    content::String - The message content (unused in this function)
-    context::Dict{Symbol, Any} - The session context containing flight information
+    message::String - The message content (unused in this function)
 
 Returns:
     String - A formatted string containing flight details or an error message
 """
-function check_status_tool(content::String, context::Dict{Symbol, Any})::String
-    ctx = from_dict(context)
-    get_flight_details(ctx.current_flight)
+function check_status_tool(message::String)::String
+    if isnothing(GLOBAL_SESSION.session)
+        return "Error: Session not initialized"
+    end
+
+    current_flight = GLOBAL_SESSION.session.context[:current_flight]::String
+    get_flight_details(current_flight)
 end
 
 """
@@ -101,14 +86,17 @@ Change the current flight to a new flight number.
 Extracts a flight number from the message content and updates the context.
 
 Parameters:
-    content::String - The message content containing the new flight number
-    context::Dict{Symbol, Any} - The session context to update
+    message::String - The message content containing the new flight number
 
 Returns:
     String - A success message with new flight details or an error message
 """
-function change_flight_tool(content::String, context::Dict{Symbol, Any})::String
-    m = match(r"FL\d+", content)
+function change_flight_tool(message::String)::String
+    if isnothing(GLOBAL_SESSION.session)
+        return "Error: Session not initialized"
+    end
+
+    m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -118,10 +106,7 @@ function change_flight_tool(content::String, context::Dict{Symbol, Any})::String
         return "Flight $new_flight does not exist"
     end
 
-    ctx = from_dict(context)
-    ctx.current_flight = new_flight
-    context[:current_flight] = new_flight
-
+    GLOBAL_SESSION.session.context[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
@@ -131,13 +116,6 @@ function run_example()
     if !haskey(ENV, "OPENAI_API_KEY")
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
-
-    # Initialize the context as a struct
-    context = AirlineContext(
-        current_flight = "FL123",  # User's current flight
-        name = "John Doe",         # User's name
-        booking_ref = "ABC123"     # Booking reference
-    )
 
     # Create tools and agent
     agent = Agent(;
@@ -158,8 +136,12 @@ function run_example()
         PT.Tool(change_flight_tool)
     ])
 
-    # Create a session with proper context
-    session = Session(agent; context=to_dict(context))
+    # Create a session with proper context and store it globally
+    GLOBAL_SESSION.session = Session(agent; context=Dict{Symbol,Any}(
+        :current_flight => "FL123",
+        :name => "John Doe",
+        :booking_ref => "ABC123"
+    ))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
@@ -173,7 +155,7 @@ function run_example()
 
     for (i, msg) in enumerate(messages)
         println("\nUser: $msg")
-        run_full_turn!(session, msg)
+        run_full_turn!(GLOBAL_SESSION.session, msg)
         # The response is already printed by run_full_turn!
     end
 
