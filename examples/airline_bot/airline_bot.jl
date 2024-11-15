@@ -35,8 +35,10 @@ Base.@kwdef struct ToolMessage
 end
 
 # Convert Dict arguments to ToolMessage
-function convert_to_tool_message(args::Dict{String,Any})::ToolMessage
-    ToolMessage(message=args["message"])
+function convert_to_tool_message(args::Dict{Symbol,Any})::ToolMessage
+    # Extract message from nested structure that PromptingTools provides
+    nested_args = args[:args]::Dict{String,Any}
+    ToolMessage(message=nested_args["message"])
 end
 
 # Initialize the flight database and global context
