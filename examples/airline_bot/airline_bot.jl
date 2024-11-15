@@ -41,6 +41,24 @@ Base.@kwdef mutable struct AirlineContext
     booking_ref::String = "ABC123"
 end
 
+# Convert AirlineContext to Dict for SwarmAgents.Session
+function to_dict(ctx::AirlineContext)::Dict{Symbol, Any}
+    Dict{Symbol, Any}(
+        :current_flight => ctx.current_flight,
+        :name => ctx.name,
+        :booking_ref => ctx.booking_ref
+    )
+end
+
+# Create AirlineContext from Dict
+function from_dict(dict::Dict{Symbol, Any})::AirlineContext
+    AirlineContext(
+        current_flight = get(dict, :current_flight, "FL123"),
+        name = get(dict, :name, "John Doe"),
+        booking_ref = get(dict, :booking_ref, "ABC123")
+    )
+end
+
 # Parameter structures for tools
 """
 Parameters for checking flight status
@@ -112,7 +130,7 @@ end
 Wrapper for check_status_pure that handles SwarmAgents integration
 """
 function check_status_tool(msg::PT.AIToolRequest, session)::String
-    context = session.context::AirlineContext
+    context = from_dict(session.context)
     params = CheckStatusParams(flight_number=context.current_flight)
     check_status_pure(params)
 end
@@ -131,8 +149,9 @@ function change_flight_tool(msg::PT.AIToolRequest, session)::String
     result = change_flight_pure(params)
 
     if flight_exists(new_flight)
-        context = session.context::AirlineContext
+        context = from_dict(session.context)
         context.current_flight = new_flight
+        session.context = to_dict(context)
     end
 
     return result
@@ -172,7 +191,7 @@ function run_example()
     ])
 
     # Create a session with proper context
-    session = Session(agent; context=context)
+    session = Session(agent; context=to_dict(context))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
