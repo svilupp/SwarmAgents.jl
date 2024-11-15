@@ -71,7 +71,13 @@ end
 """
     check_status_wrapper(message::String)::String
 
-Wrapper function for check_status_tool that handles session context internally.
+Check the status of the current flight.
+
+# Arguments
+- `message::String`: The user's message requesting flight status
+
+# Returns
+- `String`: A formatted string containing the flight details
 """
 function check_status_wrapper(message::String)::String
     check_status_tool(message, GLOBAL_SESSION.session)
@@ -80,7 +86,13 @@ end
 """
     change_flight_wrapper(message::String)::String
 
-Wrapper function for change_flight_tool that handles session context internally.
+Change the current flight to a new flight number.
+
+# Arguments
+- `message::String`: The user's message containing the new flight number (format: FL123)
+
+# Returns
+- `String`: A confirmation message with the new flight details
 """
 function change_flight_wrapper(message::String)::String
     change_flight_tool(message, GLOBAL_SESSION.session)
@@ -145,18 +157,10 @@ function run_example()
     add_tools!(agent, [
         Tool(check_status_wrapper;
              name="check_flight_status",
-             docs="Check the status of the current flight",
-             fields=[
-                 :message => String,
-                 :response => String
-             ]),
+             docs="Check the status of the current flight"),
         Tool(change_flight_wrapper;
              name="change_flight",
-             docs="Change the current flight to a new flight number",
-             fields=[
-                 :message => String,
-                 :response => String
-             ])
+             docs="Change the current flight to a new flight number")
     ])
 
     # Create a session with proper context and store it globally
