@@ -53,7 +53,14 @@ Base.convert(::Type{Dict{Symbol,Any}}, x::FlightChangeArgs) = Dict{Symbol,Any}(:
 
 # Convert Dict to MessageArgs
 function dict_to_message_args(d::Dict{Symbol,Any})::MessageArgs
-    MessageArgs(message=d[:args][:message])
+    # Handle nested JSON structure from PromptingTools
+    args_obj = d[:args]
+    if args_obj isa JSON3.Object
+        inner_args = args_obj["args"]
+        MessageArgs(message=inner_args["message"])
+    else
+        MessageArgs(message=args_obj[:message])
+    end
 end
 
 # Convert Dict to FlightStatusArgs
