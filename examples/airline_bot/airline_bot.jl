@@ -73,11 +73,6 @@ function check_flight_status(args::ToolMessage)::String
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
-# Internal function to handle Dict arguments
-function check_flight_status(args::Dict{String,Any})::String
-    check_flight_status(convert_to_tool_message(args))
-end
-
 """
 Change the current flight to a new flight number.
 """
@@ -96,11 +91,6 @@ function change_flight(args::ToolMessage)::String
     # Update global context
     GLOBAL_CONTEXT[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
-end
-
-# Internal function to handle Dict arguments
-function change_flight(args::Dict{String,Any})::String
-    change_flight(convert_to_tool_message(args))
 end
 
 # Example usage:
@@ -159,13 +149,14 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                tool.content = PT.execute_tool(tool_map[name], args)
+                # Convert Dict arguments to ToolMessage before execution
+                tool_args = convert_to_tool_message(args)
+                tool.content = PT.execute_tool(tool_map[name], tool_args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
             num_iter += 1
         end
-    end
 
     return true
 end
