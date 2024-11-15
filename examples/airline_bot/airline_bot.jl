@@ -69,33 +69,33 @@ end
 # SwarmAgents integration wrapper functions
 
 """
-    check_status_wrapper(message::String)::String
+    check_status_wrapper(request::CheckFlightStatus)::String
 
 Check the status of the current flight.
 
 # Arguments
-- `message::String`: The user's message requesting flight status
+- `request::CheckFlightStatus`: The request containing the user's message
 
 # Returns
 - `String`: A formatted string containing the flight details
 """
-function check_status_wrapper(message::String)::String
-    check_status_tool(message, GLOBAL_SESSION.session)
+function check_status_wrapper(request::CheckFlightStatus)::String
+    check_status_tool(request.message, GLOBAL_SESSION.session)
 end
 
 """
-    change_flight_wrapper(message::String)::String
+    change_flight_wrapper(request::ChangeFlightRequest)::String
 
 Change the current flight to a new flight number.
 
 # Arguments
-- `message::String`: The user's message containing the new flight number (format: FL123)
+- `request::ChangeFlightRequest`: The request containing the new flight number
 
 # Returns
 - `String`: A confirmation message with the new flight details
 """
-function change_flight_wrapper(message::String)::String
-    change_flight_tool(message, GLOBAL_SESSION.session)
+function change_flight_wrapper(request::ChangeFlightRequest)::String
+    change_flight_tool(request.message, GLOBAL_SESSION.session)
 end
 
 """
