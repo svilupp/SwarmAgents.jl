@@ -255,7 +255,7 @@ function wrapped_check_size(msg::String, session::Session)::String
 end
 
 # Example usage:
-function run_example()
+function run_example(custom_messages=nothing)
     # Initialize the context
     context = ShoeStoreContext()
 
@@ -302,20 +302,22 @@ function run_example()
     session = Session(agent; context=to_session_dict(ShoeStoreSessionContext(context=context)))
 
     # Example conversation
-    println("Bot: Welcome to our shoe store! Please authenticate first.")
+    println("Bot: Welcome to our shoe store! Please authenticate to access our services.")
 
-    # Process messages through the session
-    messages = [
-        "show shoes",
-        "authenticate: Jan Svilupp, jan@svilupp.github.com",
-        "show shoes",
-        "check size 9 Running Shoes"
+    # Use custom messages if provided, otherwise use default messages
+    messages = custom_messages !== nothing ? custom_messages : [
+        "show shoes",  # Should prompt for authentication
+        "authenticate: jan svilupp, jan@svilupp.github.com",  # Valid authentication
+        "show shoes",  # Should show inventory
+        "check size 9 Running Shoes"  # Should check size availability
     ]
 
-    for (i, msg) in enumerate(messages)
+    for msg in messages
         println("\nUser: $msg")
         run_full_turn!(session, msg)
     end
+
+    return true
 end
 
 # Run the example if this file is run directly

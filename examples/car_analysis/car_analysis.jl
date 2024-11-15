@@ -156,7 +156,7 @@ function reset_data(params::ResetDataParams, context::Dict)
 end
 
 # Example usage
-function run_example()
+function run_example(custom_messages=nothing)
     # Create agent with analysis capabilities
     agent = Agent(;
         name = "Car Analysis Bot",
@@ -213,7 +213,8 @@ function run_example()
     # Example conversation
     println("Bot: Welcome to the car data analysis bot! Let's analyze some car data.")
 
-    messages = [
+    # Use custom messages if provided, otherwise use default messages
+    messages = custom_messages !== nothing ? custom_messages : [
         "Can you show me the basic statistics?",
         "Generate some insights about the data",
         "Show me the visualizations"
