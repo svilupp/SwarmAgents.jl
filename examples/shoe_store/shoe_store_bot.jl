@@ -326,7 +326,8 @@ end
 # Example usage:
 function run_example(custom_messages=nothing)
     # Set up OpenAI API key for PromptingTools
-    ENV["OPENAI_API_KEY"] = ENV["OPENAI_API_KEY_SECRET"]  # Use the secret key
+    # The key is already set in the environment, no need to reassign it
+    # ENV["OPENAI_API_KEY"] is already available
 
     # Initialize the context
     context = ShoeStoreContext()
