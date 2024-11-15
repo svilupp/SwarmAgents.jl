@@ -56,8 +56,8 @@ function dict_to_wrapper_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON
         # Handle nested structure from PromptingTools
         message = if args isa Dict{Symbol,Any}
             args_obj = args[:args]
-            if haskey(args_obj, "args") && haskey(args_obj["args"], "message")
-                args_obj["args"]["message"]
+            if haskey(args_obj, "message")
+                args_obj["message"]
             else
                 error("Unable to find message in Symbol-keyed arguments: $args_obj")
             end
