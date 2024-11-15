@@ -51,6 +51,21 @@ end
 # Convert FlightChangeArgs to Dict
 Base.convert(::Type{Dict{Symbol,Any}}, x::FlightChangeArgs) = Dict{Symbol,Any}(:args => convert(Dict{Symbol,Any}, x.args))
 
+# Convert Dict to MessageArgs
+function dict_to_message_args(d::Dict{Symbol,Any})::MessageArgs
+    MessageArgs(message=d[:args][:message])
+end
+
+# Convert Dict to FlightStatusArgs
+function dict_to_flight_status_args(d::Dict{Symbol,Any})::FlightStatusArgs
+    FlightStatusArgs(args=dict_to_message_args(d))
+end
+
+# Convert Dict to FlightChangeArgs
+function dict_to_flight_change_args(d::Dict{Symbol,Any})::FlightChangeArgs
+    FlightChangeArgs(args=dict_to_message_args(d))
+end
+
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
 const GLOBAL_CONTEXT = Dict{Symbol,Any}(
@@ -85,14 +100,6 @@ function check_flight_status(args::FlightStatusArgs)::String
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
-# Add method for Dict arguments
-function check_flight_status(args::Dict{Symbol,Any})::String
-    # Convert Dict to struct
-    message_args = MessageArgs(message=args[:args][:message])
-    struct_args = FlightStatusArgs(args=message_args)
-    check_flight_status(struct_args)
-end
-
 """
 Change the current flight to a new flight number.
 """
@@ -111,14 +118,6 @@ function change_flight(args::FlightChangeArgs)::String
     # Update global context
     GLOBAL_CONTEXT[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
-end
-
-# Add method for Dict arguments
-function change_flight(args::Dict{Symbol,Any})::String
-    # Convert Dict to struct
-    message_args = MessageArgs(message=args[:args][:message])
-    struct_args = FlightChangeArgs(args=message_args)
-    change_flight(struct_args)
 end
 
 # Example usage:
@@ -177,8 +176,13 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                # Execute tool with the args dictionary directly
-                tool.content = PT.execute_tool(tool_map[name], args)
+                # Convert Dict to appropriate struct type and execute tool
+                struct_args = if name == "check_flight_status"
+                    dict_to_flight_status_args(args)
+                else
+                    dict_to_flight_change_args(args)
+                end
+                tool.content = PT.execute_tool(tool_map[name], struct_args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
