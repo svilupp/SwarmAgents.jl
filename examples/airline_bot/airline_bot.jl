@@ -57,19 +57,19 @@ function dict_to_message_args(d::Dict{Symbol,Any})::MessageArgs
     args_obj = d[:args]
     try
         if args_obj isa JSON3.Object
-            # Handle nested structure: args[:args]["args"]["message"]
-            inner_args = args_obj["args"]
-            if inner_args isa Dict || inner_args isa JSON3.Object
-                return MessageArgs(message=inner_args["message"])
+            # Try both string and symbol keys for message
+            if haskey(args_obj, "message")
+                return MessageArgs(message=args_obj["message"])
+            elseif haskey(args_obj, :message)
+                return MessageArgs(message=args_obj[:message])
             end
+            @error "Message key not found in args object" args_obj
+            throw(KeyError("message"))
         end
-        # Fallback to direct access
+        # Fallback to direct access for Dict
         return MessageArgs(message=args_obj[:message])
     catch e
         @error "Failed to parse message args" args_obj typeof(args_obj)
-        if args_obj isa JSON3.Object
-            @error "JSON3.Object contents" String(args_obj.bytes)
-        end
         rethrow(e)
     end
 end
