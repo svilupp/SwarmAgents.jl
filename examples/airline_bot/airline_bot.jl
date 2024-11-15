@@ -68,12 +68,8 @@ Check the status of the current flight.
 
 Returns detailed information about the flight, including departure city, destination, and time.
 """
-function check_status_tool(message::String)::String
-    if isnothing(GLOBAL_SESSION.session)
-        return "Error: Session not initialized"
-    end
-
-    current_flight = GLOBAL_SESSION.session.context[:current_flight]::String
+function check_status_tool(message::String, session::Session)::String
+    current_flight = session.context[:current_flight]::String
     get_flight_details(current_flight)
 end
 
@@ -83,11 +79,7 @@ end
 Change the current flight to a new flight number.
 Extracts a flight number from the message content and updates the context.
 """
-function change_flight_tool(message::String)::String
-    if isnothing(GLOBAL_SESSION.session)
-        return "Error: Session not initialized"
-    end
-
+function change_flight_tool(message::String, session::Session)::String
     m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
@@ -98,7 +90,7 @@ function change_flight_tool(message::String)::String
         return "Flight $new_flight does not exist"
     end
 
-    GLOBAL_SESSION.session.context[:current_flight] = new_flight
+    session.context[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
@@ -124,8 +116,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(check_status_tool),
-        Tool(change_flight_tool)
+        Tool((msg, session) -> check_status_tool(msg, session)),
+        Tool((msg, session) -> change_flight_tool(msg, session))
     ])
 
     # Create a session with proper context and store it globally
