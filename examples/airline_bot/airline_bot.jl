@@ -78,6 +78,19 @@ function json_to_tool_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.O
     end
 end
 
+# Convert ToolArgs back to Dict{Symbol} for PromptingTools compatibility
+function tool_args_to_dict(args::ToolArgs)::Dict{Symbol,Any}
+    Dict{Symbol,Any}(
+        :args => Dict{String,Any}(
+            "args" => Dict{String,Any}(
+                "args" => Dict{String,Any}(
+                    "message" => args.args.args.message
+                )
+            )
+        )
+    )
+end
+
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
 const GLOBAL_CONTEXT = Dict{Symbol,Any}(
@@ -189,9 +202,9 @@ function run_example()
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
                 try
-                    # Convert JSON args to ToolArgs struct
+                    # Convert JSON args to ToolArgs struct and then back to Dict{Symbol}
                     tool_args = json_to_tool_args(args)
-                    tool.content = PT.execute_tool(tool_map[name], tool_args)
+                    tool.content = PT.execute_tool(tool_map[name], tool_args_to_dict(tool_args))
                     @info "Tool Output: $(tool.content)"
                 catch e
                     @error "Tool execution failed" exception=(e, catch_backtrace())
