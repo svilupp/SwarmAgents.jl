@@ -7,7 +7,7 @@ const PT = PromptingTools
 if !haskey(ENV, "OPENAI_API_KEY")
     error("OpenAI API key not found in environment variables")
 end
-PT.set_openai_key(ENV["OPENAI_API_KEY"])
+PT.AIEnvironment.set_openai_key(ENV["OPENAI_API_KEY"])
 
 using Dates
 
