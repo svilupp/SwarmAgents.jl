@@ -132,8 +132,18 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        PT.Tool(check_status_tool),
-        PT.Tool(change_flight_tool)
+        PT.Tool(check_status_tool;
+            name="check_status",
+            description="Check the status of the current flight",
+            parameters=[(:message, String, "The message content (unused)")],
+            return_type=String
+        ),
+        PT.Tool(change_flight_tool;
+            name="change_flight",
+            description="Change the current flight to a new flight number",
+            parameters=[(:message, String, "The message containing the new flight number")],
+            return_type=String
+        )
     ])
 
     # Create a session with proper context and store it globally
