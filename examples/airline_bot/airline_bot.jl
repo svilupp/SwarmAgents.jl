@@ -101,7 +101,7 @@ function run_example()
     ]
 
     # Initialize conversation with system message
-    conv = [PT.SystemMessage("""
+    conv = Vector{PT.AbstractChatMessage}([PT.SystemMessage("""
     You are an airline customer service bot. You can help with:
     - Checking flight status
     - Changing flights
@@ -109,7 +109,7 @@ function run_example()
     Always refer to the customer by their name (available in context).
 
     How can I help you today?
-    """)]
+    """)])
 
     for (i, msg) in enumerate(messages)
         println("\nUser: $msg")
