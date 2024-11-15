@@ -183,40 +183,53 @@ Example:
 ```
 """
 function add_transfers!(session::Session)
+    @info "Starting add_transfers!" agent_count=length(session.agent_map)
+
     # Get all agents from the map
     agents = collect(values(session.agent_map))
 
     # For each agent, create transfer functions to all other agents
     for source_agent in agents
         source_name = source_agent.name
+        @info "Processing source agent" source_name
 
         # Create transfer functions for all other agents
         for target_agent in agents
             target_name = target_agent.name
 
             # Skip creating transfer to self
-            source_name == target_name && continue
+            if source_name == target_name
+                @debug "Skipping self-transfer" source_name target_name
+                continue
+            end
 
             # Create snake_case function name (e.g., "Booking Agent" -> "transfer_to_booking_agent")
             target_snake = lowercase(replace(target_name, r"[^a-zA-Z0-9]+" => "_"))
             function_name = "transfer_to_$target_snake"
+            @info "Creating transfer tool" function_name target_name
 
-            # Create a simple anonymous function with clear signature
-            transfer_fn = let session=session, target_name=target_name
-                handover_message::String -> begin
-                    push!(session.messages, SystemMessage(handover_message))
-                    AgentRef(Symbol(target_name))
-                end
+            try
+                # Create and add tool with transfer function
+                @debug "Creating tool" target_name
+                tool = Tool(
+                    x -> AgentRef(Symbol(target_name));
+                    name=function_name,
+                    docs="Transfer conversation to $target_name. Requires handover_message::String to explain the reason for transfer.",
+                    parameters=Dict(
+                        "handover_message" => Dict(
+                            "type" => "string",
+                            "description" => "Explanation for why the customer is being transferred"
+                        )
+                    )
+                )
+                @info "Adding tool to agent" agent=source_name tool_name=tool.name
+                add_tools!(source_agent, tool)
+            catch e
+                @error "Failed to create or add tool" exception=(e, catch_backtrace()) function_name target_name
+                rethrow(e)
             end
-
-            # Create and add tool with the anonymous function
-            tool = Tool(
-                transfer_fn;
-                name=function_name,
-                docs="Transfer conversation to $target_name. Provide reason for transfer in handover_message."
-            )
-            add_tools!(source_agent, tool)
         end
     end
+    @info "Completed add_transfers!"
     return nothing
 end
