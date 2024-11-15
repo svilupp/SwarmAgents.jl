@@ -328,10 +328,8 @@ function run_example(custom_messages=nothing)
     # Set up OpenAI API key for PromptingTools
     ENV["OPENAI_API_KEY"] = ENV["OPENAI_API_KEY"]
 
-    # Initialize the context and session
+    # Initialize the context
     context = ShoeStoreContext()
-    session = Session(; context=Dict(:context => context))
-    set_current_session!(session)
 
     # Create tools and agent
     agent = Agent(;
@@ -356,6 +354,10 @@ function run_example(custom_messages=nothing)
         Tool(wrapped_check_size; name="check_size", docs="Check availability of specific shoe size",
              strict=true)
     ])
+
+    # Create session with agent and context
+    session = Session(agent; context=Dict(:context => context))
+    set_current_session!(session)
 
     # Example conversation
     println("Bot: Welcome to our shoe store! Please authenticate to access our services.")
