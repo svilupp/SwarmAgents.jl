@@ -80,28 +80,36 @@ function change_flight!(context::AirlineContext, new_flight::String)
 end
 
 # Core tool functions
-function check_status(params::CheckStatusParams, context::AirlineContext)
-    flight_number = context.current_flight
-    return get_flight_details(flight_number)
+function check_status(flight_number::String)::String
+    get_flight_details(flight_number)
 end
 
-function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, context::AirlineContext)
+function change_flight(current_flight::String, new_flight::String)::String
+    if !flight_exists(new_flight)
+        return "Flight $new_flight does not exist"
+    end
+    "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
+end
+
+# Tool wrapper functions for Tool constructor
+function check_status_tool(msg::PT.AIToolRequest, session::Session)::String
+    current_flight = session.context[:current_flight]::String
+    check_status(current_flight)
+end
+
+function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
     # Extract flight number from message content
     m = match(r"FL\d+", msg.content)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
     new_flight = m.match
-    return change_flight!(context, new_flight)
-end
-
-# Tool wrapper functions for Tool constructor
-function check_status_tool(msg::PT.AIToolRequest, session::Session)::String
-    check_status(CheckStatusParams(), session.context)
-end
-
-function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
-    change_flight(ChangeFlightParams(), msg, session.context)
+    current_flight = session.context[:current_flight]::String
+    result = change_flight(current_flight, new_flight)
+    if !startswith(result, "Flight $new_flight does not exist")
+        session.context[:current_flight] = new_flight
+    end
+    return result
 end
 
 # Example usage:
@@ -112,11 +120,11 @@ function run_example()
     end
     PT.OPENAI_API_KEY = ENV["OPENAI_API_KEY"]
 
-    # Initialize the context with AirlineContext struct
-    context = AirlineContext(
-        current_flight = "FL123",  # User's current flight
-        name = "John Doe",         # User's name
-        booking_ref = "ABC123"     # Booking reference
+    # Initialize the context as a Dict
+    context = Dict{Symbol,Any}(
+        :current_flight => "FL123",  # User's current flight
+        :name => "John Doe",         # User's name
+        :booking_ref => "ABC123"     # Booking reference
     )
 
     # Create tools and agent
