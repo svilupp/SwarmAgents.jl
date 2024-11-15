@@ -153,8 +153,29 @@ function run_example()
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
 
-    # Create tool map using the correct pattern
-    tool_map = PT.tool_call_signature([check_flight_status, change_flight])
+    # Create wrapper functions that handle the argument conversion
+    function wrapped_check_flight_status(args::Dict{Symbol,Any})::String
+        try
+            struct_args = dict_to_flight_status_args(args)
+            return check_flight_status(struct_args)
+        catch e
+            @error "Failed to execute check_flight_status" exception=(e, catch_backtrace())
+            return "Sorry, I encountered an error checking your flight status. Please try again."
+        end
+    end
+
+    function wrapped_change_flight(args::Dict{Symbol,Any})::String
+        try
+            struct_args = dict_to_flight_change_args(args)
+            return change_flight(struct_args)
+        catch e
+            @error "Failed to execute change_flight" exception=(e, catch_backtrace())
+            return "Sorry, I encountered an error changing your flight. Please try again."
+        end
+    end
+
+    # Create tool map using wrapped functions
+    tool_map = PT.tool_call_signature([wrapped_check_flight_status, wrapped_change_flight])
     tools = collect(values(tool_map))
 
     # Example conversation
@@ -202,16 +223,13 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                # Convert Dict to appropriate struct type and execute tool
-                struct_args = if name == "check_flight_status"
-                    dict_to_flight_status_args(args)
-                else
-                    dict_to_flight_change_args(args)
+                try
+                    tool.content = PT.execute_tool(tool_map[name], args)
+                    @info "Tool Output: $(tool.content)"
+                catch e
+                    @error "Tool execution failed" exception=(e, catch_backtrace())
+                    tool.content = "Sorry, I encountered an error. Please try again."
                 end
-                # Convert struct back to Dict for execute_tool
-                dict_args = convert(Dict{Symbol,Any}, struct_args)
-                tool.content = PT.execute_tool(tool_map[name], dict_args)
-                @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
             num_iter += 1
