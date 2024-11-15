@@ -125,6 +125,16 @@ function tool_args_to_dict(args::ToolArgs)::Dict{Symbol,Any}
     )
 end
 
+# Convert WrapperArgs back to Dict{Symbol} for PromptingTools compatibility
+function wrapper_args_to_dict(args::WrapperArgs)::Dict{Symbol,Any}
+    Dict{Symbol,Any}(
+        :args => Dict{String,Any}(
+            "args" => Dict{String,Any}(
+                "message" => args.args.message
+            )
+        )
+    )
+end
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
 const GLOBAL_CONTEXT = Dict{Symbol,Any}(
@@ -265,9 +275,10 @@ function run_example()
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
                 try
-                    # Convert Dict to WrapperArgs before executing tool
+                    # Convert Dict to WrapperArgs, then back to Dict for PromptingTools
                     wrapper_args = dict_to_wrapper_args(args)
-                    tool.content = PT.execute_tool(tool_map[name], wrapper_args)
+                    tool_dict_args = wrapper_args_to_dict(wrapper_args)
+                    tool.content = PT.execute_tool(tool_map[name], tool_dict_args)
                     @info "Tool Output: $(tool.content)"
                 catch e
                     @error "Tool execution failed" exception=(e, catch_backtrace())
