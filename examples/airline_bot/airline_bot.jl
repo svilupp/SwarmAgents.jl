@@ -29,6 +29,11 @@ Base.@kwdef struct FlightDatabase
     ]
 end
 
+# Define argument structures for tools
+Base.@kwdef struct MessageArgs
+    message::String
+end
+
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
 const GLOBAL_CONTEXT = Dict{Symbol,Any}(
@@ -58,16 +63,15 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::Dict{Symbol,Any})::String
+function check_flight_status(args::MessageArgs)::String
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::Dict{Symbol,Any})::String
-    message = args[:message]
-    m = match(r"FL\d+", message)
+function change_flight(args::MessageArgs)::String
+    m = match(r"FL\d+", args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
