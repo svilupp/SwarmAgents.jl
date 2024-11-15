@@ -94,30 +94,35 @@ end
 # Tool wrapper functions for Tool constructor
 """
 Check the status of a flight
-Input: flight number as string
+Input: AIToolRequest and Session
 Output: flight details as string
 """
-function check_status_tool(flight_number::String)::String
-    check_status(flight_number)
+function check_status_tool(msg::PT.AIToolRequest, session::Session)::String
+    current_flight = session.context[:current_flight]::String
+    get_flight_details(current_flight)
 end
 
 """
 Change flight to a new flight number
-Input: new flight number as string
+Input: AIToolRequest and Session
 Output: success/failure message as string
 """
-function change_flight_tool(new_flight::String)::String
+function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
+    # Extract flight number from message content
+    m = match(r"FL\d+", msg.content)
+    if isnothing(m)
+        return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
+    end
+    new_flight = m.match
+
+    # Check if flight exists and update context
     if !flight_exists(new_flight)
         return "Flight $new_flight does not exist"
     end
-    "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
-end
 
-# Context update wrapper functions
-function update_flight_in_context!(session::Session, new_flight::String)
-    if flight_exists(new_flight)
-        session.context[:current_flight] = new_flight
-    end
+    # Update context and return success message
+    session.context[:current_flight] = new_flight
+    "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
 # Example usage:
@@ -147,21 +152,10 @@ function run_example()
         """
     )
 
-    # Add tools to the agent using simpler Tool constructor
+    # Add tools to the agent
     add_tools!(agent, [
-        Tool(check_status_tool; wrap=msg -> check_status_tool(session.context[:current_flight]::String)),
-        Tool(change_flight_tool; wrap=msg -> begin
-            m = match(r"FL\d+", msg.content)
-            if isnothing(m)
-                return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
-            end
-            new_flight = m.match
-            result = change_flight_tool(new_flight)
-            if !startswith(result, "Flight $new_flight does not exist")
-                update_flight_in_context!(session, new_flight)
-            end
-            return result
-        end)
+        Tool(check_status_tool),
+        Tool(change_flight_tool)
     ])
 
     # Create a session with proper context
