@@ -1,5 +1,5 @@
 using SwarmAgents
-using SwarmAgents: Tool
+using SwarmAgents: Tool, Session, Agent
 using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
                      ToolMessage, TestEchoOpenAISchema
@@ -91,11 +91,11 @@ function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, contex
 end
 
 # Tool wrapper functions for Tool constructor
-function check_status_tool(msg::PT.AIToolRequest, session::SwarmAgents.Session{AirlineContext})
+function check_status_tool(msg::PT.AIToolRequest, session::Session{AirlineContext})::String
     check_status(CheckStatusParams(), session.context)
 end
 
-function change_flight_tool(msg::PT.AIToolRequest, session::SwarmAgents.Session{AirlineContext})
+function change_flight_tool(msg::PT.AIToolRequest, session::Session{AirlineContext})::String
     change_flight(ChangeFlightParams(), msg, session.context)
 end
 
