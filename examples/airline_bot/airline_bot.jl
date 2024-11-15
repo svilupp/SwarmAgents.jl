@@ -124,8 +124,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(check_status_tool; name="check_status", description="Check the status of the current flight"),
-        Tool(change_flight_tool; name="change_flight", description="Change the current flight to a new flight number")
+        Tool("check_status", Dict("message" => String), "Check the status of the current flight", nothing, check_status_tool),
+        Tool("change_flight", Dict("message" => String), "Change the current flight to a new flight number", nothing, change_flight_tool)
     ])
 
     # Create a session with proper context and store it globally
