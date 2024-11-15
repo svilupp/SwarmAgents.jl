@@ -37,8 +37,8 @@ end
 # Convert Dict arguments to ToolMessage
 function convert_to_tool_message(args::Dict{Symbol,Any})::ToolMessage
     # Extract message from nested structure that PromptingTools provides
-    nested_args = args[:args]::Dict{String,Any}
-    ToolMessage(message=nested_args["message"])
+    # args[:args] is a JSON3.Object, we can access its fields directly
+    ToolMessage(message=args[:args].message)
 end
 
 # Initialize the flight database and global context
