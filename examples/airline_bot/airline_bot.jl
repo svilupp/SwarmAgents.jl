@@ -105,7 +105,7 @@ function run_example()
     if !haskey(ENV, "OPENAI_API_KEY")
         error("OPENAI_API_KEY environment variable not set. Please set it before running the example.")
     end
-    PT.set_openai_key(ENV["OPENAI_API_KEY"])
+    PT.OPENAI_API_KEY = ENV["OPENAI_API_KEY"]
 
     # Initialize the context as Dict{Symbol, Any}
     context = Dict{Symbol, Any}(

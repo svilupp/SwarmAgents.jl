@@ -2,9 +2,8 @@
 using PromptingTools
 const PT = PromptingTools
 
-# Set OpenAI API key from environment variable
-const OPENAI_API_KEY = ENV["OPENAI_API_KEY"]
-PT.set_openai_key(OPENAI_API_KEY)
+# Set OpenAI API key directly
+PT.OPENAI_API_KEY = ENV["OPENAI_API_KEY"]
 
 # Test the connection
 result = aigenerate("Say hello!", model="gpt-3.5-turbo")
