@@ -201,17 +201,12 @@ function add_transfers!(session::Session)
             target_snake = lowercase(replace(target_name, r"[^a-zA-Z0-9]+" => "_"))
             function_name = "transfer_to_$target_snake"
 
-            # Create transfer function that captures session in closure
-            transfer_fn = let session=session, target_name=target_name
-                function(handover_message::String)
+            # Create and add tool with anonymous function
+            tool = Tool(
+                handover_message::String -> begin
                     push!(session.messages, SystemMessage(handover_message))
                     return AgentRef(Symbol(target_name))
-                end
-            end
-
-            # Create and add tool with the transfer function
-            tool = Tool(
-                transfer_fn;
+                end;
                 name=function_name,
                 docs="Transfer conversation to $target_name. Provide reason for transfer in handover_message."
             )
