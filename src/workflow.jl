@@ -167,6 +167,30 @@ function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwarg
 end  # End of add_tools!
 
 """
+    transfer_agent(target_agent_name::String, handover_message::String) -> AgentRef
+
+Generic transfer function that creates an AgentRef for the specified target agent.
+This function supports introspection via PT.get_arg_names and PT.get_arg_types.
+
+# Arguments
+- `target_agent_name::String`: Name of the target agent to transfer to
+- `handover_message::String`: Explanation for why the transfer is needed
+
+# Returns
+- `AgentRef`: Reference to the target agent
+
+# Example
+```julia
+# Transfer to "Support Agent" with explanation
+new_agent = transfer_agent("Support Agent", "Customer needs technical assistance")
+```
+"""
+function transfer_agent(target_agent_name::String, handover_message::String)::AgentRef
+    @info "Transfer agent called" target_agent_name handover_message
+    return AgentRef(target_agent_name)
+end
+
+"""
     add_transfers!(session::Session)
 
 Add transfer tools to each agent in the session's agent_map to enable transfers between agents.
