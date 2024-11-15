@@ -356,7 +356,7 @@ function run_example(custom_messages=nothing)
     ])
 
     # Create session with agent and context
-    session = Session(agent; context=Dict(:context => context))
+    session = Session(agent; context=Dict{Symbol,Any}(:context => context))
     set_current_session!(session)
 
     # Example conversation
