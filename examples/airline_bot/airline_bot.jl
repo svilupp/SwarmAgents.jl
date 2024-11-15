@@ -43,19 +43,30 @@ Base.@kwdef struct ToolArgs
 end
 
 # Convert JSON3/Dict to ToolArgs
-function json_to_tool_args(args::Union{Dict{String,Any},JSON3.Object})::ToolArgs
+function json_to_tool_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::ToolArgs
     try
         # Handle nested structure from PromptingTools
-        if haskey(args, "args") && haskey(args["args"], "message")
-            return ToolArgs(
-                args=ToolInnerArgs(
-                    args=ToolMessageArgs(
-                        message=args["args"]["message"]
-                    )
+        message = if args isa Dict{Symbol,Any}
+            if haskey(args, :args) && haskey(args[:args], "args") && haskey(args[:args]["args"], "message")
+                args[:args]["args"]["message"]
+            else
+                error("Unable to find message in Symbol-keyed arguments: $args")
+            end
+        else
+            if haskey(args, "args") && haskey(args["args"], "args") && haskey(args["args"]["args"], "message")
+                args["args"]["args"]["message"]
+            else
+                error("Unable to find message in String-keyed arguments: $args")
+            end
+        end
+
+        return ToolArgs(
+            args=ToolInnerArgs(
+                args=ToolMessageArgs(
+                    message=message
                 )
             )
-        end
-        error("Unable to find message in arguments: $args")
+        )
     catch e
         @error "Failed to parse tool args" args typeof(args)
         rethrow(e)
@@ -92,9 +103,7 @@ end
 Check the status of the current flight.
 """
 function check_flight_status(args::ToolArgs)::String
-    # Convert tool args to our internal type
-    status_args = dict_to_flight_status_args(args.args)
-    # Use the message from the structured arguments
+    # Use the message from the structured arguments directly
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
@@ -102,10 +111,8 @@ end
 Change the current flight to a new flight number.
 """
 function change_flight(args::ToolArgs)::String
-    # Convert tool args to our internal type
-    change_args = dict_to_flight_change_args(args.args)
     # Extract flight number from message
-    m = match(r"FL\d+", change_args.args.message)
+    m = match(r"FL\d+", args.args.args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
