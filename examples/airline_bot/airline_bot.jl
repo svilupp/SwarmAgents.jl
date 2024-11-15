@@ -154,17 +154,11 @@ function run_example()
         """
     )
 
-    # Add tools to the agent with function signatures
-    add_tools!(agent, [
-        Tool(check_flight_status;
-            name="check_flight_status",
-            docs="Check the status of the current flight"
-        ),
-        Tool(change_flight;
-            name="change_flight",
-            docs="Change the current flight to a new flight number"
-        )
-    ])
+    # Create tool map using PromptingTools tool_call_signature
+    tool_map = PT.tool_call_signature([check_flight_status, change_flight])
+
+    # Add tools to the agent
+    add_tools!(agent, collect(values(tool_map)))
 
     # Create a session with proper context and store it globally
     GLOBAL_SESSION.session = Session(agent; context=Dict{Symbol,Any}(:current_flight => "FL123", :name => "John Doe", :booking_ref => "ABC123"))
