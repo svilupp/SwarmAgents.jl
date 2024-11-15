@@ -2,7 +2,6 @@ using SwarmAgents
 using PromptingTools
 const PT = PromptingTools
 using PromptingTools: aitools
-using PromptingTools.AITools
 using Dates
 using JSON3
 
