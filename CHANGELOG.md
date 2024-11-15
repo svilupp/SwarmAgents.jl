@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Improved private agents message visibility:
+  - Last turn messages are now visible to all agents
+  - Assistant messages with no tool calls are made public
+  - Messages during agent handoff are visible
+  - Only intermediate tool calls remain private
+  - Added comprehensive test suite for privacy logic
 
 ### Fixed
 
