@@ -71,7 +71,7 @@ function change_flight!(context::Dict{Symbol, Any}, new_flight::String)
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-# Tool functions
+# Core tool functions
 function check_status(params::CheckStatusParams, context::Dict{Symbol, Any})
     if !haskey(context, :current_flight)
         return "No flight found in context"
@@ -90,8 +90,23 @@ function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, contex
     return change_flight!(context, new_flight)
 end
 
+# Tool wrapper functions for Tool constructor
+function check_status_tool(msg::PT.AIToolRequest, session)
+    check_status(CheckStatusParams(), session.context)
+end
+
+function change_flight_tool(msg::PT.AIToolRequest, session)
+    change_flight(ChangeFlightParams(), msg, session.context)
+end
+
 # Example usage:
 function run_example()
+    # Set up OpenAI API key for PromptingTools
+    if !haskey(ENV, "OPENAI_API_KEY")
+        error("OPENAI_API_KEY environment variable not set. Please set it before running the example.")
+    end
+    PT.set_openai_key(ENV["OPENAI_API_KEY"])
+
     # Initialize the context as Dict{Symbol, Any}
     context = Dict{Symbol, Any}(
         :current_flight => "FL123",  # User's current flight
@@ -111,24 +126,10 @@ function run_example()
         """
     )
 
-    # Add tools to the agent
+    # Add tools to the agent using simpler Tool constructor
     add_tools!(agent, [
-        Tool("check_status",
-             :return => String,  # Return type as Symbol => Type pair
-             "Check the status of your current flight",
-             Dict{Symbol,Any}(),  # Empty parameters dictionary
-             function(msg::PT.AIToolRequest, session)
-                 check_status(CheckStatusParams(), session.context)
-             end
-        ),
-        Tool("change_flight",
-             :return => String,  # Return type as Symbol => Type pair
-             "Change your flight to a new flight number",
-             Dict{Symbol,Any}(),  # Empty parameters dictionary
-             function(msg::PT.AIToolRequest, session)
-                 change_flight(ChangeFlightParams(), msg, session.context)
-             end
-        )
+        Tool(check_status_tool),
+        Tool(change_flight_tool)
     ])
 
     # Create a session with proper context
