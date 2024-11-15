@@ -274,14 +274,14 @@ Tool function to authenticate users.
 # Returns
 - `String`: Authentication result message
 """
-function wrapped_authenticate(message::String)::String
+function wrapped_authenticate(args::AuthArgs)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
 
     # Create params and call authenticate
-    params = AuthenticateParams(msg=message, context=session_context)
+    params = AuthenticateParams(msg=args.message, context=session_context)
     authenticate(params)
 end
 
@@ -296,13 +296,13 @@ Tool function to show available inventory.
 # Returns
 - `String`: Formatted inventory list
 """
-function wrapped_show_inventory(message::String)::String
+function wrapped_show_inventory(args::ShowArgs)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
 
-    # Create params and call show_inventory (message is ignored as it's not needed)
+    # Create params and call show_inventory
     params = ShowInventoryParams(context=session_context)
     show_inventory(params)
 end
@@ -318,14 +318,14 @@ Tool function to check shoe size availability.
 # Returns
 - `String`: Size availability message
 """
-function wrapped_check_size(message::String)::String
+function wrapped_check_size(args::SizeArgs)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
 
     # Create params and call check_size
-    params = CheckSizeParams(msg=message, context=session_context)
+    params = CheckSizeParams(msg=args.message, context=session_context)
     check_size(params)
 end
 
@@ -350,9 +350,9 @@ function run_example(custom_messages=nothing)
 
     # Add tools to the agent with explicit type information
     add_tools!(agent, [
-        Tool(wrapped_authenticate; name="authenticate", docs="Authenticate user with name and email", param_type=AuthArgs),
-        Tool(wrapped_show_inventory; name="show_inventory", docs="Show available shoe inventory", param_type=ShowArgs),
-        Tool(wrapped_check_size; name="check_size", docs="Check availability of specific shoe size", param_type=SizeArgs)
+        Tool(wrapped_authenticate; name="authenticate", docs="Authenticate user with name and email", strict=true),
+        Tool(wrapped_show_inventory; name="show_inventory", docs="Show available shoe inventory", strict=true),
+        Tool(wrapped_check_size; name="check_size", docs="Check availability of specific shoe size", strict=true)
     ])
 
     # Create session with agent and context
