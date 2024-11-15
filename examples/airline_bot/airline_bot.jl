@@ -189,6 +189,7 @@ function run_example()
             end
             num_iter += 1
         end
+    end
 
     return true
 end
