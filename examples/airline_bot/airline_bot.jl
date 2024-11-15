@@ -114,7 +114,7 @@ function run_example()
     # Add tools to the agent
     add_tools!(agent, [
         Tool("check_status",
-             Dict{Symbol,Any}(:return => String, :parameters => Dict{Symbol,Any}()),  # Full return type specification
+             :return => String,  # Simple return type as Pair<Symbol,Type>
              "Check the status of your current flight",
              nothing,
              function(msg::PT.AIToolRequest, session)
@@ -122,7 +122,7 @@ function run_example()
              end
         ),
         Tool("change_flight",
-             Dict{Symbol,Any}(:return => String, :parameters => Dict{Symbol,Any}()),  # Full return type specification
+             :return => String,  # Simple return type as Pair<Symbol,Type>
              "Change your flight to a new flight number",
              nothing,
              function(msg::PT.AIToolRequest, session)
