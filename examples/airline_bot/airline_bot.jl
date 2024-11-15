@@ -69,23 +69,28 @@ end
 # SwarmAgents integration wrapper functions
 
 """
-    check_status_tool(message::String, session::Session{AirlineContext})::String
+    check_status_tool(message::String, session::Session)::String
 
 Check the status of the current flight.
 
 Returns detailed information about the flight, including departure city, destination, and time.
 """
-function check_status_tool(message::String, session::Session{AirlineContext})::String
-    get_flight_details(session.context.current_flight)
+function check_status_tool(message::String, session::Session)::String
+    context = AirlineContext(;
+        current_flight=session.context[:current_flight],
+        name=session.context[:name],
+        booking_ref=session.context[:booking_ref]
+    )
+    get_flight_details(context.current_flight)
 end
 
 """
-    change_flight_tool(message::String, session::Session{AirlineContext})::String
+    change_flight_tool(message::String, session::Session)::String
 
 Change the current flight to a new flight number.
 Extracts a flight number from the message content and updates the context.
 """
-function change_flight_tool(message::String, session::Session{AirlineContext})::String
+function change_flight_tool(message::String, session::Session)::String
     m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
@@ -96,11 +101,8 @@ function change_flight_tool(message::String, session::Session{AirlineContext})::
         return "Flight $new_flight does not exist"
     end
 
-    session.context = AirlineContext(
-        current_flight=new_flight,
-        name=session.context.name,
-        booking_ref=session.context.booking_ref
-    )
+    # Update context dictionary
+    session.context[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
@@ -131,7 +133,7 @@ function run_example()
     ])
 
     # Create a session with proper context and store it globally
-    GLOBAL_SESSION.session = Session(agent; context=AirlineContext())
+    GLOBAL_SESSION.session = Session(agent; context=Dict{Symbol,Any}(:current_flight => "FL123", :name => "John Doe", :booking_ref => "ABC123"))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
