@@ -56,8 +56,8 @@ function dict_to_message_args(d::Dict{Symbol,Any})::MessageArgs
     # Handle nested JSON structure from PromptingTools
     args_obj = d[:args]
     if args_obj isa JSON3.Object
-        inner_args = args_obj["args"]
-        MessageArgs(message=inner_args["message"])
+        # Message is directly in args[:args] for JSON3.Object
+        MessageArgs(message=args_obj["message"])
     else
         MessageArgs(message=args_obj[:message])
     end
