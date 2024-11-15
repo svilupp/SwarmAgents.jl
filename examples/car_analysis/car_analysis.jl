@@ -112,47 +112,40 @@ function create_visualizations(df::DataFrame)
 end
 
 # Tool functions
-function show_stats(params::ShowStatsParams, context::Dict)
-    if !haskey(context, "data")
-        return "No data available. Please reset the data first."
-    end
+"""
+    show_stats_tool(message::String, session::Session)::String
 
-    df = context["data"]
-    return """
-    Basic Statistics:
-    - Number of cars: $(nrow(df))
-    - Average price: \$$(round(mean(df.price), digits=2))
-    - Average MPG: $(round(mean(df.mpg), digits=1))
-    - Newest car: $(maximum(df.year))
-    - Oldest car: $(minimum(df.year))
-    """
+Show basic statistics about the car dataset.
+"""
+function show_stats_tool(message::String, session::Session)::String
+    show_stats(ShowStatsParams(), session.context)
 end
 
-function show_insights(params::ShowInsightsParams, context::Dict)
-    if !haskey(context, "data")
-        return "No data available. Please reset the data first."
-    end
+"""
+    show_insights_tool(message::String, session::Session)::String
 
-    insights = generate_insights(context["data"])
-    return """
-    Here are some insights about the data:
-
-    $insights
-    """
+Generate insights about the car dataset using AI analysis.
+"""
+function show_insights_tool(message::String, session::Session)::String
+    show_insights(ShowInsightsParams(), session.context)
 end
 
-function show_plots(params::ShowPlotsParams, context::Dict)
-    if !haskey(context, "data")
-        return "No data available. Please reset the data first."
-    end
+"""
+    show_plots_tool(message::String, session::Session)::String
 
-    plots = create_visualizations(context["data"])
-    return "Generated $(length(plots)) plots: price distribution and MPG vs Price scatter plot"
+Create and display visualizations of the car dataset.
+"""
+function show_plots_tool(message::String, session::Session)::String
+    show_plots(ShowPlotsParams(), session.context)
 end
 
-function reset_data(params::ResetDataParams, context::Dict)
-    context["data"] = create_mock_dataset()
-    return "Created new mock dataset with $(nrow(context["data"])) cars. Try 'show insights' or 'show plots'!"
+"""
+    reset_data_tool(message::String, session::Session)::String
+
+Reset the dataset to a new random sample.
+"""
+function reset_data_tool(message::String, session::Session)::String
+    reset_data(ResetDataParams(), session.context)
 end
 
 # Example usage
@@ -173,10 +166,10 @@ function run_example(custom_messages=nothing)
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool((msg, session) -> show_stats(ShowStatsParams(), session.context)),
-        Tool((msg, session) -> show_insights(ShowInsightsParams(), session.context)),
-        Tool((msg, session) -> show_plots(ShowPlotsParams(), session.context)),
-        Tool((msg, session) -> reset_data(ResetDataParams(), session.context))
+        Tool(show_stats_tool),
+        Tool(show_insights_tool),
+        Tool(show_plots_tool),
+        Tool(reset_data_tool)
     ])
 
     # Initialize context with fresh data

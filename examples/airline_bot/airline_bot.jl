@@ -116,8 +116,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool((msg, session) -> check_status_tool(msg, session)),
-        Tool((msg, session) -> change_flight_tool(msg, session))
+        Tool(check_status_tool),
+        Tool(change_flight_tool)
     ])
 
     # Create a session with proper context and store it globally
