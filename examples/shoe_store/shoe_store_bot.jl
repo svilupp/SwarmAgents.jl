@@ -275,26 +275,20 @@ function run_example(custom_messages=nothing)
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(;
+        Tool(wrapped_authenticate;
             name="authenticate",
             parameters=(msg=String,),
-            return_type=String,
-            description="Authenticate user with name and email",
-            callable=wrapped_authenticate
+            return_type=String
         ),
-        Tool(;
+        Tool(wrapped_show_inventory;
             name="show_inventory",
             parameters=NamedTuple(),  # No parameters needed as wrapper doesn't use any
-            return_type=String,
-            description="Show available shoe inventory",
-            callable=wrapped_show_inventory
+            return_type=String
         ),
-        Tool(;
+        Tool(wrapped_check_size;
             name="check_size",
             parameters=(msg=String,),
-            return_type=String,
-            description="Check if a specific shoe size is available",
-            callable=wrapped_check_size
+            return_type=String
         )
     ])
 

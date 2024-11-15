@@ -173,33 +173,25 @@ function run_example(custom_messages=nothing)
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(;
+        Tool((msg, session) -> show_stats(ShowStatsParams(), session.context);
             name="show_stats",
             parameters=(none=Nothing,),
-            return_type=String,
-            description="Show basic statistics about the car dataset",
-            callable=(msg, session) -> show_stats(ShowStatsParams(), session.context)
+            return_type=String
         ),
-        Tool(;
+        Tool((msg, session) -> show_insights(ShowInsightsParams(), session.context);
             name="show_insights",
             parameters=(none=Nothing,),
-            return_type=String,
-            description="Show insights generated from the car dataset",
-            callable=(msg, session) -> show_insights(ShowInsightsParams(), session.context)
+            return_type=String
         ),
-        Tool(;
+        Tool((msg, session) -> show_plots(ShowPlotsParams(), session.context);
             name="show_plots",
             parameters=(none=Nothing,),
-            return_type=String,
-            description="Show visualizations of the car dataset",
-            callable=(msg, session) -> show_plots(ShowPlotsParams(), session.context)
+            return_type=String
         ),
-        Tool(;
+        Tool((msg, session) -> reset_data(ResetDataParams(), session.context);
             name="reset_data",
             parameters=(none=Nothing,),
-            return_type=String,
-            description="Reset/create new car dataset",
-            callable=(msg, session) -> reset_data(ResetDataParams(), session.context)
+            return_type=String
         )
     ])
 
