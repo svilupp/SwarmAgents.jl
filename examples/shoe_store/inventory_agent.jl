@@ -2,30 +2,46 @@ using SwarmAgents
 using PromptingTools
 
 """
-Show the complete inventory of available shoes with sizes and prices.
-Returns formatted list of all available shoes.
+    display_available_inventory(message::String)::String
+
+Show complete inventory of available shoes with sizes and prices.
+Returns formatted list of all available shoes with suggestions for next steps.
+
+Usage:
+    display_available_inventory("show me your shoes")
+
+Intent: Provide comprehensive overview of available products and guide to size checking.
 """
-function show_inventory(message::String)::String
+function display_available_inventory(message::String)::String
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
 
     if !store_context.authenticated
-        return "Please authenticate first."
+        return "Please authenticate first to view our exclusive collection."
     end
 
     return """
-    Here's our current inventory, $(store_context.name):
+    Here's our current collection, $(store_context.name):
     $(join([format_shoe_info(shoe) for shoe in keys(SHOE_INVENTORY)], "\n"))
 
-    Would you like to check any specific sizes? I can transfer you to our sizing specialist.
+    Would you like to check if your size is available in any of these models?
+    I can connect you with our sizing specialist who can help you find the perfect fit.
+    Just let me know which shoe and size you're interested in!
     """
 end
 
 """
-Transfer to the sizing specialist for detailed size checks.
-Returns the sizing agent instance for handling size queries.
+    transfer_to_sizing_specialist(message::String)::Union{Agent,Nothing}
+
+Transfer customer to sizing specialist for detailed size availability checks.
+Returns sizing agent instance or nothing if user isn't authenticated.
+
+Usage:
+    transfer_to_sizing_specialist("check size 9 Running Shoes")
+
+Intent: Ensure smooth transition to size checking when customer shows specific interest.
 """
-function transfer_to_sizing(message::String)::Union{Agent,Nothing}
+function transfer_to_sizing_specialist(message::String)::Union{Agent,Nothing}
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
 
@@ -69,8 +85,8 @@ function create_inventory_agent()::Agent
 
     # Add tools with clear names and docstrings
     add_tools!(agent, [
-        show_inventory,
-        transfer_to_sizing
+        display_available_inventory,
+        transfer_to_sizing_specialist
     ]; hidden_fields=["context"])  # Hide context from AI model
 
     return agent
