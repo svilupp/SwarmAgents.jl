@@ -2,7 +2,7 @@ using Test
 using SwarmAgents
 using PromptingTools
 using PromptingTools: ToolMessage, UserMessage, AIMessage, Tool
-using SwarmAgents: ToolFlowRules, PrivateMessage
+using SwarmAgents: PrivateMessage
 
 @testset "Flow Rules" begin
     @testset "TerminationCycleCheck" begin

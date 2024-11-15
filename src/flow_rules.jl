@@ -5,36 +5,28 @@ const PT = PromptingTools
 Abstract type hierarchy for flow rules in SwarmAgents.
 
 # Notes
-- Flow rules, including tool flow rules and termination checks, ignore PrivateMessage visibility
+- Flow rules, including termination checks, ignore PrivateMessage visibility
 - They operate on the underlying messages regardless of privacy settings
 """
 abstract type AbstractFlowRules end
-abstract type AbstractToolFlowRules <: AbstractFlowRules end
 abstract type AbstractTerminationFlowRules <: AbstractFlowRules end
 
 """
-    ToolFlowRules <: AbstractToolFlowRules
+    add_rules!(session::Session, rules::Vector{<:AbstractFlowRules})
 
-A concrete implementation of tool flow rules that manages a single tool.
+Add flow rules to a session.
 
-# Fields
-- `name::String`: Name of the rule (defaults to tool's name)
-- `tool::Tool`: The tool this rule manages
+# Arguments
+- `session::Session`: The session to add rules to
+- `rules::Vector{<:AbstractFlowRules}`: Vector of rules to add
 
-# Examples
-```julia
-rule = ToolFlowRules(Tool(my_function))
-```
+# Notes
+- Rules are added to session.rules
+- Duplicate rule names will be overwritten with a warning
 """
-Base.@kwdef struct ToolFlowRules <: AbstractToolFlowRules
-    tool::Tool
-    name::String = tool.name
-end
-
-ToolFlowRules(tool::Tool) = ToolFlowRules(; tool=tool)
 
 """
-    FixedOrder <: AbstractToolFlowRules
+    FixedOrder <: AbstractFlowRules
 
 Enforces a fixed order of tool execution.
 
@@ -52,7 +44,7 @@ rule = FixedOrder(order=[:tool1, :tool2, :tool3])
 - Only allows one tool at a time in strict sequence
 - Returns empty list when all tools have been used
 """
-Base.@kwdef struct FixedOrder <: AbstractToolFlowRules
+Base.@kwdef struct FixedOrder <: AbstractFlowRules
     name::String = "FixedOrder"
     order::Vector{Symbol} = Symbol[]
 end
@@ -366,12 +358,11 @@ function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Un
 end
 
 function add_rules!(session::Session, tool::Tool)
-    rule = ToolFlowRules(tool)
-    add_rules!(session, rule)
+    session.rules[tool.name] = tool
 end
 
 """
-    FixedPrerequisites <: AbstractToolFlowRules
+    FixedPrerequisites <: AbstractFlowRules
 
 Enforces prerequisites for tool execution.
 
@@ -393,7 +384,7 @@ rule = FixedPrerequisites(prerequisites=prereqs)
 - Tools can only be used after their prerequisites
 - Tools without prerequisites are always allowed
 """
-Base.@kwdef struct FixedPrerequisites <: AbstractToolFlowRules
+Base.@kwdef struct FixedPrerequisites <: AbstractFlowRules
     name::String = "FixedPrerequisites"
     prerequisites::Dict{Symbol,Vector{Symbol}} = Dict{Symbol,Vector{Symbol}}()
 end
@@ -436,11 +427,13 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{Symbol})
     return allowed
 end
 
-function get_allowed_tools(rules::Vector{<:AbstractToolFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
-    isempty(rules) && return String[]
+function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{Symbol}; combine::Function=intersect)
+    # Filter for only tool flow rules
+    tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
+    isempty(tool_rules) && return String[]
 
     # Get allowed tools from each rule
-    rule_results = [get_allowed_tools(rule, used_tools) for rule in rules]
+    rule_results = [get_allowed_tools(rule, used_tools) for rule in tool_rules]
 
     # Handle empty results
     all(isempty, rule_results) && return String[]

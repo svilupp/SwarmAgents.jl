@@ -12,11 +12,32 @@ func5() = "test"
 
     @testset "handle_tool_calls!" begin
         agent = Agent(name = "TestAgent")
-        add_tools!(agent, [Tool(func1)])
-        session = Session(agent)
-        add_rules!(session, Tool(func5))  # Add func5 as a session rule
 
-        # Test tool from agent's tool_map
+        # Define test structs for tool output testing
+        struct TestStructWithOutput
+            output::String
+            data::Int
+        end
+        struct TestStructNoOutput
+            value::String
+        end
+
+        # Define test tools with different output types
+        func1() = nothing  # Original test function
+        func5() = "test"   # Original test function
+        func_struct_output() = TestStructWithOutput("struct output", 42)
+        func_no_output() = TestStructNoOutput("custom value")
+
+        # Add tools to agent
+        add_tools!(agent, [
+            Tool(func1),
+            Tool(name="struct_tool", callable=func_struct_output),
+            Tool(name="custom_tool", callable=func_no_output)
+        ])
+        session = Session(agent)
+        add_rules!(session, Tool(func5))
+
+        # Test original tool from agent's tool_map
         history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
             tool_call_id = "1", raw = "{}",
             name = "func1", args = Dict())])]
@@ -24,18 +45,25 @@ func5() = "test"
         result = handle_tool_calls!(agent, history, session)
         @test length(result.history) == 2
         @test length(session.artifacts) == 1
-        @test session.artifacts[end] === nothing  # func1 returns nothing
+        @test session.artifacts[end] === nothing
 
-        # Test tool from session rules
+        # Test struct with output property
         history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
             tool_call_id = "2", raw = "{}",
-            name = "func5", args = Dict())])]
+            name = "struct_tool", args = Dict())])]
 
         result = handle_tool_calls!(agent, history, session)
-        @test length(result.history) == 2
-        @test result.history[end].content == "test"
-        @test length(session.artifacts) == 2
-        @test session.artifacts[end] == "test"  # func5 returns "test"
+        @test result.history[end].output == "struct output"
+        @test session.artifacts[end] isa TestStructWithOutput
+
+        # Test struct without output property (uses show)
+        history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
+            tool_call_id = "3", raw = "{}",
+            name = "custom_tool", args = Dict())])]
+
+        result = handle_tool_calls!(agent, history, session)
+        @test occursin("custom value", result.history[end].output)
+        @test occursin("TestStructNoOutput", result.history[end].output)
 
         # Test with no active agent
         push!(history, PT.AIToolRequest(; content = "Hi"))
@@ -163,9 +191,75 @@ func5() = "test"
         @test session2.artifacts[end] == "test"
     end
 
+    @testset "run_full_turn termination and tool filtering" begin
+        # Setup mock response for repeated tool calls
+        response3 = Dict(
+            :id => "125",
+            :choices => [
+                Dict(
+                :message => Dict(:content => "test",
+                    :tool_calls => [
+                        Dict(:id => "125",
+                        :function => Dict(
+                            :name => "func1",
+                            :arguments => JSON3.write(Dict())))
+                    ]),
+                :finish_reason => "tool_calls")
+            ],
+            :usage => Dict(:total_tokens => 20, :prompt_tokens => 15, :completion_tokens => 5)
+        )
+        schema = TestEchoOpenAISchema(; response = response3, status = 200)
+        PT.register_model!(; name = "mocktools3", schema)
+
+        agent = Agent(
+            name = "TestAgent3", instructions = "You are a test agent.", model = "mocktools3")
+        add_tools!(agent, Tool(func1))
+        messages = AbstractMessage[PT.UserMessage("Hello")]
+
+        # Test termination checks and tool filtering
+        session = Session(agent)
+
+        # Create different types of rules
+        tool_rule = FixedOrder(order=[:func1])
+        termination_rule = TerminationRepeatCheck(2)  # Terminate after 2 tool calls
+        generic_rule = TerminationGenericCheck(callable=(h, a) -> length(h) > 5 ? nothing : a)
+
+        # Add rules to session
+        add_rules!(session, [tool_rule, termination_rule, generic_rule])
+
+        # Test get_allowed_tools filtering
+        rules = collect(values(session.rules))
+        allowed_tools = get_allowed_tools(rules, Symbol[])
+        @test allowed_tools == ["func1"]  # Only tool rules should be processed
+        @test length(allowed_tools) == 1  # Should only get tools from AbstractToolFlowRules
+
+        # Run full turn with termination checks
+        response = run_full_turn(agent, messages, session; max_turns = 5)
+        @test response isa Response
+        @test !isempty(response.messages)
+
+        # Verify termination occurred after repeated tool usage
+        tool_messages = filter(m -> m isa ToolMessage, response.messages)
+        @test length(tool_messages) <= 2  # Should terminate after 2 uses due to TerminationRepeatCheck
+
+        # Test termination with generic check
+        session2 = Session(agent)
+        add_rules!(session2, generic_rule)
+        response2 = run_full_turn(agent, messages, session2; max_turns = 10)
+        @test length(response2.messages) <= 6  # Should terminate when history length > 5
+
+        # Test that non-tool rules are ignored in get_allowed_tools
+        mixed_rules = [
+            FixedOrder(order=[:func1]),
+            TerminationRepeatCheck(2),
+            FixedOrder(order=[:func5])
+        ]
+        allowed_tools_mixed = get_allowed_tools(mixed_rules, Symbol[])
+        @test Set(allowed_tools_mixed) == Set(["func1", "func5"])  # Only tool rules processed
+        @test length(allowed_tools_mixed) == 2  # Should only get tools from AbstractToolFlowRules
+    end
+
     @testset "add_transfers!" begin
-        @testset "function naming convention" begin
-            session = Session()
 
             # Create test agents with different name formats
             booking_agent = Agent(name="Booking Agent")

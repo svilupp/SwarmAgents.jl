@@ -45,4 +45,49 @@ using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
         output = String(take!(io))
         @test contains(output, "Tool response: output")
     end
+
+    @testset "tool_output" begin
+        # Test struct with output property
+        struct TestStructWithOutput
+            output::String
+            other::Int
+        end
+        test_struct = TestStructWithOutput("test output", 42)
+
+        # Test struct without output property
+        struct TestStructNoOutput
+            value::Int
+        end
+        test_struct_no_output = TestStructNoOutput(42)
+
+        # Test struct with custom tool_output method
+        struct TestStructCustomOutput
+            data::String
+        end
+        # Define custom tool_output method
+        SwarmAgents.tool_output(x::TestStructCustomOutput) = "Custom: $(x.data)"
+        test_struct_custom = TestStructCustomOutput("custom data")
+
+        # Test string passthrough
+        @test tool_output("direct string") == "direct string"
+
+        # Test struct with output property
+        @test tool_output(test_struct) == "test output"
+
+        # Test struct without output property (uses show method)
+        output = tool_output(test_struct_no_output)
+        @test contains(output, "42")
+        @test contains(output, "TestStructNoOutput")
+
+        # Test custom tool_output method
+        @test tool_output(test_struct_custom) == "Custom: custom data"
+
+        # Test other types (using show method)
+        @test tool_output(42) == "42"
+        @test tool_output([1, 2, 3]) == "[1, 2, 3]"
+
+        # Test Dict type
+        test_dict = Dict("key" => "value")
+        @test tool_output(test_dict) == "Dict(\"key\" => \"value\")"
+    end
 end

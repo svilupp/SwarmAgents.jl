@@ -41,8 +41,8 @@ abstract type AbstractFlowRules end
 """
     AbstractToolFlowRules <: AbstractFlowRules
 
-Abstract type for rules that govern tool usage and selection.
-These rules determine which tools can be used and in what order.
+Abstract type for rules that control tool execution and flow.
+These rules determine which tools are allowed to be used at any given point.
 """
 abstract type AbstractToolFlowRules <: AbstractFlowRules end
 
