@@ -1,17 +1,45 @@
 println("Setting up environment...")
 using Pkg
-Pkg.add("PromptingTools")
+Pkg.activate(".")
+
+# Install required packages if not already installed
+packages = [
+    "PromptingTools",
+    "SwarmAgents",
+    "DataFrames",
+    "PlotlyJS",
+    "Statistics",
+    "JSON3"
+]
+
+for pkg in packages
+    if !haskey(Pkg.project().dependencies, pkg)
+        println("Installing $pkg...")
+        Pkg.add(pkg)
+    end
+end
+
 using PromptingTools
 const PT = PromptingTools
 
-# Set OpenAI API key from environment
-println("Configuring OpenAI API Key...")
-ENV["OPENAI_API_KEY"] = get(ENV, "OPENAI_API_KEY", "")  # Ensure it's set
-println("OpenAI API Key configured: ", !isempty(ENV["OPENAI_API_KEY"]))
+# Configure OpenAI API key
+println("\nConfiguring OpenAI API key...")
+api_key = get(ENV, "OPENAI_API_KEY", nothing)
+if isnothing(api_key) || isempty(api_key)
+    error("OpenAI API key not found in environment variables")
+end
 
-# Test environment
-println("\nTesting environment...")
-println("PromptingTools version: ", pkgversion(PromptingTools))
+# Test PromptingTools with a simple query
+println("\nTesting PromptingTools with OpenAI...")
+try
+    response = aigenerate("Say hello!", model="gpt-3.5-turbo")
+    println("Test response: ", response.content)
+    println("\nEnvironment setup complete! ✅")
+catch e
+    println("\nError testing OpenAI connection:")
+    println(e)
+    error("Failed to verify OpenAI connection")
+end
 
 # Run all examples
 println("\nRunning all examples...")
