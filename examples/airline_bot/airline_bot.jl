@@ -187,12 +187,9 @@ end
 Change the current flight to a new flight number.
 """
 function change_flight(args::ToolArgs)::String
-    # Extract flight number from message
-    m = match(r"FL\d+", args.args.args.message)
-    if isnothing(m)
-        return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
-    end
-    new_flight = m.match
+    # Extract flight number from the message
+    # The message is now directly the flight number
+    new_flight = args.args.args.message
 
     if !flight_exists(new_flight)
         return "Flight $new_flight does not exist"
