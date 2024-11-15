@@ -120,21 +120,17 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::Dict{String,Any})::String
-    # Extract message from nested structure
-    # We don't actually need the message for this function
+function check_flight_status(args::ToolArgs)::String
+    # Use the message from the structured arguments directly
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::Dict{String,Any})::String
-    # Extract message from nested structure
-    message = args["args"]["args"]["message"]
-
+function change_flight(args::ToolArgs)::String
     # Extract flight number from message
-    m = match(r"FL\d+", message)
+    m = match(r"FL\d+", args.args.args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -206,8 +202,9 @@ function run_example()
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
                 try
-                    # Execute tool directly with the args dictionary
-                    tool.content = PT.execute_tool(tool_map[name], args)
+                    # Convert JSON args to ToolArgs struct
+                    tool_args = json_to_tool_args(args)
+                    tool.content = PT.execute_tool(tool_map[name], tool_args)
                     @info "Tool Output: $(tool.content)"
                 catch e
                     @error "Tool execution failed" exception=(e, catch_backtrace())
