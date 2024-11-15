@@ -569,7 +569,9 @@ version = "7.2.1+1"
 
 [[deps.SwarmAgents]]
 deps = ["JSON3", "PromptingTools"]
-path = "/home/ubuntu/projects/SwarmAgents.jl"
+git-tree-sha1 = "8db1cf10a8a1a586db9d8ced852c899600675a66"
+repo-rev = "main"
+repo-url = "https://github.com/svilupp/SwarmAgents.jl.git"
 uuid = "6fce2c4d-9d52-4112-b2c3-c0b80c6b8436"
 version = "0.2.0"
 
