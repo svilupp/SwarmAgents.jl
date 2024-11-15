@@ -165,3 +165,58 @@ end
 function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
     add_tools!(agent, Tool(callable; kwargs...))
 end  # End of add_tools!
+
+"""
+    add_transfers!(session::Session)
+
+Add transfer tools to each agent in the session's agent_map to enable transfers between agents.
+For each agent, creates transfer functions to all other agents (except itself) and adds them as tools.
+
+Each transfer tool includes a handover_message parameter to explain the reason for transfer.
+
+Example:
+```julia
+# If agent_map contains "Booking Agent" and "Support Agent"
+# Creates tools:
+# - transfer_to_booking_agent(handover_message::String) for Support Agent
+# - transfer_to_support_agent(handover_message::String) for Booking Agent
+```
+"""
+function add_transfers!(session::Session)
+    # Get all agents from the map
+    agents = collect(values(session.agent_map))
+
+    # For each agent, create transfer functions to all other agents
+    for source_agent in agents
+        source_name = source_agent.name
+
+        # Create transfer functions for all other agents
+        for target_agent in agents
+            target_name = target_agent.name
+
+            # Skip creating transfer to self
+            source_name == target_name && continue
+
+            # Create snake_case function name (e.g., "Booking Agent" -> "transfer_to_booking_agent")
+            target_snake = lowercase(replace(target_name, r"[^a-zA-Z0-9]+" => "_"))
+            function_name = "transfer_to_$target_snake"
+
+            # Create transfer function that captures session in closure
+            transfer_fn = let session=session, target_name=target_name
+                function(handover_message::String)
+                    push!(session.messages, SystemMessage(handover_message))
+                    return AgentRef(Symbol(target_name))
+                end
+            end
+
+            # Create and add tool with the transfer function
+            tool = Tool(
+                transfer_fn;
+                name=function_name,
+                docs="Transfer conversation to $target_name. Provide reason for transfer in handover_message."
+            )
+            add_tools!(source_agent, tool)
+        end
+    end
+    return nothing
+end

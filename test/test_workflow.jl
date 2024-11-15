@@ -162,4 +162,104 @@ func5() = "test"
         @test length(session2.artifacts) == 1
         @test session2.artifacts[end] == "test"
     end
+
+    @testset "add_transfers!" begin
+        @testset "function naming convention" begin
+            session = Session()
+
+            # Create test agents with different name formats
+            booking_agent = Agent(name="Booking Agent")
+            support_agent = Agent(name="Support Agent")
+            sales_agent = Agent(name="Sales Agent")
+
+            # Add agents to session
+            session.agent_map[:booking] = booking_agent
+            session.agent_map[:support] = support_agent
+            session.agent_map[:sales] = sales_agent
+
+            # Add transfer tools
+            add_transfers!(session)
+
+            # Verify tool names follow snake_case convention
+            @test haskey(booking.tool_map, "transfer_to_support_agent")
+            @test haskey(booking.tool_map, "transfer_to_sales_agent")
+            @test haskey(support.tool_map, "transfer_to_booking_agent")
+            @test haskey(support.tool_map, "transfer_to_sales_agent")
+            @test haskey(sales.tool_map, "transfer_to_booking_agent")
+            @test haskey(sales.tool_map, "transfer_to_support_agent")
+
+            # Verify no self-transfer tools were created
+            @test !haskey(booking.tool_map, "transfer_to_booking_agent")
+            @test !haskey(support.tool_map, "transfer_to_support_agent")
+            @test !haskey(sales.tool_map, "transfer_to_sales_agent")
+        end
+
+        @testset "handover message handling" begin
+            session = Session()
+
+            # Create test agents
+            agent1 = Agent(name="Agent One")
+            agent2 = Agent(name="Agent Two")
+
+            # Add agents to session
+            session.agent_map[:one] = agent1
+            session.agent_map[:two] = agent2
+
+            # Add transfer tools
+            add_transfers!(session)
+
+            # Test handover message
+            handover_msg = "Transferring to specialized agent for technical support"
+            transfer_fn = agent1.tool_map["transfer_to_agent_two"]
+
+            # Execute transfer
+            result = transfer_fn.function(handover_msg)
+
+            # Verify handover message was added to session
+            @test length(session.messages) == 1
+            @test session.messages[1] isa SystemMessage
+            @test session.messages[1].content == handover_msg
+
+            # Verify correct AgentRef is returned
+            @test result isa AgentRef
+            @test result.name == Symbol("Agent Two")
+        end
+
+        @testset "end-to-end agent transfers" begin
+            session = Session()
+
+            # Create agents with different specialties
+            booking = Agent(name="Booking Agent", instructions="Handle flight bookings")
+            support = Agent(name="Support Agent", instructions="Handle customer support")
+
+            # Add agents to session
+            session.agent_map[:booking] = booking
+            session.agent_map[:support] = support
+
+            # Add transfer tools
+            add_transfers!(session)
+
+            # Test complete transfer flow
+            booking_to_support = booking.tool_map["transfer_to_support_agent"]
+            support_to_booking = support.tool_map["transfer_to_booking_agent"]
+
+            # Transfer from booking to support
+            handover_msg1 = "Customer needs help with existing booking"
+            result1 = booking_to_support.function(handover_msg1)
+
+            # Verify first transfer
+            @test result1 isa AgentRef
+            @test result1.name == Symbol("Support Agent")
+            @test session.messages[end].content == handover_msg1
+
+            # Transfer back to booking
+            handover_msg2 = "Customer wants to modify their booking"
+            result2 = support_to_booking.function(handover_msg2)
+
+            # Verify second transfer
+            @test result2 isa AgentRef
+            @test result2.name == Symbol("Booking Agent")
+            @test session.messages[end].content == handover_msg2
+        end
+    end
 end
