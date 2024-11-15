@@ -98,8 +98,8 @@ Input: AIToolRequest and Session
 Output: flight details as string
 """
 function check_status_tool(msg::PT.AIToolRequest, session::Session)::String
-    current_flight = session.context[:current_flight]::String
-    get_flight_details(current_flight)
+    context = session.context::AirlineContext
+    get_flight_details(context.current_flight)
 end
 
 """
@@ -108,6 +108,8 @@ Input: AIToolRequest and Session
 Output: success/failure message as string
 """
 function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
+    context = session.context::AirlineContext
+
     # Extract flight number from message content
     m = match(r"FL\d+", msg.content)
     if isnothing(m)
@@ -121,23 +123,20 @@ function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
     end
 
     # Update context and return success message
-    session.context[:current_flight] = new_flight
+    context.current_flight = new_flight
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
 # Example usage:
 function run_example()
     # Set up OpenAI API key for PromptingTools
-    if !haskey(ENV, "OPENAI_API_KEY")
-        error("OPENAI_API_KEY environment variable not set. Please set it before running the example.")
-    end
     PT.OPENAI_API_KEY = ENV["OPENAI_API_KEY"]
 
-    # Initialize the context as a Dict
-    context = Dict{Symbol,Any}(
-        :current_flight => "FL123",  # User's current flight
-        :name => "John Doe",         # User's name
-        :booking_ref => "ABC123"     # Booking reference
+    # Initialize the context as a struct
+    context = AirlineContext(
+        current_flight = "FL123",  # User's current flight
+        name = "John Doe",         # User's name
+        booking_ref = "ABC123"     # Booking reference
     )
 
     # Create tools and agent
@@ -149,6 +148,7 @@ function run_example()
         - Checking flight status
         - Changing flights
         Use the available tools to assist customers.
+        Always refer to the customer by their name (available in context).
         """
     )
 
