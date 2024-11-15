@@ -1,6 +1,7 @@
 using SwarmAgents
 using PromptingTools
 const PT = PromptingTools
+using PromptingTools.AITools: register_tool
 using Dates
 using JSON3
 
@@ -57,14 +58,15 @@ end
 """
 Check the status of the current flight.
 """
-PT.@tool function check_flight_status(message::String)::String
+function check_flight_status(message::String)::String
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
+register_tool(check_flight_status, "Check the status of the current flight")
 
 """
 Change the current flight to a new flight number.
 """
-PT.@tool function change_flight(message::String)::String
+function change_flight(message::String)::String
     m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
@@ -79,6 +81,7 @@ PT.@tool function change_flight(message::String)::String
     GLOBAL_CONTEXT[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
+register_tool(change_flight, "Change the current flight to a new flight number")
 
 # Example usage:
 function run_example()
@@ -87,8 +90,8 @@ function run_example()
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
 
-    # Create tool map using PromptingTools tool_call_signature
-    tool_map = Dict("check_flight_status" => check_flight_status, "change_flight" => change_flight)
+    # Get registered tools
+    tools = PT.AITools.get_registered_tools()
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?\n")
@@ -120,7 +123,7 @@ function run_example()
 
             # Get AI response
             conv = aitools(conv;
-                tools=collect(values(tool_map)),
+                tools=tools,
                 return_all=true,
                 verbose=true,
                 model="gpt-3.5-turbo")
@@ -135,7 +138,7 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                tool.content = PT.execute_tool(tool_map[name], args)
+                tool.content = PT.AITools.execute_tool(name, args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
