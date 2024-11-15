@@ -1,5 +1,5 @@
 using SwarmAgents
-using SwarmAgents: Tool, Session, Agent, @tool
+using SwarmAgents: Tool, Session, Agent
 using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
                      ToolMessage, TestEchoOpenAISchema
