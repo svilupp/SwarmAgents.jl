@@ -1,6 +1,7 @@
 using SwarmAgents
 using PromptingTools
 const PT = PromptingTools
+using PromptingTools: aitools
 using PromptingTools.AITools: register_tool, get_registered_tools, execute_tool
 using Dates
 using JSON3
