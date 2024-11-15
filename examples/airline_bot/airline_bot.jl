@@ -3,7 +3,7 @@ using SwarmAgents: Session, Agent
 const Tool = SwarmAgents.Tool  # Be explicit about using SwarmAgents.Tool
 using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                     ToolMessage, TestEchoOpenAISchema
+                     ToolMessage, TestEchoOpenAISchema, @tool
 const PT = PromptingTools
 using Dates
 using JSON3
