@@ -94,22 +94,21 @@ end
 # Tool wrapper functions for Tool constructor
 """
 Check the status of a flight
-Input: AIToolRequest and Session
-Output: flight details as string
+Input: String (flight number)
+Output: String (flight details)
 """
-function check_status_tool(msg::PT.AIToolRequest, session::Session)::String
-    context = session.context::AirlineContext
-    get_flight_details(context.current_flight)
+function check_status_tool(msg::PT.AIToolRequest, session)::String
+    # Extract flight number from context manually
+    current_flight = session.context[:current_flight]::String
+    get_flight_details(current_flight)
 end
 
 """
 Change flight to a new flight number
-Input: AIToolRequest and Session
-Output: success/failure message as string
+Input: String (new flight number)
+Output: String (success/failure message)
 """
-function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
-    context = session.context::AirlineContext
-
+function change_flight_tool(msg::PT.AIToolRequest, session)::String
     # Extract flight number from message content
     m = match(r"FL\d+", msg.content)
     if isnothing(m)
@@ -122,8 +121,8 @@ function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
         return "Flight $new_flight does not exist"
     end
 
-    # Update context and return success message
-    context.current_flight = new_flight
+    # Update context manually
+    session.context[:current_flight] = new_flight
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
