@@ -91,11 +91,11 @@ function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, contex
 end
 
 # Tool wrapper functions for Tool constructor
-function check_status_tool(msg::PT.AIToolRequest, session)
+function check_status_tool(msg::PT.AIToolRequest, session::SwarmAgents.Session{AirlineContext})
     check_status(CheckStatusParams(), session.context)
 end
 
-function change_flight_tool(msg::PT.AIToolRequest, session)
+function change_flight_tool(msg::PT.AIToolRequest, session::SwarmAgents.Session{AirlineContext})
     change_flight(ChangeFlightParams(), msg, session.context)
 end
 
