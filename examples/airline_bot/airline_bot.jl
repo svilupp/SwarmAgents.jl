@@ -34,29 +34,11 @@ end
 # Initialize the flight database
 const FLIGHT_DB = FlightDatabase()
 
-# Context and parameter structures
+# Context structure
 Base.@kwdef mutable struct AirlineContext
     current_flight::String = "FL123"
     name::String = "John Doe"
     booking_ref::String = "ABC123"
-end
-
-# Convert AirlineContext to Dict for SwarmAgents.Session
-function to_dict(ctx::AirlineContext)::Dict{Symbol, Any}
-    Dict{Symbol, Any}(
-        :current_flight => ctx.current_flight,
-        :name => ctx.name,
-        :booking_ref => ctx.booking_ref
-    )
-end
-
-# Create AirlineContext from Dict
-function from_dict(dict::Dict{Symbol, Any})::AirlineContext
-    AirlineContext(
-        current_flight = get(dict, :current_flight, "FL123"),
-        name = get(dict, :name, "John Doe"),
-        booking_ref = get(dict, :booking_ref, "ABC123")
-    )
 end
 
 # Parameter structures for tools
@@ -103,40 +85,37 @@ function change_flight!(context::AirlineContext, new_flight::String)
     "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-# Pure tool functions with struct parameters
-"""
-Check the status of a flight
-Input: CheckStatusParams
-Output: String (flight details)
-"""
-function check_status_pure(params::CheckStatusParams)::String
-    get_flight_details(params.flight_number)
-end
-
-"""
-Change flight to a new flight number
-Input: ChangeFlightParams
-Output: String (success/failure message)
-"""
-function change_flight_pure(params::ChangeFlightParams)::String
-    if !flight_exists(params.new_flight)
-        return "Flight $(params.new_flight) does not exist"
-    end
-    "Flight changed successfully to $(params.new_flight)\n$(get_flight_details(params.new_flight))"
-end
-
 # SwarmAgents integration wrapper functions
 """
-Wrapper for check_status_pure that handles SwarmAgents integration
+Check the status of the current flight in the session context.
+
+This tool retrieves the current flight number from the session context and returns
+detailed information about the flight, including departure city, destination, and time.
+
+Parameters:
+    msg::PT.AIToolRequest - The request message from the AI
+    session - The current session containing context information
+
+Returns:
+    String - A formatted string containing flight details or an error message
 """
 function check_status_tool(msg::PT.AIToolRequest, session)::String
-    context = from_dict(session.context)
-    params = CheckStatusParams(flight_number=context.current_flight)
-    check_status_pure(params)
+    context = session.context::AirlineContext
+    get_flight_details(context.current_flight)
 end
 
 """
-Wrapper for change_flight_pure that handles SwarmAgents integration
+Change the current flight to a new flight number.
+
+This tool extracts a flight number from the message content, validates it,
+updates the session context with the new flight number, and returns the result.
+
+Parameters:
+    msg::PT.AIToolRequest - The request message containing the new flight number
+    session - The current session to update with the new flight information
+
+Returns:
+    String - A success message with new flight details or an error message
 """
 function change_flight_tool(msg::PT.AIToolRequest, session)::String
     m = match(r"FL\d+", msg.content)
@@ -145,16 +124,13 @@ function change_flight_tool(msg::PT.AIToolRequest, session)::String
     end
     new_flight = m.match
 
-    params = ChangeFlightParams(new_flight=new_flight)
-    result = change_flight_pure(params)
-
-    if flight_exists(new_flight)
-        context = from_dict(session.context)
-        context.current_flight = new_flight
-        session.context = to_dict(context)
+    if !flight_exists(new_flight)
+        return "Flight $new_flight does not exist"
     end
 
-    return result
+    context = session.context::AirlineContext
+    context.current_flight = new_flight
+    return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
 # Example usage:
@@ -186,12 +162,12 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        PT.Tool(check_status_pure),
-        PT.Tool(change_flight_pure)
+        PT.Tool(check_status_tool),
+        PT.Tool(change_flight_tool)
     ])
 
     # Create a session with proper context
-    session = Session(agent; context=to_dict(context))
+    session = Session(agent; context=context)
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
