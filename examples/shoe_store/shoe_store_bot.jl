@@ -2,6 +2,13 @@ using SwarmAgents
 using SwarmAgents: Tool
 using PromptingTools
 const PT = PromptingTools
+
+# Set up OpenAI API key for PromptingTools
+if !haskey(ENV, "OPENAI_API_KEY")
+    error("OpenAI API key not found in environment variables")
+end
+PT.set_openai_key(ENV["OPENAI_API_KEY"])
+
 using Dates
 
 """
@@ -326,8 +333,11 @@ end
 # Example usage:
 function run_example(custom_messages=nothing)
     # Set up OpenAI API key for PromptingTools
-    # The key is already set in the environment, no need to reassign it
-    # ENV["OPENAI_API_KEY"] is already available
+    if !haskey(ENV, "OPENAI_API_KEY")
+        error("OpenAI API key not found in environment variables")
+    end
+    using PromptingTools: set_openai_key
+    set_openai_key(ENV["OPENAI_API_KEY"])
 
     # Initialize the context
     context = ShoeStoreContext()
@@ -349,11 +359,11 @@ function run_example(custom_messages=nothing)
     # Add tools to the agent with explicit type information
     add_tools!(agent, [
         Tool(wrapped_authenticate; name="authenticate", docs="Authenticate user with name and email",
-             schema_fields=[(:message, String)], strict=true),
+             strict=true),
         Tool(wrapped_show_inventory; name="show_inventory", docs="Show available shoe inventory",
-             schema_fields=[(:message, String)], strict=true),
+             strict=true),
         Tool(wrapped_check_size; name="check_size", docs="Check availability of specific shoe size",
-             schema_fields=[(:message, String)], strict=true)
+             strict=true)
     ])
 
     # Create session with agent and context
