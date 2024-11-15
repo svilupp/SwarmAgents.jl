@@ -290,13 +290,13 @@ Tool function to show available inventory.
 # Returns
 - `String`: Formatted inventory list
 """
-function wrapped_show_inventory(message::String="")::String
+function wrapped_show_inventory(message::String)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
 
-    # Create params and call show_inventory
+    # Create params and call show_inventory (message is ignored as it's not needed)
     params = ShowInventoryParams(context=session_context)
     show_inventory(params)
 end
