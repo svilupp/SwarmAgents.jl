@@ -348,11 +348,11 @@ function run_example(custom_messages=nothing)
     # Add tools to the agent with explicit type information
     add_tools!(agent, [
         Tool(wrapped_authenticate; name="authenticate", docs="Authenticate user with name and email",
-             strict=true),
+             strict=true, fields=[:message => String]),
         Tool(wrapped_show_inventory; name="show_inventory", docs="Show available shoe inventory",
-             strict=true),
+             strict=true, fields=[:message => String]),
         Tool(wrapped_check_size; name="check_size", docs="Check availability of specific shoe size",
-             strict=true)
+             strict=true, fields=[:message => String])
     ])
 
     # Create session with agent and context
