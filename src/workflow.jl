@@ -258,12 +258,10 @@ function add_transfers!(session::Session)
                 # Log function creation and type conversion details
                 @debug "Creating transfer function" target_name Symbol(target_name) string_name=String(target_name)
                 @info "Agent name type details" original_type=typeof(target_name) symbol_type=typeof(Symbol(target_name))
-                transfer_fn = (args...; kwargs...) -> begin
-                    @info "Transfer function called" kwargs target_name
-                    @debug "Creating AgentRef" target_name=target_name target_type=typeof(target_name)
-                    AgentRef(target_name)  # target_name is already a String, let AgentRef handle Symbol conversion
-                end
-                @info "Created transfer function" fn_type=typeof(transfer_fn)
+
+                # Use generic transfer_agent function with target_name binding
+                transfer_fn = (args...; kwargs...) -> transfer_agent(target_name, kwargs[:handover_message])
+                @info "Created transfer function using generic transfer_agent" fn_type=typeof(transfer_fn)
 
                 # Log docstring creation
                 docs = """
