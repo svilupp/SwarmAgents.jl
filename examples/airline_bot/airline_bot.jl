@@ -58,15 +58,15 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(message::String)::String
+function check_flight_status(args::Dict{Symbol,Any})::String
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
-PT.AITools.register_tool(check_flight_status, "Check the status of the current flight")
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(message::String)::String
+function change_flight(args::Dict{Symbol,Any})::String
+    message = args[:message]
     m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
@@ -81,7 +81,6 @@ function change_flight(message::String)::String
     GLOBAL_CONTEXT[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
-PT.AITools.register_tool(change_flight, "Change the current flight to a new flight number")
 
 # Example usage:
 function run_example()
@@ -90,8 +89,9 @@ function run_example()
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
 
-    # Get registered tools
-    tools = PT.AITools.get_registered_tools()
+    # Create tool map using the correct pattern
+    tool_map = PT.tool_call_signature([check_flight_status, change_flight])
+    tools = collect(values(tool_map))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?\n")
@@ -138,7 +138,7 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                tool.content = PT.AITools.execute_tool(name, args)
+                tool.content = PT.execute_tool(tool_map[name], args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
