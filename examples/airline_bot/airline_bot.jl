@@ -15,6 +15,15 @@ This bot demonstrates:
 3. Simple conversation flow with error handling
 """
 
+# Define tool request structures
+Base.@kwdef struct CheckFlightStatus
+    message::String
+end
+
+Base.@kwdef struct ChangeFlightRequest
+    message::String
+end
+
 # Define flight information structure
 Base.@kwdef struct Flight
     from::String
