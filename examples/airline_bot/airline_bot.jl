@@ -30,58 +30,36 @@ Base.@kwdef struct FlightDatabase
 end
 
 # Define tool argument structures that match PromptingTools' expected schema
-Base.@kwdef struct ToolArgs
-    args::Dict{String,Any}
-end
-
-Base.@kwdef struct MessageArgs
+Base.@kwdef struct ToolMessageArgs
     message::String
 end
 
-Base.@kwdef struct FlightStatusArgs
-    args::MessageArgs
+Base.@kwdef struct ToolInnerArgs
+    args::ToolMessageArgs
 end
 
-Base.@kwdef struct FlightChangeArgs
-    args::MessageArgs
+Base.@kwdef struct ToolArgs
+    args::ToolInnerArgs
 end
 
-# Convert Dict to MessageArgs
-function dict_to_message_args(d::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::MessageArgs
+# Convert JSON3/Dict to ToolArgs
+function json_to_tool_args(args::Union{Dict{String,Any},JSON3.Object})::ToolArgs
     try
         # Handle nested structure from PromptingTools
-        if d isa Dict{Symbol,Any} && haskey(d, :args)
-            args_obj = d[:args]
-        elseif haskey(d, "args")
-            args_obj = d["args"]
-        else
-            args_obj = d
+        if haskey(args, "args") && haskey(args["args"], "message")
+            return ToolArgs(
+                args=ToolInnerArgs(
+                    args=ToolMessageArgs(
+                        message=args["args"]["message"]
+                    )
+                )
+            )
         end
-
-        # Extract message from nested structure
-        if args_obj isa Dict || args_obj isa JSON3.Object
-            if haskey(args_obj, "args") && (args_obj["args"] isa Dict || args_obj["args"] isa JSON3.Object)
-                return MessageArgs(message=args_obj["args"]["message"])
-            elseif haskey(args_obj, "message")
-                return MessageArgs(message=args_obj["message"])
-            end
-        end
-
-        error("Unable to find message in arguments: $d")
+        error("Unable to find message in arguments: $args")
     catch e
-        @error "Failed to parse message args" d typeof(d)
+        @error "Failed to parse tool args" args typeof(args)
         rethrow(e)
     end
-end
-
-# Convert Dict to FlightStatusArgs
-function dict_to_flight_status_args(d::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::FlightStatusArgs
-    FlightStatusArgs(args=dict_to_message_args(d))
-end
-
-# Convert Dict to FlightChangeArgs
-function dict_to_flight_change_args(d::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::FlightChangeArgs
-    FlightChangeArgs(args=dict_to_message_args(d))
 end
 
 # Initialize the flight database and global context
@@ -199,7 +177,9 @@ function run_example()
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
                 try
-                    tool.content = PT.execute_tool(tool_map[name], args)
+                    # Convert JSON args to ToolArgs struct
+                    tool_args = json_to_tool_args(args)
+                    tool.content = PT.execute_tool(tool_map[name], tool_args)
                     @info "Tool Output: $(tool.content)"
                 catch e
                     @error "Tool execution failed" exception=(e, catch_backtrace())
@@ -209,7 +189,6 @@ function run_example()
             end
             num_iter += 1
         end
-    end
 
     return true
 end
