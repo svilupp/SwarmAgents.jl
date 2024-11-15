@@ -22,12 +22,17 @@ Base.@kwdef struct Flight
     time::DateTime
 end
 
-# Define our flight database (in a real application, this would be in a database)
-const FLIGHTS = Dict{String, Flight}(
-    "FL123" => Flight(from="New York", to="London", time=DateTime(2024, 12, 1, 10, 30)),
-    "FL124" => Flight(from="London", to="New York", time=DateTime(2024, 12, 2, 14, 45)),
-    "FL125" => Flight(from="Paris", to="New York", time=DateTime(2024, 12, 3, 9, 15))
-)
+# Define flight database structure
+Base.@kwdef struct FlightDatabase
+    flights::Vector{Tuple{String, Flight}} = [
+        ("FL123", Flight(from="New York", to="London", time=DateTime(2024, 12, 1, 10, 30))),
+        ("FL124", Flight(from="London", to="New York", time=DateTime(2024, 12, 2, 14, 45))),
+        ("FL125", Flight(from="Paris", to="New York", time=DateTime(2024, 12, 3, 9, 15)))
+    ]
+end
+
+# Initialize the flight database
+const FLIGHT_DB = FlightDatabase()
 
 # Context and parameter structures
 Base.@kwdef mutable struct AirlineContext
@@ -49,7 +54,7 @@ end
 Check if a flight exists in our database
 """
 function flight_exists(flight_number::String)
-    haskey(FLIGHTS, flight_number)
+    any(f -> f[1] == flight_number, FLIGHT_DB.flights)
 end
 
 """
@@ -59,7 +64,7 @@ function get_flight_details(flight_number::String)
     if !flight_exists(flight_number)
         return "Flight not found"
     end
-    flight = FLIGHTS[flight_number]
+    flight = first(f[2] for f in FLIGHT_DB.flights if f[1] == flight_number)
     "Flight $flight_number: $(flight.from) to $(flight.to) at $(flight.time)"
 end
 
