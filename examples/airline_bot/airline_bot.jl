@@ -164,15 +164,13 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(CheckFlightStatus;
+        Tool(check_status_wrapper;
             name="check_flight_status",
-            docs="Check the status of the current flight",
-            callable=check_status_wrapper
+            docs="Check the status of the current flight"
         ),
-        Tool(ChangeFlightRequest;
+        Tool(change_flight_wrapper;
             name="change_flight",
-            docs="Change the current flight to a new flight number",
-            callable=change_flight_wrapper
+            docs="Change the current flight to a new flight number"
         )
     ])
 
