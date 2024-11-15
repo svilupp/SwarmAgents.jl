@@ -78,7 +78,7 @@ end
 # SwarmAgents integration wrapper functions
 
 """
-    check_status_wrapper(request::CheckFlightStatus)::NamedTuple{(:response,), Tuple{String}}
+    check_status_wrapper(request::CheckFlightStatus)::String
 
 Check the status of the current flight.
 
@@ -86,15 +86,14 @@ Check the status of the current flight.
 - `request::CheckFlightStatus`: The request containing the user's message
 
 # Returns
-- `NamedTuple`: A named tuple containing the response message
+- `String`: A formatted string containing the flight details
 """
-function check_status_wrapper(request::CheckFlightStatus)::NamedTuple{(:response,), Tuple{String}}
-    response = check_status_tool(request.message, GLOBAL_SESSION.session)
-    return (response=response,)
+function check_status_wrapper(request::CheckFlightStatus)::String
+    check_status_tool(request.message, GLOBAL_SESSION.session)
 end
 
 """
-    change_flight_wrapper(request::ChangeFlightRequest)::NamedTuple{(:response,), Tuple{String}}
+    change_flight_wrapper(request::ChangeFlightRequest)::String
 
 Change the current flight to a new flight number.
 
@@ -102,11 +101,10 @@ Change the current flight to a new flight number.
 - `request::ChangeFlightRequest`: The request containing the user's message with new flight number
 
 # Returns
-- `NamedTuple`: A named tuple containing the response message
+- `String`: A confirmation message with the new flight details
 """
-function change_flight_wrapper(request::ChangeFlightRequest)::NamedTuple{(:response,), Tuple{String}}
-    response = change_flight_tool(request.message, GLOBAL_SESSION.session)
-    return (response=response,)
+function change_flight_wrapper(request::ChangeFlightRequest)::String
+    change_flight_tool(request.message, GLOBAL_SESSION.session)
 end
 
 """
