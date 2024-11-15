@@ -41,19 +41,22 @@ Base.@kwdef mutable struct AirlineContext
     booking_ref::String = "ABC123"
 end
 
-# Parameter structures for tools
-"""
-Parameters for checking flight status
-"""
-Base.@kwdef struct CheckStatusParams
-    flight_number::String
+# Convert AirlineContext to Dict for SwarmAgents.Session
+function to_dict(ctx::AirlineContext)::Dict{Symbol, Any}
+    Dict{Symbol, Any}(
+        :current_flight => ctx.current_flight,
+        :name => ctx.name,
+        :booking_ref => ctx.booking_ref
+    )
 end
 
-"""
-Parameters for changing flight
-"""
-Base.@kwdef struct ChangeFlightParams
-    new_flight::String
+# Create AirlineContext from Dict
+function from_dict(dict::Dict{Symbol, Any})::AirlineContext
+    AirlineContext(
+        current_flight = get(dict, :current_flight, "FL123"),
+        name = get(dict, :name, "John Doe"),
+        booking_ref = get(dict, :booking_ref, "ABC123")
+    )
 end
 
 """
@@ -74,51 +77,38 @@ function get_flight_details(flight_number::String)
     "Flight $flight_number: $(flight.from) to $(flight.to) at $(flight.time)"
 end
 
-"""
-Change flight in the context
-"""
-function change_flight!(context::AirlineContext, new_flight::String)
-    if !flight_exists(new_flight)
-        return "Flight $new_flight does not exist"
-    end
-    context.current_flight = new_flight
-    "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
-end
-
 # SwarmAgents integration wrapper functions
 """
-Check the status of the current flight in the session context.
+Check the status of the current flight.
 
-This tool retrieves the current flight number from the session context and returns
-detailed information about the flight, including departure city, destination, and time.
+Returns detailed information about the flight, including departure city, destination, and time.
 
 Parameters:
-    msg::PT.AIToolRequest - The request message from the AI
-    session - The current session containing context information
+    content::String - The message content (unused in this function)
+    context::Dict{Symbol, Any} - The session context containing flight information
 
 Returns:
     String - A formatted string containing flight details or an error message
 """
-function check_status_tool(msg::PT.AIToolRequest, session)::String
-    context = session.context::AirlineContext
-    get_flight_details(context.current_flight)
+function check_status_tool(content::String, context::Dict{Symbol, Any})::String
+    ctx = from_dict(context)
+    get_flight_details(ctx.current_flight)
 end
 
 """
 Change the current flight to a new flight number.
 
-This tool extracts a flight number from the message content, validates it,
-updates the session context with the new flight number, and returns the result.
+Extracts a flight number from the message content and updates the context.
 
 Parameters:
-    msg::PT.AIToolRequest - The request message containing the new flight number
-    session - The current session to update with the new flight information
+    content::String - The message content containing the new flight number
+    context::Dict{Symbol, Any} - The session context to update
 
 Returns:
     String - A success message with new flight details or an error message
 """
-function change_flight_tool(msg::PT.AIToolRequest, session)::String
-    m = match(r"FL\d+", msg.content)
+function change_flight_tool(content::String, context::Dict{Symbol, Any})::String
+    m = match(r"FL\d+", content)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -128,8 +118,10 @@ function change_flight_tool(msg::PT.AIToolRequest, session)::String
         return "Flight $new_flight does not exist"
     end
 
-    context = session.context::AirlineContext
-    context.current_flight = new_flight
+    ctx = from_dict(context)
+    ctx.current_flight = new_flight
+    context[:current_flight] = new_flight
+
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
@@ -167,7 +159,7 @@ function run_example()
     ])
 
     # Create a session with proper context
-    session = Session(agent; context=context)
+    session = Session(agent; context=to_dict(context))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
