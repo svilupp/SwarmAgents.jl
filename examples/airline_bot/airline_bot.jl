@@ -57,14 +57,14 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(; message::String)::String
+function check_flight_status(message::String)::String
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(; message::String)::String
+function change_flight(message::String)::String
     m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
@@ -80,41 +80,6 @@ function change_flight(; message::String)::String
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-"""
-    check_status_tool(message::String, session::Session)::String
-
-Internal implementation for checking flight status.
-"""
-function check_status_tool(message::String, session::Session)::String
-    context = AirlineContext(;
-        current_flight=session.context[:current_flight],
-        name=session.context[:name],
-        booking_ref=session.context[:booking_ref]
-    )
-    get_flight_details(context.current_flight)
-end
-
-"""
-    change_flight_tool(message::String, session::Session)::String
-
-Internal implementation for changing flights.
-"""
-function change_flight_tool(message::String, session::Session)::String
-    m = match(r"FL\d+", message)
-    if isnothing(m)
-        return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
-    end
-    new_flight = m.match
-
-    if !flight_exists(new_flight)
-        return "Flight $new_flight does not exist"
-    end
-
-    # Update context dictionary
-    session.context[:current_flight] = new_flight
-    return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
-end
-
 # Example usage:
 function run_example()
     # Set up OpenAI API key for PromptingTools
@@ -124,13 +89,6 @@ function run_example()
 
     # Create tool map using PromptingTools tool_call_signature
     tool_map = PT.tool_call_signature([check_flight_status, change_flight])
-
-    # Initialize context
-    GLOBAL_SESSION.session = Session(; context=Dict{Symbol,Any}(
-        :current_flight => "FL123",
-        :name => "John Doe",
-        :booking_ref => "ABC123"
-    ))
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?\n")
