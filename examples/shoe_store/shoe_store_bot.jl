@@ -349,12 +349,12 @@ function run_example(custom_messages=nothing)
 
     # Add tools to the agent with explicit type information
     add_tools!(agent, [
-        Tool(wrapped_authenticate; name="authenticate", description="Authenticate user with name and email",
-             arg_type=AuthArgs, return_type=String),
-        Tool(wrapped_show_inventory; name="show_inventory", description="Show available shoe inventory",
-             arg_type=ShowArgs, return_type=String),
-        Tool(wrapped_check_size; name="check_size", description="Check availability of specific shoe size",
-             arg_type=SizeArgs, return_type=String)
+        Tool(wrapped_authenticate; name="authenticate", docs="Authenticate user with name and email",
+             strict=true),
+        Tool(wrapped_show_inventory; name="show_inventory", docs="Show available shoe inventory",
+             strict=true),
+        Tool(wrapped_check_size; name="check_size", docs="Check availability of specific shoe size",
+             strict=true)
     ])
 
     # Example conversation
