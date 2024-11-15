@@ -179,34 +179,40 @@ function change_flight(args::ToolArgs)::String
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
+# Create wrapper functions that handle struct-based arguments
+"""
+Check the status of a flight using a wrapper that handles struct-based arguments.
+"""
+function wrapped_check_status(args::WrapperArgs)::String
+    @info "Wrapped check status received args:" args
+    check_flight_status(ToolArgs(
+        args=ToolInnerArgs(
+            args=ToolMessageArgs(
+                message=args.args.message
+            )
+        )
+    ))
+end
+
+"""
+Change flight using a wrapper that handles struct-based arguments.
+"""
+function wrapped_change_flight(args::WrapperArgs)::String
+    @info "Wrapped change flight received args:" args
+    change_flight(ToolArgs(
+        args=ToolInnerArgs(
+            args=ToolMessageArgs(
+                message=args.args.message
+            )
+        )
+    ))
+end
+
 # Example usage:
 function run_example()
     # Set up OpenAI API key for PromptingTools
     if !haskey(ENV, "OPENAI_API_KEY")
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
-    end
-
-    # Create wrapper functions that handle struct-based arguments
-    function wrapped_check_status(args::WrapperArgs)::String
-        @info "Wrapped check status received args:" args
-        check_flight_status(ToolArgs(
-            args=ToolInnerArgs(
-                args=ToolMessageArgs(
-                    message=args.args.message
-                )
-            )
-        ))
-    end
-
-    function wrapped_change_flight(args::WrapperArgs)::String
-        @info "Wrapped change flight received args:" args
-        change_flight(ToolArgs(
-            args=ToolInnerArgs(
-                args=ToolMessageArgs(
-                    message=args.args.message
-                )
-            )
-        ))
     end
 
     # Create tool map using the wrapped functions
