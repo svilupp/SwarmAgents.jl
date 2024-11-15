@@ -15,11 +15,18 @@ This bot demonstrates:
 3. Simple conversation flow with error handling
 """
 
+# Define flight information structure
+Base.@kwdef struct Flight
+    from::String
+    to::String
+    time::DateTime
+end
+
 # Define our flight database (in a real application, this would be in a database)
-const FLIGHTS = Dict(
-    "FL123" => Dict("from" => "New York", "to" => "London", "time" => DateTime(2024, 12, 1, 10, 30)),
-    "FL124" => Dict("from" => "London", "to" => "New York", "time" => DateTime(2024, 12, 2, 14, 45)),
-    "FL125" => Dict("from" => "Paris", "to" => "New York", "time" => DateTime(2024, 12, 3, 9, 15))
+const FLIGHTS = Dict{String, Flight}(
+    "FL123" => Flight(from="New York", to="London", time=DateTime(2024, 12, 1, 10, 30)),
+    "FL124" => Flight(from="London", to="New York", time=DateTime(2024, 12, 2, 14, 45)),
+    "FL125" => Flight(from="Paris", to="New York", time=DateTime(2024, 12, 3, 9, 15))
 )
 
 # Context and parameter structures
@@ -53,7 +60,7 @@ function get_flight_details(flight_number::String)
         return "Flight not found"
     end
     flight = FLIGHTS[flight_number]
-    "Flight $flight_number: $(flight["from"]) to $(flight["to"]) at $(flight["time"])"
+    "Flight $flight_number: $(flight.from) to $(flight.to) at $(flight.time)"
 end
 
 """
