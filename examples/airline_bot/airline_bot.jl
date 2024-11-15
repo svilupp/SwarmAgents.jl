@@ -202,9 +202,9 @@ function run_example()
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
                 try
-                    # Convert JSON args to ToolArgs struct
+                    # Convert JSON args to ToolArgs struct and then back to Dict{Symbol}
                     tool_args = json_to_tool_args(args)
-                    tool.content = PT.execute_tool(tool_map[name], tool_args)
+                    tool.content = PT.execute_tool(tool_map[name], tool_args_to_dict(tool_args))
                     @info "Tool Output: $(tool.content)"
                 catch e
                     @error "Tool execution failed" exception=(e, catch_backtrace())
