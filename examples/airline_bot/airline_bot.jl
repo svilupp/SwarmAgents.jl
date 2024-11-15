@@ -29,18 +29,6 @@ Base.@kwdef struct FlightDatabase
     ]
 end
 
-# Define argument structures for tools
-Base.@kwdef struct ToolMessage
-    message::String
-end
-
-# Convert Dict arguments to ToolMessage
-function convert_to_tool_message(args::Dict{Symbol,Any})::ToolMessage
-    # Extract message from nested structure that PromptingTools provides
-    # args[:args] is a JSON3.Object, we can access its fields directly
-    ToolMessage(message=args[:args].message)
-end
-
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
 const GLOBAL_CONTEXT = Dict{Symbol,Any}(
@@ -70,7 +58,7 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::ToolMessage)::String
+function check_flight_status(args::Dict{Symbol,Any})::String
     # Use the message from the structured arguments
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
@@ -78,9 +66,10 @@ end
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::ToolMessage)::String
+function change_flight(args::Dict{Symbol,Any})::String
     # Extract flight number from message
-    m = match(r"FL\d+", args.message)
+    message = args[:args].message
+    m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -151,9 +140,8 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                # Convert Dict arguments to ToolMessage before execution
-                tool_args = convert_to_tool_message(args)
-                tool.content = PT.execute_tool(tool_map[name], tool_args)
+                # Execute tool directly with the args dictionary
+                tool.content = PT.execute_tool(tool_map[name], args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
