@@ -173,26 +173,10 @@ function run_example(custom_messages=nothing)
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool((msg, session) -> show_stats(ShowStatsParams(), session.context);
-            name="show_stats",
-            parameters=(none=Nothing,),
-            return_type=String
-        ),
-        Tool((msg, session) -> show_insights(ShowInsightsParams(), session.context);
-            name="show_insights",
-            parameters=(none=Nothing,),
-            return_type=String
-        ),
-        Tool((msg, session) -> show_plots(ShowPlotsParams(), session.context);
-            name="show_plots",
-            parameters=(none=Nothing,),
-            return_type=String
-        ),
-        Tool((msg, session) -> reset_data(ResetDataParams(), session.context);
-            name="reset_data",
-            parameters=(none=Nothing,),
-            return_type=String
-        )
+        Tool((msg, session) -> show_stats(ShowStatsParams(), session.context)),
+        Tool((msg, session) -> show_insights(ShowInsightsParams(), session.context)),
+        Tool((msg, session) -> show_plots(ShowPlotsParams(), session.context)),
+        Tool((msg, session) -> reset_data(ResetDataParams(), session.context))
     ])
 
     # Initialize context with fresh data
