@@ -161,8 +161,9 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                # Convert JSON3.Object to appropriate argument type
-                message_args = MessageArgs(message=args[:args].message)
+                # Extract message from nested structure
+                nested_args = args[:args][:args]
+                message_args = MessageArgs(message=nested_args[:message])
                 tool_args = if name == "check_flight_status"
                     FlightStatusArgs(args=message_args)
                 else
