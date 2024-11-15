@@ -201,12 +201,12 @@ function add_transfers!(session::Session)
             target_snake = lowercase(replace(target_name, r"[^a-zA-Z0-9]+" => "_"))
             function_name = "transfer_to_$target_snake"
 
-            # Create and add tool with anonymous function
+            # Create and add tool with simple anonymous function using arrow syntax
             tool = Tool(
-                handover_message::String -> begin
-                    push!(session.messages, SystemMessage(handover_message))
-                    return AgentRef(Symbol(target_name))
-                end;
+                handover_message::String -> (
+                    push!(session.messages, SystemMessage(handover_message));
+                    AgentRef(Symbol(target_name))
+                );
                 name=function_name,
                 docs="Transfer conversation to $target_name. Provide reason for transfer in handover_message."
             )
