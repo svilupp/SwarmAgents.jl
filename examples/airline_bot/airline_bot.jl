@@ -69,24 +69,23 @@ end
 # SwarmAgents integration wrapper functions
 
 """
-    check_status_tool(message::String)::String
+    check_status_tool(message::String, session::Session{AirlineContext})::String
 
 Check the status of the current flight.
 
 Returns detailed information about the flight, including departure city, destination, and time.
 """
-function check_status_tool(message::String, session::Session)::String
-    context = session.context::AirlineContext
-    get_flight_details(context.current_flight)
+function check_status_tool(message::String, session::Session{AirlineContext})::String
+    get_flight_details(session.context.current_flight)
 end
 
 """
-    change_flight_tool(message::String)::String
+    change_flight_tool(message::String, session::Session{AirlineContext})::String
 
 Change the current flight to a new flight number.
 Extracts a flight number from the message content and updates the context.
 """
-function change_flight_tool(message::String, session::Session)::String
+function change_flight_tool(message::String, session::Session{AirlineContext})::String
     m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
@@ -97,11 +96,10 @@ function change_flight_tool(message::String, session::Session)::String
         return "Flight $new_flight does not exist"
     end
 
-    context = session.context::AirlineContext
     session.context = AirlineContext(
         current_flight=new_flight,
-        name=context.name,
-        booking_ref=context.booking_ref
+        name=session.context.name,
+        booking_ref=session.context.booking_ref
     )
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
