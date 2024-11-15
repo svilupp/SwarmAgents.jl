@@ -1,9 +1,5 @@
 using SwarmAgents
-using SwarmAgents: Session, Agent
-const Tool = SwarmAgents.Tool  # Be explicit about using SwarmAgents.Tool
 using PromptingTools
-using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
-                     ToolMessage, TestEchoOpenAISchema, @tool
 const PT = PromptingTools
 using Dates
 using JSON3
@@ -23,13 +19,6 @@ Base.@kwdef struct Flight
     time::DateTime
 end
 
-# Define context structure for the session
-Base.@kwdef struct AirlineContext
-    current_flight::String = "FL123"
-    name::String = "John Doe"
-    booking_ref::String = "ABC123"
-end
-
 # Define flight database structure
 Base.@kwdef struct FlightDatabase
     flights::Vector{Tuple{String, Flight}} = [
@@ -39,15 +28,13 @@ Base.@kwdef struct FlightDatabase
     ]
 end
 
-# Initialize the flight database
+# Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
-
-# Global session reference
-mutable struct GlobalSession
-    session::Union{Nothing, Session}
-end
-
-const GLOBAL_SESSION = GlobalSession(nothing)
+const GLOBAL_CONTEXT = Dict{Symbol,Any}(
+    :current_flight => "FL123",
+    :name => "John Doe",
+    :booking_ref => "ABC123"
+)
 
 """
 Check if a flight exists in our database
@@ -67,36 +54,30 @@ function get_flight_details(flight_number::String)::String
     "Flight $flight_number: $(flight.from) to $(flight.to) at $(flight.time)"
 end
 
-# SwarmAgents integration functions
-
 """
-    check_flight_status(; message::String)::String
-
 Check the status of the current flight.
-
-# Arguments
-- `message::String`: The user's message
-
-# Returns
-- `String`: A formatted string containing the flight details
 """
-PT.@tool function check_flight_status(; message::String)::String
-    check_status_tool(message, GLOBAL_SESSION.session)
+function check_flight_status(; message::String)::String
+    get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
 """
-    change_flight(; message::String)::String
-
 Change the current flight to a new flight number.
-
-# Arguments
-- `message::String`: The user's message containing the new flight number
-
-# Returns
-- `String`: A confirmation message with the new flight details
 """
-PT.@tool function change_flight(; message::String)::String
-    change_flight_tool(message, GLOBAL_SESSION.session)
+function change_flight(; message::String)::String
+    m = match(r"FL\d+", message)
+    if isnothing(m)
+        return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
+    end
+    new_flight = m.match
+
+    if !flight_exists(new_flight)
+        return "Flight $new_flight does not exist"
+    end
+
+    # Update global context
+    GLOBAL_CONTEXT[:current_flight] = new_flight
+    return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
 """
