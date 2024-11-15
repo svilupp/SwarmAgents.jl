@@ -29,6 +29,15 @@ Base.@kwdef struct FlightDatabase
     ]
 end
 
+# Define argument structures for tools
+Base.@kwdef struct FlightStatusArgs
+    message::String
+end
+
+Base.@kwdef struct FlightChangeArgs
+    message::String
+end
+
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
 const GLOBAL_CONTEXT = Dict{Symbol,Any}(
@@ -58,7 +67,7 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::Dict{Symbol,Any})::String
+function check_flight_status(args::FlightStatusArgs)::String
     # Use the message from the structured arguments
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
@@ -66,10 +75,9 @@ end
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::Dict{Symbol,Any})::String
+function change_flight(args::FlightChangeArgs)::String
     # Extract flight number from message
-    message = args[:args].message
-    m = match(r"FL\d+", message)
+    m = match(r"FL\d+", args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -140,8 +148,13 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                # Execute tool directly with the args dictionary
-                tool.content = PT.execute_tool(tool_map[name], args)
+                # Convert JSON3.Object to appropriate argument type
+                tool_args = if name == "check_flight_status"
+                    FlightStatusArgs(message=args[:args].message)
+                else
+                    FlightChangeArgs(message=args[:args].message)
+                end
+                tool.content = PT.execute_tool(tool_map[name], tool_args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
