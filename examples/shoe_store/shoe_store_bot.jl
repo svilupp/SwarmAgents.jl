@@ -89,6 +89,32 @@ function process_authentication(msg::String)
 end
 
 # Parameter structures for tools
+# Message argument structures for PromptingTools compatibility
+Base.@kwdef struct AuthMessageArgs
+    message::String
+end
+
+Base.@kwdef struct AuthWrapperArgs
+    args::AuthMessageArgs
+end
+
+Base.@kwdef struct ShowMessageArgs
+    message::String
+end
+
+Base.@kwdef struct ShowWrapperArgs
+    args::ShowMessageArgs
+end
+
+Base.@kwdef struct SizeMessageArgs
+    message::String
+end
+
+Base.@kwdef struct SizeWrapperArgs
+    args::SizeMessageArgs
+end
+
+# Core parameter structures
 Base.@kwdef struct AuthenticateParams
     msg::String
     context::ShoeStoreSessionContext
@@ -211,9 +237,16 @@ Tool function to authenticate users.
 # Returns
 - `String`: Authentication result message
 """
-function wrapped_authenticate(msg::String, session::Session)::String
-    store_context = session.context[:context]::ShoeStoreContext
+function wrapped_authenticate(args::Dict{Symbol,Any})::String
+    # Convert from PromptingTools format to our format
+    wrapper_args = AuthWrapperArgs(args=AuthMessageArgs(message=args[:args]["args"]["message"]))
+    msg = wrapper_args.args.message
+
+    # Get session context from global context
+    store_context = GLOBAL_CONTEXT[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
+
+    # Create params and call authenticate
     params = AuthenticateParams(msg=msg, context=session_context)
     authenticate(params)
 end
@@ -229,9 +262,12 @@ Tool function to show available inventory.
 # Returns
 - `String`: Formatted inventory list
 """
-function wrapped_show_inventory(session::Session)::String
-    store_context = session.context[:context]::ShoeStoreContext
+function wrapped_show_inventory(args::Dict{Symbol,Any})::String
+    # Get session context from global context
+    store_context = GLOBAL_CONTEXT[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
+
+    # Create params and call show_inventory
     params = ShowInventoryParams(context=session_context)
     show_inventory(params)
 end
@@ -248,9 +284,16 @@ Tool function to check shoe size availability.
 # Returns
 - `String`: Size availability message
 """
-function wrapped_check_size(msg::String, session::Session)::String
-    store_context = session.context[:context]::ShoeStoreContext
+function wrapped_check_size(args::Dict{Symbol,Any})::String
+    # Convert from PromptingTools format to our format
+    wrapper_args = SizeWrapperArgs(args=SizeMessageArgs(message=args[:args]["args"]["message"]))
+    msg = wrapper_args.args.message
+
+    # Get session context from global context
+    store_context = GLOBAL_CONTEXT[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
+
+    # Create params and call check_size
     params = CheckSizeParams(msg=msg, context=session_context)
     check_size(params)
 end
