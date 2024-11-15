@@ -145,14 +145,10 @@ function run_example()
     add_tools!(agent, [
         Tool(check_status_wrapper;
              name="check_flight_status",
-             description="Check the status of the current flight",
-             input_type=String,
-             return_type=String),
+             docs="Check the status of the current flight"),
         Tool(change_flight_wrapper;
              name="change_flight",
-             description="Change the current flight to a new flight number",
-             input_type=String,
-             return_type=String)
+             docs="Change the current flight to a new flight number")
     ])
 
     # Create a session with proper context and store it globally
