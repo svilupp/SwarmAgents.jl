@@ -22,6 +22,13 @@ Base.@kwdef struct Flight
     time::DateTime
 end
 
+# Define context structure for the session
+Base.@kwdef struct AirlineContext
+    current_flight::String = "FL123"
+    name::String = "John Doe"
+    booking_ref::String = "ABC123"
+end
+
 # Define flight database structure
 Base.@kwdef struct FlightDatabase
     flights::Vector{Tuple{String, Flight}} = [
@@ -69,8 +76,8 @@ Check the status of the current flight.
 Returns detailed information about the flight, including departure city, destination, and time.
 """
 function check_status_tool(message::String, session::Session)::String
-    current_flight = session.context[:current_flight]::String
-    get_flight_details(current_flight)
+    context = session.context::AirlineContext
+    get_flight_details(context.current_flight)
 end
 
 """
@@ -90,7 +97,12 @@ function change_flight_tool(message::String, session::Session)::String
         return "Flight $new_flight does not exist"
     end
 
-    session.context[:current_flight] = new_flight
+    context = session.context::AirlineContext
+    session.context = AirlineContext(
+        current_flight=new_flight,
+        name=context.name,
+        booking_ref=context.booking_ref
+    )
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
@@ -121,11 +133,7 @@ function run_example()
     ])
 
     # Create a session with proper context and store it globally
-    GLOBAL_SESSION.session = Session(agent; context=Dict{Symbol,Any}(
-        :current_flight => "FL123",
-        :name => "John Doe",
-        :booking_ref => "ABC123"
-    ))
+    GLOBAL_SESSION.session = Session(agent; context=AirlineContext())
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?")
