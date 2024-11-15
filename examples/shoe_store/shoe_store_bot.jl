@@ -104,14 +104,39 @@ end
 
 # Parameter structures for tools
 # Message argument structures for PromptingTools compatibility
+
+"""
+    AuthArgs
+
+Arguments for authentication tool.
+
+# Fields
+- `message::String`: The authentication message containing name and email
+"""
 Base.@kwdef struct AuthArgs
     message::String
 end
 
+"""
+    ShowArgs
+
+Arguments for showing inventory tool.
+
+# Fields
+- `message::String`: Optional message (defaults to empty string)
+"""
 Base.@kwdef struct ShowArgs
     message::String = ""  # Default empty string as this tool doesn't need a message
 end
 
+"""
+    SizeArgs
+
+Arguments for checking size availability tool.
+
+# Fields
+- `message::String`: The size check message containing shoe type and size
+"""
 Base.@kwdef struct SizeArgs
     message::String
 end
@@ -322,15 +347,15 @@ function run_example(custom_messages=nothing)
         """
     )
 
-    # Add tools to the agent
+    # Add tools to the agent with explicit type information
     add_tools!(agent, [
-        Tool(wrapped_authenticate),
-        Tool(wrapped_show_inventory),
-        Tool(wrapped_check_size)
+        Tool(wrapped_authenticate; name="authenticate", description="Authenticate user with name and email",
+             arg_type=AuthArgs, return_type=String),
+        Tool(wrapped_show_inventory; name="show_inventory", description="Show available shoe inventory",
+             arg_type=ShowArgs, return_type=String),
+        Tool(wrapped_check_size; name="check_size", description="Check availability of specific shoe size",
+             arg_type=SizeArgs, return_type=String)
     ])
-
-    # Create a session with proper context
-    session = Session(agent; context=to_session_dict(ShoeStoreSessionContext(context=context)))
 
     # Example conversation
     println("Bot: Welcome to our shoe store! Please authenticate to access our services.")
