@@ -12,58 +12,34 @@ println("API Test Response: ", result.content)
 println("\n=== Running Airline Bot Example ===")
 println("Testing flight status and flight change functionality...")
 include("airline_bot/airline_bot.jl")
+run_example()
 println("\nAirline Bot Test Complete!")
 
 println("\n=== Running Shoe Store Example ===")
 println("Testing authentication flow and inventory queries...")
-# Create a temporary module to avoid name conflicts
-module ShoeStoreTest
-    using SwarmAgents
-    using PromptingTools
-    using Dates
-    using JSON3
-    const PT = PromptingTools
-
-    include("shoe_store/shoe_store_bot.jl")
-    # Test authentication flow
-    function test_shoe_store()
-        println("\nTesting authentication flow:")
-        messages = [
-            "show shoes",  # Should prompt for authentication
-            "authenticate: jan svilupp, jan@svilupp.github.com",  # Valid authentication
-            "show shoes",  # Should show inventory
-            "check size 9 Running Shoes"  # Should check size availability
-        ]
-        run_example(messages)
-    end
-    test_shoe_store()
-end
+include("shoe_store/shoe_store_bot.jl")
+# Test authentication flow
+println("\nTesting authentication flow:")
+messages = [
+    "show shoes",  # Should prompt for authentication
+    "authenticate: jan svilupp, jan@svilupp.github.com",  # Valid authentication
+    "show shoes",  # Should show inventory
+    "check size 9 Running Shoes"  # Should check size availability
+]
+run_example(messages)
 println("\nShoe Store Test Complete!")
 
 println("\n=== Running Car Analysis Example ===")
 println("Testing data analysis and visualization capabilities...")
-# Create a temporary module to avoid name conflicts
-module CarAnalysisTest
-    using SwarmAgents
-    using PromptingTools
-    using DataFrames
-    using PlotlyJS
-    using Statistics
-    const PT = PromptingTools
-
-    include("car_analysis/car_analysis.jl")
-    # Test data analysis capabilities
-    function test_car_analysis()
-        println("\nTesting data analysis:")
-        messages = [
-            "Can you show me the basic statistics?",
-            "Generate some insights about the data",
-            "Show me the visualizations"
-        ]
-        run_example(messages)
-    end
-    test_car_analysis()
-end
+include("car_analysis/car_analysis.jl")
+# Test data analysis capabilities
+println("\nTesting data analysis:")
+messages = [
+    "Can you show me the basic statistics?",
+    "Generate some insights about the data",
+    "Show me the visualizations"
+]
+run_example(messages)
 println("\nCar Analysis Test Complete!")
 
 println("\n=== All Examples Completed ===")
