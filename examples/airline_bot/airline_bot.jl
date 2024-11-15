@@ -34,13 +34,22 @@ Base.@kwdef struct MessageArgs
     message::String
 end
 
+# Convert MessageArgs to Dict
+Base.convert(::Type{Dict{Symbol,Any}}, x::MessageArgs) = Dict{Symbol,Any}(:message => x.message)
+
 Base.@kwdef struct FlightStatusArgs
     args::MessageArgs
 end
 
+# Convert FlightStatusArgs to Dict
+Base.convert(::Type{Dict{Symbol,Any}}, x::FlightStatusArgs) = Dict{Symbol,Any}(:args => convert(Dict{Symbol,Any}, x.args))
+
 Base.@kwdef struct FlightChangeArgs
     args::MessageArgs
 end
+
+# Convert FlightChangeArgs to Dict
+Base.convert(::Type{Dict{Symbol,Any}}, x::FlightChangeArgs) = Dict{Symbol,Any}(:args => convert(Dict{Symbol,Any}, x.args))
 
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
@@ -159,7 +168,9 @@ function run_example()
                 else
                     FlightChangeArgs(args=message_args)
                 end
-                tool.content = PT.execute_tool(tool_map[name], tool_args)
+                # Convert struct to Dict for execute_tool
+                args_dict = convert(Dict{Symbol,Any}, tool_args)
+                tool.content = PT.execute_tool(tool_map[name], args_dict)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
