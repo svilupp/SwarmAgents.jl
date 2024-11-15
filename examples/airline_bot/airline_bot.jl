@@ -1,7 +1,7 @@
 using SwarmAgents
 using PromptingTools
 const PT = PromptingTools
-using PromptingTools.AITools: register_tool
+using PromptingTools.AITools: register_tool, get_registered_tools, execute_tool
 using Dates
 using JSON3
 
@@ -91,7 +91,7 @@ function run_example()
     end
 
     # Get registered tools
-    tools = PT.AITools.get_registered_tools()
+    tools = get_registered_tools()
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?\n")
@@ -138,7 +138,7 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                tool.content = PT.AITools.execute_tool(name, args)
+                tool.content = execute_tool(name, args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
