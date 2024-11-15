@@ -78,7 +78,7 @@ end
 # SwarmAgents integration wrapper functions
 
 """
-    check_status_wrapper(; message::String)::String
+    check_status_wrapper(message::String)::String
 
 Check the status of the current flight.
 
@@ -88,12 +88,12 @@ Check the status of the current flight.
 # Returns
 - `String`: A formatted string containing the flight details
 """
-function check_status_wrapper(; message::String)::String
+function check_status_wrapper(message::String)::String
     check_status_tool(message, GLOBAL_SESSION.session)
 end
 
 """
-    change_flight_wrapper(; message::String)::String
+    change_flight_wrapper(message::String)::String
 
 Change the current flight to a new flight number.
 
@@ -103,7 +103,7 @@ Change the current flight to a new flight number.
 # Returns
 - `String`: A confirmation message with the new flight details
 """
-function change_flight_wrapper(; message::String)::String
+function change_flight_wrapper(message::String)::String
     change_flight_tool(message, GLOBAL_SESSION.session)
 end
 
@@ -164,8 +164,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(check_status_wrapper),
-        Tool(change_flight_wrapper)
+        Tool(check_status_wrapper; name="check_flight_status", description="Check the status of the current flight"),
+        Tool(change_flight_wrapper; name="change_flight", description="Change the current flight to a new flight number")
     ])
 
     # Create a session with proper context and store it globally
