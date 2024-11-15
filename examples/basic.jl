@@ -1,270 +1,102 @@
-# Basic Example
+# # Basic Example
+# Shows how to run low-level multi-turn tool calls.
+
+## Imports
 using SwarmAgents
 using PromptingTools
+const PT = PromptingTools
+using JSON3
 using Dates
 
-"""
-Example of basic SwarmAgents.jl functionality demonstrating:
-1. Tool usage with clear intent and reflection
-2. Multi-agent communication with proper handoffs
-3. Context preservation across agent transfers
-4. Session-based conversation management
-"""
+# # Example 1: Date manipulation and Bday wishes
 
-# Ensure OpenAI API key is available
-if !haskey(ENV, "OPENAI_API_KEY")
-    ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
+"""
+Returns the current date.
+"""
+function tell_date()
+    return "The date is $(Dates.today())"
+end
+
+"Returns the current time"
+function tell_time()
+    return "The time is $(Dates.format(Dates.now(), "HH:MM:SS"))"
 end
 
 """
-    tell_date(message::String)::String
-
-Get the current date in a human-readable format.
-
-Usage:
-    tell_date("What's today's date?")
-
-Intent: Provide current date information for temporal context.
+Returns a happy birthday message.
 """
-function tell_date(message::String)::String
-    return """
-    Today's date is $(Dates.today())
-    Would you like me to:
-    1. Tell you the current time as well
-    2. Calculate a specific date
-    """
+function wish_happy_birthday(name::String, age::Int)
+    return "Wish should be: Happy $(age)th birthday, $(name)!"
 end
 
-"""
-    tell_time(message::String)::String
-
-Get the current time in 24-hour format.
-
-Usage:
-    tell_time("What time is it?")
-
-Intent: Provide current time information for temporal context.
-"""
-function tell_time(message::String)::String
-    return """
-    Current time is $(Dates.format(Dates.now(), "HH:MM:SS"))
-    Would you like me to:
-    1. Tell you today's date
-    2. Set a reminder
-    """
-end
-
-"""
-    wish_happy_birthday(name::String, age::Int)::String
-
-Generate a personalized birthday message.
-
-Usage:
-    wish_happy_birthday("Alice", 25)
-
-Intent: Create a warm birthday greeting with personal touch.
-"""
-function wish_happy_birthday(name::String, age::Int)::String
-    return """
-    🎉 Happy $(age)th birthday, $(name)! 🎂
-    Wishing you a wonderful day filled with joy and celebration!
-    """
-end
-
-"""
-    transfer_to_spanish(message::String, session::Session)::Tuple{Agent,String}
-
-Transfer conversation to Spanish-speaking agent.
-
-Usage:
-    transfer_to_spanish("Hola", session)
-
-Intent: Ensure seamless language transition for Spanish speakers.
-"""
-function transfer_to_spanish(message::String, session::Session)::Tuple{Agent,String}
-    spanish_agent = Agent(
-        name = "Spanish Agent",
-        model = "gpt4o",
-        instructions = """
-        You are a Spanish-speaking assistant.
-
-        Capabilities:
-        - Communicate fluently in Spanish
-        - Handle date and time queries in Spanish
-        - Transfer to English agent when needed
-        - Access conversation context
-
-        What you cannot do:
-        - Communicate in languages other than Spanish
-        - Modify system settings
-        - Access external APIs
-
-        Routine:
-        1. Respond to all queries in Spanish
-        2. For English requests, transfer to English agent
-        3. Maintain professional and friendly tone
-        4. Use proper Spanish formality based on context
-
-        Example queries:
-        - "¿Qué hora es?" (use tell_time)
-        - "¿Qué día es hoy?" (use tell_date)
-        - "I need help in English" (transfer to English agent)
-        """
-    )
-
-    # Add tools with context handling
-    add_tools!(spanish_agent, [
-        tell_date,
-        tell_time,
-        transfer_to_english
-    ]; hidden_fields=["context"])
-
-    # Share context
-    spanish_agent.context = session.context
-
-    handover_message = """
-    Transferring you to our Spanish-speaking assistant.
-    ---
-    Transfiriendo a nuestro asistente de habla hispana.
-    """
-
-    return (spanish_agent, handover_message)
-end
-
-"""
-    transfer_to_english(message::String, session::Session)::Tuple{Agent,String}
-
-Transfer conversation to English-speaking agent.
-
-Usage:
-    transfer_to_english("I need English", session)
-
-Intent: Ensure seamless language transition for English speakers.
-"""
-function transfer_to_english(message::String, session::Session)::Tuple{Agent,String}
-    english_agent = Agent(
-        name = "English Agent",
-        model = "gpt4o",
-        instructions = """
-        You are an English-speaking assistant.
-
-        Capabilities:
-        - Communicate fluently in English
-        - Handle date and time queries
-        - Transfer to Spanish agent when needed
-        - Access conversation context
-
-        What you cannot do:
-        - Communicate in languages other than English
-        - Modify system settings
-        - Access external APIs
-
-        Routine:
-        1. Respond to all queries in English
-        2. For Spanish requests, transfer to Spanish agent
-        3. Maintain professional and friendly tone
-        4. Use clear and concise language
-
-        Example queries:
-        - "What time is it?" (use tell_time)
-        - "What's today's date?" (use tell_date)
-        - "¿Hablas español?" (transfer to Spanish agent)
-        """
-    )
-
-    # Add tools with context handling
-    add_tools!(english_agent, [
-        tell_date,
-        tell_time,
-        transfer_to_spanish
-    ]; hidden_fields=["context"])
-
-    # Share context
-    english_agent.context = session.context
-
-    handover_message = """
-    Transferring you to our English-speaking assistant.
-    ---
-    Cambiando al asistente de habla inglesa.
-    """
-
-    return (english_agent, handover_message)
-end
-
-# Example usage with proper context handling
-function run_example()
-    # Create initial English agent
-    english_agent = Agent(
-        name = "English Agent",
-        model = "gpt4o",
-        instructions = """
-        You are an English-speaking assistant.
-
-        Capabilities:
-        - Communicate fluently in English
-        - Handle date and time queries
-        - Transfer to Spanish agent when needed
-        - Access conversation context
-
-        What you cannot do:
-        - Communicate in languages other than English
-        - Modify system settings
-        - Access external APIs
-
-        Routine:
-        1. Respond to all queries in English
-        2. For Spanish requests, transfer to Spanish agent
-        3. Maintain professional and friendly tone
-        4. Use clear and concise language
-
-        Example queries:
-        - "What time is it?" (use tell_time)
-        - "What's today's date?" (use tell_date)
-        - "¿Hablas español?" (transfer to Spanish agent)
-        """
-    )
-
-    # Add tools with context handling
-    add_tools!(english_agent, [
-        tell_date,
-        tell_time,
-        transfer_to_spanish
-    ]; hidden_fields=["context"])
-
-    # Initialize session with context
-    context = Dict{Symbol,Any}(
-        :context => Dict{Symbol,Any}(
-            :language_preference => "English",
-            :conversation_start => now()
-        )
-    )
-    session = Session(english_agent; context=context)
-
-    # Example conversation
-    println("Bot: Hello! I'm your multilingual assistant. How can I help you today?\n")
-
-    messages = [
-        "What time is it?",
-        "¿Hablas español?",
-        "¿Qué hora es?",
-        "I need English please",
-        "What's today's date?"
-    ]
-
-    for msg in messages
-        println("\nUser: $msg")
-        result = run_full_turn!(session, msg)
-
-        # Handle agent transfers
-        if result isa Tuple{Agent,String}
-            new_agent, handover_msg = result
-            println("\nBot: $handover_msg")
-            session = Session(new_agent; context=session.context)
-        end
+## Run full turn (until tool calls are exhausted)
+tool_map = PT.tool_call_signature([tell_date, tell_time, wish_happy_birthday])
+conv = "Hello, my cousin Joe was born on $(Dates.today() - Year(10)). Is there anything I should know?"
+num_iter = 0
+while true && num_iter <= 10
+    conv = aitools(conv;
+        tools = collect(values(tool_map)), return_all = true, verbose = false)
+    # Print assistant response
+    !isnothing(PT.last_output(conv)) && @info ">> Assistant: $(PT.last_output(conv))"
+    # Terminate if no further tool calls
+    isempty(conv[end].tool_calls) && break
+    for tool in conv[end].tool_calls
+        name, args = tool.name, tool.args
+        @info "Tool Request: $name, args: $args"
+        tool.content = PT.execute_tool(tool_map[name], args)
+        @info ">> Tool Output: $(tool.content)"
+        push!(conv, tool)
     end
+    num_iter += 1
 end
 
-# Run the example if this file is run directly
-if abspath(PROGRAM_FILE) == @__FILE__
-    run_example()
+# # Example 2: Routing to other agents
+
+english_agent = Agent(name = "English Agent",
+    instructions = "You only speak English.")
+spanish_agent = Agent(name = "Spanish Agent",
+    instructions = "You only speak Spanish.")
+
+"""Transfer spanish speaking users immediately."""
+transfer_to_spanish_agent() = spanish_agent
+add_tools!(english_agent, transfer_to_spanish_agent)
+transfer_to_english_agent() = english_agent
+add_tools!(spanish_agent, transfer_to_english_agent)
+
+current_agent = english_agent
+conv = PT.create_template(;
+    user = "Hola. ¿Como estás?", system = current_agent.instructions)
+num_iter = 0
+while true && num_iter <= 5
+    conv = PT.aitools(conv;
+        tools = collect(values(current_agent.tool_map)), return_all = true, verbose = false,
+        name_assistant = replace(current_agent.name, " " => "_"))
+    # Print assistant response
+    !isnothing(PT.last_output(conv)) && @info ">> Assistant: $(PT.last_output(conv))"
+    # Terminate if no further tool calls
+    isempty(conv[end].tool_calls) && break
+    for tool in conv[end].tool_calls
+        name, args = tool.name, tool.args
+        @info "Tool Request: $name, args: $args"
+        output = PT.execute_tool(current_agent.tool_map[name], args)
+        ## Changing the agent
+        if isabstractagent(output)
+            current_agent = output
+            popfirst!(conv)
+            pushfirst!(conv, PT.SystemMessage(current_agent.instructions))
+            output = "Transferred to $(current_agent.name). Adopt the persona immediately."
+        end
+        tool.content = output
+        @info ">> Tool Output: $(tool.content)"
+        push!(conv, tool)
+    end
+    num_iter += 1
 end
+
+# # Simpler API with a Session
+# Initialize a session to hold the state and allow repeated turns
+sess = Session(english_agent)
+# Run a full turn until tools are depleted
+run_full_turn!(sess, "Hola. ¿Como estás?")
+# Run another turn
+run_full_turn!(sess, "What do you mean?")
