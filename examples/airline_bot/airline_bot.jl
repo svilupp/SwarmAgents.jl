@@ -47,13 +47,13 @@ function json_to_tool_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.O
     try
         # Handle nested structure from PromptingTools
         message = if args isa Dict{Symbol,Any}
-            # Parse the JSON string in :args
-            parsed_args = JSON3.read(args[:args])
-            if haskey(parsed_args, "args") && haskey(parsed_args["args"], "args") &&
-               haskey(parsed_args["args"]["args"], "message")
-                parsed_args["args"]["args"]["message"]
+            # args[:args] is already a JSON3.Object, access it directly
+            args_obj = args[:args]
+            if haskey(args_obj, "args") && haskey(args_obj["args"], "args") &&
+               haskey(args_obj["args"]["args"], "message")
+                args_obj["args"]["args"]["message"]
             else
-                error("Unable to find message in Symbol-keyed arguments after parsing: $parsed_args")
+                error("Unable to find message in Symbol-keyed arguments: $args_obj")
             end
         else
             # For String keys or JSON3.Object, assume already parsed
