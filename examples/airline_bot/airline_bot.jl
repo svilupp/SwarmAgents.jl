@@ -141,42 +141,62 @@ function run_example()
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
 
-    # Create tools and agent
-    agent = Agent(;
-        name = "Airline Bot",
-        model = "gpt-3.5-turbo",  # Use OpenAI GPT-3.5
-        instructions = """
-        You are an airline customer service bot. You can help with:
-        - Checking flight status
-        - Changing flights
-        Use the available tools to assist customers.
-        Always refer to the customer by their name (available in context).
-        """
-    )
-
     # Create tool map using PromptingTools tool_call_signature
     tool_map = PT.tool_call_signature([check_flight_status, change_flight])
 
-    # Add tools to the agent
-    add_tools!(agent, collect(values(tool_map)))
-
-    # Create a session with proper context and store it globally
-    GLOBAL_SESSION.session = Session(agent; context=Dict{Symbol,Any}(:current_flight => "FL123", :name => "John Doe", :booking_ref => "ABC123"))
+    # Initialize context
+    GLOBAL_SESSION.session = Session(; context=Dict{Symbol,Any}(
+        :current_flight => "FL123",
+        :name => "John Doe",
+        :booking_ref => "ABC123"
+    ))
 
     # Example conversation
-    println("Bot: Welcome to our airline service! How can I help you today?")
+    println("Bot: Welcome to our airline service! How can I help you today?\n")
 
-    # Process messages through the session
+    # Process messages
     messages = [
         "What's my flight status?",
         "Change flight to FL124",
         "What's my flight status?"
     ]
 
+    conv = """
+    You are an airline customer service bot. You can help with:
+    - Checking flight status
+    - Changing flights
+    Use the available tools to assist customers.
+    Always refer to the customer by their name (available in context).
+
+    How can I help you today?
+    """
+
     for (i, msg) in enumerate(messages)
         println("\nUser: $msg")
-        run_full_turn!(GLOBAL_SESSION.session, msg)
-        # The response is already printed by run_full_turn!
+        num_iter = 0
+        while num_iter <= 5
+            conv = aitools(conv * "\nUser: " * msg;
+                tools=collect(values(tool_map)),
+                return_all=true,
+                verbose=true,
+                model="gpt-3.5-turbo")
+
+            # Print assistant response
+            !isnothing(PT.last_output(conv)) && println("Bot: $(PT.last_output(conv))")
+
+            # Terminate if no further tool calls
+            isempty(conv[end].tool_calls) && break
+
+            # Process tool calls
+            for tool in conv[end].tool_calls
+                name, args = tool.name, tool.args
+                @info "Tool Request: $name, args: $args"
+                tool.content = PT.execute_tool(tool_map[name], args)
+                @info "Tool Output: $(tool.content)"
+                push!(conv, tool)
+            end
+            num_iter += 1
+        end
     end
 
     return true
