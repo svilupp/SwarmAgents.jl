@@ -70,7 +70,7 @@ end
 # SwarmAgents integration functions
 
 """
-    check_flight_status(message::String)::String
+    check_flight_status(; message::String)::String
 
 Check the status of the current flight.
 
@@ -80,12 +80,12 @@ Check the status of the current flight.
 # Returns
 - `String`: A formatted string containing the flight details
 """
-function check_flight_status(message::String)::String
+PT.@tool function check_flight_status(; message::String)::String
     check_status_tool(message, GLOBAL_SESSION.session)
 end
 
 """
-    change_flight(message::String)::String
+    change_flight(; message::String)::String
 
 Change the current flight to a new flight number.
 
@@ -95,7 +95,7 @@ Change the current flight to a new flight number.
 # Returns
 - `String`: A confirmation message with the new flight details
 """
-function change_flight(message::String)::String
+PT.@tool function change_flight(; message::String)::String
     change_flight_tool(message, GLOBAL_SESSION.session)
 end
 
