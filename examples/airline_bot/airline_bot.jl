@@ -36,10 +36,10 @@ const FLIGHT_DB = FlightDatabase()
 
 # Global session reference
 mutable struct GlobalSession
-    session::Union{Nothing, Session} = nothing
+    session::Union{Nothing, Session}
 end
 
-const GLOBAL_SESSION = GlobalSession()
+const GLOBAL_SESSION = GlobalSession(nothing)
 
 """
 Check if a flight exists in our database
