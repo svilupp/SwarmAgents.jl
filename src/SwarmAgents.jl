@@ -34,6 +34,6 @@ export TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck, T
 
 # Workflow (run_full_turn, handle tool calls)
 include("workflow.jl")
-export run_full_turn, run_full_turn!, Response, add_tools!, handle_tool_calls!, add_transfers!
+export run_full_turn, run_full_turn!, Response, add_tools!, handle_tool_calls!, add_transfers!, transfer_agent
 
 end # module
