@@ -80,7 +80,7 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::FlightStatusArgs)::String
+function check_flight_status(args::Dict{Symbol,Any})::String
     # Use the message from the structured arguments
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
@@ -88,9 +88,10 @@ end
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::FlightChangeArgs)::String
+function change_flight(args::Dict{Symbol,Any})::String
     # Extract flight number from message
-    m = match(r"FL\d+", args.args.message)
+    message = args[:args][:message]
+    m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -161,17 +162,8 @@ function run_example()
             for tool in conv[end].tool_calls
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
-                # Extract message from nested structure
-                nested_args = args[:args][:args]
-                message_args = MessageArgs(message=nested_args[:message])
-                tool_args = if name == "check_flight_status"
-                    FlightStatusArgs(args=message_args)
-                else
-                    FlightChangeArgs(args=message_args)
-                end
-                # Convert struct to Dict for execute_tool
-                args_dict = convert(Dict{Symbol,Any}, tool_args)
-                tool.content = PT.execute_tool(tool_map[name], args_dict)
+                # Execute tool with the args dictionary directly
+                tool.content = PT.execute_tool(tool_map[name], args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
