@@ -264,7 +264,7 @@ end
 
 # Create wrapper functions that handle parameter construction
 """
-    wrapped_authenticate(; message::String)::String
+    wrapped_authenticate(message::String)::String
 
 Tool function to authenticate users.
 
@@ -274,7 +274,7 @@ Tool function to authenticate users.
 # Returns
 - `String`: Authentication result message
 """
-function wrapped_authenticate(; message::String)::String
+function wrapped_authenticate(message::String)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
@@ -286,7 +286,7 @@ function wrapped_authenticate(; message::String)::String
 end
 
 """
-    wrapped_show_inventory(; message::String)::String
+    wrapped_show_inventory(message::String="")::String
 
 Tool function to show available inventory.
 
@@ -296,7 +296,7 @@ Tool function to show available inventory.
 # Returns
 - `String`: Formatted inventory list
 """
-function wrapped_show_inventory(; message::String="")::String
+function wrapped_show_inventory(message::String="")::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
@@ -308,7 +308,7 @@ function wrapped_show_inventory(; message::String="")::String
 end
 
 """
-    wrapped_check_size(; message::String)::String
+    wrapped_check_size(message::String)::String
 
 Tool function to check shoe size availability.
 
@@ -318,7 +318,7 @@ Tool function to check shoe size availability.
 # Returns
 - `String`: Size availability message
 """
-function wrapped_check_size(; message::String)::String
+function wrapped_check_size(message::String)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
