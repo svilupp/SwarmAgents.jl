@@ -34,6 +34,11 @@ Base.@kwdef struct ToolMessage
     message::String
 end
 
+# Convert Dict arguments to ToolMessage
+function convert_to_tool_message(args::Dict{String,Any})::ToolMessage
+    ToolMessage(message=args["message"])
+end
+
 # Initialize the flight database and global context
 const FLIGHT_DB = FlightDatabase()
 const GLOBAL_CONTEXT = Dict{Symbol,Any}(
@@ -63,21 +68,22 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::Dict{String,Any})::String
-    # Extract message from args
-    message = args["message"]
+function check_flight_status(args::ToolMessage)::String
+    # Use the message from the structured arguments
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
+end
+
+# Internal function to handle Dict arguments
+function check_flight_status(args::Dict{String,Any})::String
+    check_flight_status(convert_to_tool_message(args))
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::Dict{String,Any})::String
-    # Extract message from args
-    message = args["message"]
-
+function change_flight(args::ToolMessage)::String
     # Extract flight number from message
-    m = match(r"FL\d+", message)
+    m = match(r"FL\d+", args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -90,6 +96,11 @@ function change_flight(args::Dict{String,Any})::String
     # Update global context
     GLOBAL_CONTEXT[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
+end
+
+# Internal function to handle Dict arguments
+function change_flight(args::Dict{String,Any})::String
+    change_flight(convert_to_tool_message(args))
 end
 
 # Example usage:
