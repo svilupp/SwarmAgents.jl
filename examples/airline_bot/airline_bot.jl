@@ -100,7 +100,8 @@ function run_example()
         "What's my flight status?"
     ]
 
-    conv = """
+    # Initialize conversation with system message
+    conv = [PT.SystemMessage("""
     You are an airline customer service bot. You can help with:
     - Checking flight status
     - Changing flights
@@ -108,13 +109,17 @@ function run_example()
     Always refer to the customer by their name (available in context).
 
     How can I help you today?
-    """
+    """)]
 
     for (i, msg) in enumerate(messages)
         println("\nUser: $msg")
         num_iter = 0
         while num_iter <= 5
-            conv = aitools(conv * "\nUser: " * msg;
+            # Add user message to conversation
+            push!(conv, PT.UserMessage(msg))
+
+            # Get AI response
+            conv = aitools(conv;
                 tools=collect(values(tool_map)),
                 return_all=true,
                 verbose=true,
