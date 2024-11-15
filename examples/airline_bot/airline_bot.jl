@@ -153,10 +153,13 @@ function run_example()
     end
 
     # Create wrapper functions that handle Dict to ToolArgs conversion
-    wrapped_check_status = function(args::Dict{String,Any})::String
+    function wrapped_check_status(args::Dict{String,Any})::String
+        @info "Wrapped check status received args:" args
         check_flight_status(json_to_tool_args(args))
     end
-    wrapped_change_flight = function(args::Dict{String,Any})::String
+
+    function wrapped_change_flight(args::Dict{String,Any})::String
+        @info "Wrapped change flight received args:" args
         change_flight(json_to_tool_args(args))
     end
 
