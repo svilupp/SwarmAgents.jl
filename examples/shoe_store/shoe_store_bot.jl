@@ -286,7 +286,7 @@ function wrapped_authenticate(message::String)::String
 end
 
 """
-    wrapped_show_inventory(message::String="")::String
+    wrapped_show_inventory(message::String)::String
 
 Tool function to show available inventory.
 
@@ -296,7 +296,7 @@ Tool function to show available inventory.
 # Returns
 - `String`: Formatted inventory list
 """
-function wrapped_show_inventory(message::String="")::String
+function wrapped_show_inventory(message::String)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
