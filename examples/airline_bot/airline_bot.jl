@@ -41,15 +41,15 @@ Base.@kwdef struct FlightStatusArgs
     args::MessageArgs
 end
 
-# Convert FlightStatusArgs to Dict
-Base.convert(::Type{Dict{Symbol,Any}}, x::FlightStatusArgs) = Dict{Symbol,Any}(:args => convert(Dict{Symbol,Any}, x.args))
+# Convert FlightStatusArgs to Dict - flatten the structure for PromptingTools
+Base.convert(::Type{Dict{Symbol,Any}}, x::FlightStatusArgs) = convert(Dict{Symbol,Any}, x.args)
 
 Base.@kwdef struct FlightChangeArgs
     args::MessageArgs
 end
 
-# Convert FlightChangeArgs to Dict
-Base.convert(::Type{Dict{Symbol,Any}}, x::FlightChangeArgs) = Dict{Symbol,Any}(:args => convert(Dict{Symbol,Any}, x.args))
+# Convert FlightChangeArgs to Dict - flatten the structure for PromptingTools
+Base.convert(::Type{Dict{Symbol,Any}}, x::FlightChangeArgs) = convert(Dict{Symbol,Any}, x.args)
 
 # Convert Dict to MessageArgs
 function dict_to_message_args(d::Dict{Symbol,Any})::MessageArgs
