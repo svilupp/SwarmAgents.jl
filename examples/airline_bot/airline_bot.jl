@@ -182,7 +182,9 @@ function run_example()
                 else
                     dict_to_flight_change_args(args)
                 end
-                tool.content = PT.execute_tool(tool_map[name], struct_args)
+                # Convert struct back to Dict for execute_tool
+                dict_args = convert(Dict{Symbol,Any}, struct_args)
+                tool.content = PT.execute_tool(tool_map[name], dict_args)
                 @info "Tool Output: $(tool.content)"
                 push!(conv, tool)
             end
