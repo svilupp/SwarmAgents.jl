@@ -47,13 +47,18 @@ function json_to_tool_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.O
     try
         # Handle nested structure from PromptingTools
         message = if args isa Dict{Symbol,Any}
-            if haskey(args, :args) && haskey(args[:args], "args") && haskey(args[:args]["args"], "message")
-                args[:args]["args"]["message"]
+            # Parse the JSON string in :args
+            parsed_args = JSON3.read(args[:args])
+            if haskey(parsed_args, "args") && haskey(parsed_args["args"], "args") &&
+               haskey(parsed_args["args"]["args"], "message")
+                parsed_args["args"]["args"]["message"]
             else
-                error("Unable to find message in Symbol-keyed arguments: $args")
+                error("Unable to find message in Symbol-keyed arguments after parsing: $parsed_args")
             end
         else
-            if haskey(args, "args") && haskey(args["args"], "args") && haskey(args["args"]["args"], "message")
+            # For String keys or JSON3.Object, assume already parsed
+            if haskey(args, "args") && haskey(args["args"], "args") &&
+               haskey(args["args"]["args"], "message")
                 args["args"]["args"]["message"]
             else
                 error("Unable to find message in String-keyed arguments: $args")
@@ -68,7 +73,7 @@ function json_to_tool_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.O
             )
         )
     catch e
-        @error "Failed to parse tool args" args typeof(args)
+        @error "Failed to parse tool args" args typeof(args) exception=(e, catch_backtrace())
         rethrow(e)
     end
 end
