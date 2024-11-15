@@ -277,5 +277,28 @@ func5() = "test"
             @test result2 isa AgentRef
             @test result2.name == Symbol("Booking Agent")
         end
+
+        @testset "generic transfer_agent function" begin
+            # Test direct usage of transfer_agent
+            result = transfer_agent("Test Agent", "Testing transfer")
+            @test result isa AgentRef
+            @test result.name == Symbol("Test Agent")
+
+            # Test function introspection
+            arg_names = PT.get_arg_names(transfer_agent)
+            arg_types = PT.get_arg_types(transfer_agent)
+
+            @test length(arg_names) == 2
+            @test arg_names[1] == :target_agent_name
+            @test arg_names[2] == :handover_message
+
+            @test length(arg_types) == 2
+            @test arg_types[1] == String
+            @test arg_types[2] == String
+
+            # Test error handling
+            @test_throws MethodError transfer_agent(Symbol("Test Agent"), "Testing transfer")
+            @test_throws MethodError transfer_agent("Test Agent", 123)
+        end
     end
 end
