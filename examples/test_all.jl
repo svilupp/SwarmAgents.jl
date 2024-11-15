@@ -4,6 +4,7 @@ Pkg.activate(".")
 
 println("\n=== Testing OpenAI API Connection ===")
 using PromptingTools
+using SwarmAgents
 const PT = PromptingTools
 result = aigenerate("Say hello!", model="gpt-3.5-turbo")
 println("API Test Response: ", result.content)
@@ -17,6 +18,12 @@ println("\n=== Running Shoe Store Example ===")
 println("Testing authentication flow and inventory queries...")
 # Create a temporary module to avoid name conflicts
 module ShoeStoreTest
+    using SwarmAgents
+    using PromptingTools
+    using Dates
+    using JSON3
+    const PT = PromptingTools
+
     include("shoe_store/shoe_store_bot.jl")
     # Test authentication flow
     function test_shoe_store()
@@ -37,6 +44,13 @@ println("\n=== Running Car Analysis Example ===")
 println("Testing data analysis and visualization capabilities...")
 # Create a temporary module to avoid name conflicts
 module CarAnalysisTest
+    using SwarmAgents
+    using PromptingTools
+    using DataFrames
+    using PlotlyJS
+    using Statistics
+    const PT = PromptingTools
+
     include("car_analysis/car_analysis.jl")
     # Test data analysis capabilities
     function test_car_analysis()
@@ -46,7 +60,7 @@ module CarAnalysisTest
             "Generate some insights about the data",
             "Show me the visualizations"
         ]
-        run_example()
+        run_example(messages)
     end
     test_car_analysis()
 end
