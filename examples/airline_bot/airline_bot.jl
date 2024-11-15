@@ -60,18 +60,15 @@ function get_flight_details(flight_number::String)::String
 end
 
 # SwarmAgents integration wrapper functions
+
 """
+    check_status_tool(message::String)::String
+
 Check the status of the current flight.
 
 Returns detailed information about the flight, including departure city, destination, and time.
-
-Parameters:
-    message::String - The message content (unused in this function)
-
-Returns:
-    String - A formatted string containing flight details or an error message
 """
-function check_status_tool(message::String)::String
+PT.@tool function check_status_tool(message::String)::String
     if isnothing(GLOBAL_SESSION.session)
         return "Error: Session not initialized"
     end
@@ -81,17 +78,12 @@ function check_status_tool(message::String)::String
 end
 
 """
+    change_flight_tool(message::String)::String
+
 Change the current flight to a new flight number.
-
 Extracts a flight number from the message content and updates the context.
-
-Parameters:
-    message::String - The message content containing the new flight number
-
-Returns:
-    String - A success message with new flight details or an error message
 """
-function change_flight_tool(message::String)::String
+PT.@tool function change_flight_tool(message::String)::String
     if isnothing(GLOBAL_SESSION.session)
         return "Error: Session not initialized"
     end
@@ -132,18 +124,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        PT.Tool(check_status_tool;
-            name="check_status",
-            description="Check the status of the current flight",
-            parameters=[(:message, String, "The message content (unused)")],
-            return_type=String
-        ),
-        PT.Tool(change_flight_tool;
-            name="change_flight",
-            description="Change the current flight to a new flight number",
-            parameters=[(:message, String, "The message containing the new flight number")],
-            return_type=String
-        )
+        check_status_tool,
+        change_flight_tool
     ])
 
     # Create a session with proper context and store it globally
