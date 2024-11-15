@@ -187,13 +187,18 @@ function add_transfers!(session::Session)
 
     # Get all agents from the map
     agents = collect(values(session.agent_map))
+    agent_names = [agent.name for agent in agents]
 
-    # For each agent, create transfer functions to all other agents
+    # For each agent, create transfer tools to all other agents
     for source_agent in agents
         source_name = source_agent.name
         @info "Processing source agent" source_name
 
-        # Create transfer functions for all other agents
+        # Get available target agents (excluding self)
+        available_targets = filter(name -> name != source_name, agent_names)
+        available_targets_str = join(available_targets, ", ")
+
+        # Create transfer tools for all other agents
         for target_agent in agents
             target_name = target_agent.name
 
@@ -209,23 +214,63 @@ function add_transfers!(session::Session)
             @info "Creating transfer tool" function_name target_name
 
             try
-                # Create and add tool with transfer function
-                @debug "Creating tool" target_name
-                tool = Tool(
-                    x -> AgentRef(Symbol(target_name));
-                    name=function_name,
-                    docs="Transfer conversation to $target_name. Requires handover_message::String to explain the reason for transfer.",
-                    parameters=Dict(
-                        "handover_message" => Dict(
-                            "type" => "string",
-                            "description" => "Explanation for why the customer is being transferred"
-                        )
+                # Log parameter creation
+                @debug "Creating parameters dictionary" handover_message_spec=Dict(
+                    "type" => "string",
+                    "description" => "Explanation for why the transfer is needed",
+                    "required" => true
+                )
+
+                # Create parameters with detailed logging
+                parameters = Dict(
+                    "handover_message" => Dict(
+                        "type" => "string",
+                        "description" => "Explanation for why the transfer is needed",
+                        "required" => true
                     )
                 )
+                @info "Created parameters dictionary" parameters
+
+                # Log function creation and type conversion details
+                @debug "Creating transfer function" target_name Symbol(target_name) string_name=String(target_name)
+                @info "Agent name type details" original_type=typeof(target_name) symbol_type=typeof(Symbol(target_name))
+                transfer_fn = (args...; kwargs...) -> begin
+                    @info "Transfer function called" kwargs target_name
+                    @debug "Creating AgentRef" target_name=target_name target_type=typeof(target_name)
+                    AgentRef(target_name)  # target_name is already a String, let AgentRef handle Symbol conversion
+                end
+                @info "Created transfer function" fn_type=typeof(transfer_fn)
+
+                # Log docstring creation
+                docs = """
+                    Transfer conversation to $target_name.
+
+                    Available agents for transfer from $source_name: $available_targets_str
+
+                    Parameters:
+                    - handover_message::String: Required explanation for the transfer
+
+                    Returns:
+                    - AgentRef: Reference to $target_name agent
+                """
+                @debug "Created docstring" docs
+
+                @info "Creating tool with parameters" name=function_name fn_type=typeof(transfer_fn)
+                # Create tool with explicit kwargs and detailed logging
+                tool = Tool(;
+                    name=function_name,
+                    parameters=parameters,
+                    description=docs,
+                    callable=transfer_fn
+                )
+                @info "Successfully created tool" tool_name=tool.name tool_type=typeof(tool)
+
                 @info "Adding tool to agent" agent=source_name tool_name=tool.name
                 add_tools!(source_agent, tool)
             catch e
                 @error "Failed to create or add tool" exception=(e, catch_backtrace()) function_name target_name
+                @error "Tool creation details" step="last_known" parameters=get(Base.current_exceptions(), :parameters, nothing)
+                @error "Function details" fn_type=get(Base.current_exceptions(), :fn_type, nothing)
                 rethrow(e)
             end
         end

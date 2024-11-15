@@ -17,9 +17,9 @@ A reference to another agent in the system.
 - `name::String`: The name of the referenced agent
 """
 struct AgentRef <: AbstractAgentRef
-    name::String
-    AgentRef(name::String) = new(name)
-    AgentRef(; name::String) = new(name)
+    name::Symbol
+    AgentRef(name::String) = new(Symbol(name))
+    AgentRef(; name::String) = new(Symbol(name))
 end
 
 """

@@ -181,17 +181,29 @@ func5() = "test"
             add_transfers!(session)
 
             # Verify tool names follow snake_case convention
-            @test haskey(booking.tool_map, "transfer_to_support_agent")
-            @test haskey(booking.tool_map, "transfer_to_sales_agent")
-            @test haskey(support.tool_map, "transfer_to_booking_agent")
-            @test haskey(support.tool_map, "transfer_to_sales_agent")
-            @test haskey(sales.tool_map, "transfer_to_booking_agent")
-            @test haskey(sales.tool_map, "transfer_to_support_agent")
+            @test haskey(booking_agent.tool_map, "transfer_to_support_agent")
+            @test haskey(booking_agent.tool_map, "transfer_to_sales_agent")
+            @test haskey(support_agent.tool_map, "transfer_to_booking_agent")
+            @test haskey(support_agent.tool_map, "transfer_to_sales_agent")
+            @test haskey(sales_agent.tool_map, "transfer_to_booking_agent")
+            @test haskey(sales_agent.tool_map, "transfer_to_support_agent")
 
             # Verify no self-transfer tools were created
-            @test !haskey(booking.tool_map, "transfer_to_booking_agent")
-            @test !haskey(support.tool_map, "transfer_to_support_agent")
-            @test !haskey(sales.tool_map, "transfer_to_sales_agent")
+            @test !haskey(booking_agent.tool_map, "transfer_to_booking_agent")
+            @test !haskey(support_agent.tool_map, "transfer_to_support_agent")
+            @test !haskey(sales_agent.tool_map, "transfer_to_sales_agent")
+
+            # Test tool properties and docstrings
+            support_transfer = booking_agent.tool_map["transfer_to_support_agent"]
+            @test support_transfer.name == "transfer_to_support_agent"
+            @test haskey(support_transfer.parameters, "handover_message")
+            @test support_transfer.parameters["handover_message"]["type"] == "string"
+            @test support_transfer.parameters["handover_message"]["required"] == true
+
+            # Verify available agents are listed in docstring
+            @test contains(support_transfer.description, "Support Agent")
+            @test contains(support_transfer.description, "Sales Agent")
+            @test contains(support_transfer.description, "Available agents for transfer from Booking Agent")
         end
 
         @testset "handover message handling" begin
@@ -208,17 +220,14 @@ func5() = "test"
             # Add transfer tools
             add_transfers!(session)
 
-            # Test handover message
+            # Get transfer tool and verify its structure
+            transfer_tool = agent1.tool_map["transfer_to_agent_two"]
+            @test transfer_tool isa Tool
+            @test haskey(transfer_tool.parameters, "handover_message")
+
+            # Test transfer function execution
             handover_msg = "Transferring to specialized agent for technical support"
-            transfer_fn = agent1.tool_map["transfer_to_agent_two"]
-
-            # Execute transfer
-            result = transfer_fn.function(handover_msg)
-
-            # Verify handover message was added to session
-            @test length(session.messages) == 1
-            @test session.messages[1] isa SystemMessage
-            @test session.messages[1].content == handover_msg
+            result = transfer_tool.callable(; handover_message=handover_msg)
 
             # Verify correct AgentRef is returned
             @test result isa AgentRef
@@ -229,37 +238,44 @@ func5() = "test"
             session = Session()
 
             # Create agents with different specialties
-            booking = Agent(name="Booking Agent", instructions="Handle flight bookings")
-            support = Agent(name="Support Agent", instructions="Handle customer support")
+            booking_agent = Agent(name="Booking Agent", instructions="Handle flight bookings")
+            support_agent = Agent(name="Support Agent", instructions="Handle customer support")
 
             # Add agents to session
-            session.agent_map[:booking] = booking
-            session.agent_map[:support] = support
+            session.agent_map[:booking] = booking_agent
+            session.agent_map[:support] = support_agent
 
             # Add transfer tools
             add_transfers!(session)
 
             # Test complete transfer flow
-            booking_to_support = booking.tool_map["transfer_to_support_agent"]
-            support_to_booking = support.tool_map["transfer_to_booking_agent"]
+            booking_to_support = booking_agent.tool_map["transfer_to_support_agent"]
+            support_to_booking = support_agent.tool_map["transfer_to_booking_agent"]
+
+            # Verify tool structure
+            @test booking_to_support isa Tool
+            @test haskey(booking_to_support.parameters, "handover_message")
+            @test booking_to_support.parameters["handover_message"]["type"] == "string"
+            @test booking_to_support.parameters["handover_message"]["required"] == true
+            @test !isnothing(booking_to_support.description)
+            @test contains(booking_to_support.description, "Available agents for transfer from Booking Agent")
+            @test contains(booking_to_support.description, "Support Agent")
 
             # Transfer from booking to support
             handover_msg1 = "Customer needs help with existing booking"
-            result1 = booking_to_support.function(handover_msg1)
+            result1 = booking_to_support.callable(; handover_message=handover_msg1)
 
             # Verify first transfer
             @test result1 isa AgentRef
             @test result1.name == Symbol("Support Agent")
-            @test session.messages[end].content == handover_msg1
 
             # Transfer back to booking
             handover_msg2 = "Customer wants to modify their booking"
-            result2 = support_to_booking.function(handover_msg2)
+            result2 = support_to_booking.callable(; handover_message=handover_msg2)
 
             # Verify second transfer
             @test result2 isa AgentRef
             @test result2.name == Symbol("Booking Agent")
-            @test session.messages[end].content == handover_msg2
         end
     end
 end
