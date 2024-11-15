@@ -264,17 +264,17 @@ end
 
 # Create wrapper functions that handle parameter construction
 """
-    wrapped_authenticate(msg::String, session::Session)::String
+    wrapped_authenticate(; message::String)::String
 
 Tool function to authenticate users.
 
 # Arguments
-- `args::AuthArgs`: The authentication arguments containing the message
+- `message::String`: The authentication message containing name and email
 
 # Returns
 - `String`: Authentication result message
 """
-function wrapped_authenticate(message::String)::String
+function wrapped_authenticate(; message::String)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
@@ -286,17 +286,17 @@ function wrapped_authenticate(message::String)::String
 end
 
 """
-    wrapped_show_inventory(args::ShowArgs)::String
+    wrapped_show_inventory(; message::String)::String
 
 Tool function to show available inventory.
 
 # Arguments
-- `args::ShowArgs`: The show inventory arguments (message field is optional)
+- `message::String`: The message (optional, not used for this tool)
 
 # Returns
 - `String`: Formatted inventory list
 """
-function wrapped_show_inventory(message::String)::String
+function wrapped_show_inventory(; message::String="")::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
@@ -308,7 +308,7 @@ function wrapped_show_inventory(message::String)::String
 end
 
 """
-    wrapped_check_size(message::String)::String
+    wrapped_check_size(; message::String)::String
 
 Tool function to check shoe size availability.
 
@@ -318,7 +318,7 @@ Tool function to check shoe size availability.
 # Returns
 - `String`: Size availability message
 """
-function wrapped_check_size(message::String)::String
+function wrapped_check_size(; message::String)::String
     # Get session context from the session
     session = current_session()
     store_context = session.context[:context]::ShoeStoreContext
