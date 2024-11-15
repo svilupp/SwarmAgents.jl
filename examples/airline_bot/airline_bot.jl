@@ -189,12 +189,12 @@ function change_flight(args::ToolArgs)::String
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
 end
 
-# Create wrapper functions that handle struct-based arguments
+# Create wrapper functions that handle both Dict and struct-based arguments
 """
 Check the status of a flight using a wrapper that handles struct-based arguments.
 """
 function wrapped_check_status(args::WrapperArgs)::String
-    @info "Wrapped check status received args:" args
+    @info "Wrapped check status received WrapperArgs:" args
     check_flight_status(ToolArgs(
         args=ToolInnerArgs(
             args=ToolMessageArgs(
@@ -204,11 +204,18 @@ function wrapped_check_status(args::WrapperArgs)::String
     ))
 end
 
+# Add Dict argument support for wrapped_check_status
+function wrapped_check_status(args::Dict)::String
+    @info "Wrapped check status received Dict:" args
+    wrapped_args = dict_to_wrapper_args(args)
+    wrapped_check_status(wrapped_args)
+end
+
 """
 Change flight using a wrapper that handles struct-based arguments.
 """
 function wrapped_change_flight(args::WrapperArgs)::String
-    @info "Wrapped change flight received args:" args
+    @info "Wrapped change flight received WrapperArgs:" args
     change_flight(ToolArgs(
         args=ToolInnerArgs(
             args=ToolMessageArgs(
@@ -216,6 +223,13 @@ function wrapped_change_flight(args::WrapperArgs)::String
             )
         )
     ))
+end
+
+# Add Dict argument support for wrapped_change_flight
+function wrapped_change_flight(args::Dict)::String
+    @info "Wrapped change flight received Dict:" args
+    wrapped_args = dict_to_wrapper_args(args)
+    wrapped_change_flight(wrapped_args)
 end
 
 # Example usage:
