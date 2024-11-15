@@ -53,19 +53,33 @@ end
 # Convert JSON3/Dict to WrapperArgs
 function dict_to_wrapper_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::WrapperArgs
     try
-        # Handle nested structure from PromptingTools
+        # Handle both simple and nested structures from PromptingTools
         message = if args isa Dict{Symbol,Any}
             args_obj = args[:args]
-            if haskey(args_obj, "message")
+            if args_obj isa String
+                # Simple case: :args contains the message directly
+                args_obj
+            elseif args_obj isa Dict && haskey(args_obj, "message")
+                # Nested case: :args contains a Dict with "message" key
                 args_obj["message"]
             else
                 error("Unable to find message in Symbol-keyed arguments: $args_obj")
             end
         else
-            if haskey(args, "args") && haskey(args["args"], "message")
-                args["args"]["message"]
+            # For String keys or JSON3.Object
+            if haskey(args, "args")
+                args_obj = args["args"]
+                if args_obj isa String
+                    # Simple case: "args" contains the message directly
+                    args_obj
+                elseif haskey(args_obj, "message")
+                    # Nested case: "args" contains a Dict with "message" key
+                    args_obj["message"]
+                else
+                    error("Unable to find message in String-keyed arguments: $args_obj")
+                end
             else
-                error("Unable to find message in String-keyed arguments: $args")
+                error("Unable to find 'args' key in arguments: $args")
             end
         end
 
