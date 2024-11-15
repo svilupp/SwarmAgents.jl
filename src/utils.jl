@@ -76,3 +76,77 @@ function convert_message(T::Type{<:PT.AbstractMessage}, msg::PT.AbstractMessage)
         error("Unknown message type: $(typeof(msg))")
     end
 end
+
+"""
+    tool_output(output::Any)
+
+Convert tool output to string format. This function is used to convert any tool output into a string
+representation that can be used in tool messages.
+
+# Behavior
+The function handles three cases in order of precedence:
+1. String input: returns the string directly
+2. Struct with :output property: returns the output property value as string
+3. Other types: converts to string using show method
+
+# Customization
+Users can customize how their tool outputs are converted to strings in two ways:
+
+1. Define an :output property in your struct:
+```julia
+struct MyToolOutput
+    output::String  # This will be used automatically
+    other_data::Any
+end
+```
+
+2. Define a custom tool_output method for your type:
+```julia
+struct MyCustomOutput
+    data::Any
+end
+
+# Custom conversion method
+SwarmAgents.tool_output(x::MyCustomOutput) = "Processed: \$(x.data)"
+```
+
+# Examples
+```julia
+# String passthrough
+tool_output("hello")  # returns "hello"
+
+# Struct with output property
+struct ResultWithOutput
+    output::String
+    details::Dict
+end
+result = ResultWithOutput("computation done", Dict("time" => 0.5))
+tool_output(result)  # returns "computation done"
+
+# Custom tool_output method
+struct CustomResult
+    value::Int
+end
+SwarmAgents.tool_output(x::CustomResult) = "Result: \$(x.value)"
+tool_output(CustomResult(42))  # returns "Result: 42"
+
+# Fallback to show method
+tool_output([1, 2, 3])  # returns "[1, 2, 3]"
+```
+
+See also: [`handle_tool_calls!`](@ref)
+"""
+function tool_output(output::Any)
+    # Direct passthrough for strings
+    output isa String && return output
+
+    # Check for :output property in structs
+    if hasfield(typeof(output), :output)
+        return string(getfield(output, :output))
+    end
+
+    # Fallback to show method for other types
+    io = IOBuffer()
+    show(io, output)
+    return String(take!(io))
+end

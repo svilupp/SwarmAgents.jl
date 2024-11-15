@@ -28,7 +28,7 @@ export PrivateMessage, is_visible, filter_history, maybe_private_message
 
 # Flow rules (termination and tool selection)
 include("flow_rules.jl")
-export TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck, ToolFlowRules,
+export TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
     FixedOrder, FixedPrerequisites, is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools,
     get_allowed_tools
 
