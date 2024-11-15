@@ -30,12 +30,12 @@ Base.@kwdef struct FlightDatabase
 end
 
 # Define argument structures for tools
-Base.@kwdef struct ToolArgs
-    args::MessageArgs
-end
-
 Base.@kwdef struct MessageArgs
     message::String
+end
+
+Base.@kwdef struct ToolArgs
+    args::MessageArgs
 end
 
 # Initialize the flight database and global context
