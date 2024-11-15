@@ -191,45 +191,35 @@ end
 
 # Create wrapper functions that handle both Dict and struct-based arguments
 """
-Check the status of a flight using a wrapper that handles struct-based arguments.
+Check the status of a flight using a wrapper that handles both Dict and struct-based arguments.
 """
-function wrapped_check_status(args::WrapperArgs)::String
-    @info "Wrapped check status received WrapperArgs:" args
+function wrapped_check_status(args::Union{Dict,WrapperArgs})::String
+    @info "Wrapped check status received args:" args
+    # Convert Dict to WrapperArgs if needed
+    wrapper_args = args isa Dict ? dict_to_wrapper_args(args) : args
     check_flight_status(ToolArgs(
         args=ToolInnerArgs(
             args=ToolMessageArgs(
-                message=args.args.message
+                message=wrapper_args.args.message
             )
         )
     ))
 end
 
-# Add Dict argument support for wrapped_check_status
-function wrapped_check_status(args::Dict)::String
-    @info "Wrapped check status received Dict:" args
-    wrapped_args = dict_to_wrapper_args(args)
-    wrapped_check_status(wrapped_args)
-end
-
 """
-Change flight using a wrapper that handles struct-based arguments.
+Change flight using a wrapper that handles both Dict and struct-based arguments.
 """
-function wrapped_change_flight(args::WrapperArgs)::String
-    @info "Wrapped change flight received WrapperArgs:" args
+function wrapped_change_flight(args::Union{Dict,WrapperArgs})::String
+    @info "Wrapped change flight received args:" args
+    # Convert Dict to WrapperArgs if needed
+    wrapper_args = args isa Dict ? dict_to_wrapper_args(args) : args
     change_flight(ToolArgs(
         args=ToolInnerArgs(
             args=ToolMessageArgs(
-                message=args.args.message
+                message=wrapper_args.args.message
             )
         )
     ))
-end
-
-# Add Dict argument support for wrapped_change_flight
-function wrapped_change_flight(args::Dict)::String
-    @info "Wrapped change flight received Dict:" args
-    wrapped_args = dict_to_wrapper_args(args)
-    wrapped_change_flight(wrapped_args)
 end
 
 # Example usage:
