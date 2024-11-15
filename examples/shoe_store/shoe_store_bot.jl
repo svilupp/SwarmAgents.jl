@@ -3,11 +3,10 @@ using SwarmAgents: Tool
 using PromptingTools
 const PT = PromptingTools
 
-# Set up OpenAI API key for PromptingTools
+# Verify OpenAI API key is available for PromptingTools
 if !haskey(ENV, "OPENAI_API_KEY")
     error("OpenAI API key not found in environment variables")
 end
-PT.AIEnvironment.set_openai_key(ENV["OPENAI_API_KEY"])
 
 using Dates
 
