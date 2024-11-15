@@ -30,12 +30,8 @@ Base.@kwdef struct FlightDatabase
 end
 
 # Define argument structures for tools
-Base.@kwdef struct MessageArgs
+Base.@kwdef struct ToolMessage
     message::String
-end
-
-Base.@kwdef struct ToolArgs
-    args::MessageArgs
 end
 
 # Initialize the flight database and global context
@@ -67,21 +63,17 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(raw_args::Dict{Symbol,Any})::String
-    # Parse nested argument structure from PromptingTools
-    args = ToolArgs(MessageArgs(raw_args[:args]["args"]["message"]))
+function check_flight_status(args::ToolMessage)::String
+    # Use the message from the structured arguments
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(raw_args::Dict{Symbol,Any})::String
-    # Parse nested argument structure from PromptingTools
-    args = ToolArgs(MessageArgs(raw_args[:args]["args"]["message"]))
-
+function change_flight(args::ToolMessage)::String
     # Extract flight number from message
-    m = match(r"FL\d+", args.args.message)
+    m = match(r"FL\d+", args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
