@@ -78,33 +78,33 @@ end
 # SwarmAgents integration wrapper functions
 
 """
-    check_status_wrapper(request::CheckFlightStatus)::String
+    check_status_wrapper(message::String)::String
 
 Check the status of the current flight.
 
 # Arguments
-- `request::CheckFlightStatus`: The request containing the user's message
+- `message::String`: The user's message requesting flight status
 
 # Returns
 - `String`: A formatted string containing the flight details
 """
-function check_status_wrapper(request::CheckFlightStatus)::String
-    check_status_tool(request.message, GLOBAL_SESSION.session)
+function check_status_wrapper(message::String)::String
+    check_status_tool(message, GLOBAL_SESSION.session)
 end
 
 """
-    change_flight_wrapper(request::ChangeFlightRequest)::String
+    change_flight_wrapper(message::String)::String
 
 Change the current flight to a new flight number.
 
 # Arguments
-- `request::ChangeFlightRequest`: The request containing the new flight number
+- `message::String`: The user's message containing the new flight number
 
 # Returns
 - `String`: A confirmation message with the new flight details
 """
-function change_flight_wrapper(request::ChangeFlightRequest)::String
-    change_flight_tool(request.message, GLOBAL_SESSION.session)
+function change_flight_wrapper(message::String)::String
+    change_flight_tool(message, GLOBAL_SESSION.session)
 end
 
 """
@@ -166,14 +166,10 @@ function run_example()
     add_tools!(agent, [
         Tool(check_status_wrapper;
              name="check_flight_status",
-             description="Check the status of the current flight",
-             parameters=[:message => String],
-             return_type=String),
+             docs="Check the status of the current flight"),
         Tool(change_flight_wrapper;
              name="change_flight",
-             description="Change the current flight to a new flight number",
-             parameters=[:message => String],
-             return_type=String)
+             docs="Change the current flight to a new flight number")
     ])
 
     # Create a session with proper context and store it globally
