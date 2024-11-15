@@ -61,12 +61,45 @@ function check_size_availability(message::String)::String
 end
 
 """
+    transfer_back_to_inventory(message::String)::Tuple{Agent,String}
+
+Transfer customer back to inventory specialist for browsing more shoes.
+Returns inventory agent instance and handover message.
+
+Usage:
+    transfer_back_to_inventory("show me other shoes")
+
+Intent: Allow smooth transition back to inventory browsing when customer wants to explore more options.
+"""
+function transfer_back_to_inventory(message::String)::Tuple{Agent,String}
+    session = current_session()
+    store_context = session.context[:context]::ShoeStoreContext
+
+    # Create handover message for smooth transition
+    handover_message = """
+    Transferring you back to our Inventory Specialist.
+    Customer Details:
+    - Name: $(store_context.name)
+    - Email: $(store_context.email)
+    - Previous Action: Size check completed
+
+    They'll help you explore more options!
+    """
+
+    # Create and return the inventory specialist agent
+    inventory_agent = create_inventory_agent()
+    inventory_agent.context = session.context
+
+    return (inventory_agent, handover_message)
+end
+
+"""
 Create the sizing specialist agent with specific tools and instructions.
 """
 function create_sizing_agent()::Agent
     agent = Agent(;
         name = "Sizing Specialist",
-        model = "gpt-4-0125-preview",  # Using gpt4o model
+        model = "gpt4o",  # Use OpenAI GPT-4 model
         instructions = """
         You are a sizing specialist for our shoe store.
 
@@ -74,6 +107,7 @@ function create_sizing_agent()::Agent
         - Check availability of specific shoe sizes
         - Provide information about available sizes
         - Suggest alternatives when requested size isn't available
+        - Transfer back to inventory specialist when needed
 
         What you cannot do:
         - Process authentication
@@ -84,17 +118,20 @@ function create_sizing_agent()::Agent
         1. When asked about a size, check availability
         2. Always provide complete size range information
         3. If size unavailable, suggest checking other sizes
-        4. Be precise and helpful in responses
+        4. When customer wants to see other shoes, transfer back to inventory
+        5. Be precise and helpful in responses
 
         Example queries:
         - "check size 9 Running Shoes"
         - "size 10 Casual Sneakers"
+        - "show me other shoes" (will transfer back to inventory)
         """
     )
 
     # Add tools with clear names and docstrings
     add_tools!(agent, [
-        check_size_availability
+        check_size_availability,
+        transfer_back_to_inventory
     ]; hidden_fields=["context"])  # Hide context from AI model
 
     return agent

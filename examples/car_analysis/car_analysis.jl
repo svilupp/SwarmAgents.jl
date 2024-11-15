@@ -4,6 +4,11 @@ using PlotlyJS
 using PromptingTools
 using Statistics
 
+# Ensure OpenAI API key is available
+if !haskey(ENV, "OPENAI_API_KEY")
+    error("OpenAI API key not found in environment variables. Please set the OPENAI_API_KEY environment variable.")
+end
+
 """
 Example of a data science agent using SwarmAgents.jl
 This example demonstrates:
@@ -14,25 +19,7 @@ This example demonstrates:
 5. Automatic insight generation
 """
 
-# Define our conversation flow rules
-struct CarAnalysisFlowRules <: AbstractToolFlowRules end
-
-# Define tool parameters
-Base.@kwdef struct ShowStatsParams
-    none::Nothing = nothing
-end
-
-Base.@kwdef struct ShowInsightsParams
-    none::Nothing = nothing
-end
-
-Base.@kwdef struct ShowPlotsParams
-    none::Nothing = nothing
-end
-
-Base.@kwdef struct ResetDataParams
-    none::Nothing = nothing
-end
+# Removed parameter structs and flow rules
 
 """
 Create a mock car dataset
@@ -113,39 +100,166 @@ end
 
 # Tool functions
 """
-    show_stats_tool(message::String, session::Session)::String
+    show_stats(message::String, session::Session)::String
 
-Show basic statistics about the car dataset.
+Display comprehensive statistics about the car dataset, including price, mpg, and mileage metrics.
+
+Usage:
+    show_stats("Show me the statistics", session)
+
+Intent: Provide a clear numerical overview of the dataset's key metrics.
 """
-function show_stats_tool(message::String, session::Session)::String
-    show_stats(ShowStatsParams(), session.context)
+function show_stats(message::String, session::Session)::String
+    df = session.context[:data]
+    stats = describe(df, :mean, :std, :min, :max)
+    return "Here are the detailed statistics for our car dataset:\n$(stats)\n\nWould you like to explore any specific metrics in more detail?"
 end
 
 """
-    show_insights_tool(message::String, session::Session)::String
+    show_insights(message::String, session::Session)::String
 
-Generate insights about the car dataset using AI analysis.
+Generate AI-powered insights about patterns and trends in the car dataset.
+
+Usage:
+    show_insights("What patterns do you see?", session)
+
+Intent: Discover and communicate meaningful patterns in the data using AI analysis.
 """
-function show_insights_tool(message::String, session::Session)::String
-    show_insights(ShowInsightsParams(), session.context)
+function show_insights(message::String, session::Session)::String
+    df = session.context[:data]
+    insights = generate_insights(df)
+    return "I've analyzed the data and found these interesting patterns:\n$(insights)\n\nWould you like me to create visualizations to illustrate these insights?"
 end
 
 """
-    show_plots_tool(message::String, session::Session)::String
+    show_plots(message::String, session::Session)::String
 
-Create and display visualizations of the car dataset.
+Create and display interactive visualizations of price distributions and relationships.
+
+Usage:
+    show_plots("Show me some charts", session)
+
+Intent: Visualize key relationships and distributions to aid understanding.
 """
-function show_plots_tool(message::String, session::Session)::String
-    show_plots(ShowPlotsParams(), session.context)
+function show_plots(message::String, session::Session)::String
+    df = session.context[:data]
+    plots = create_visualizations(df)
+    return "I've created interactive visualizations showing:\n1. Price distribution by brand\n2. MPG vs Price relationship\n\nWould you like to explore any specific aspects of these visualizations?"
 end
 
 """
-    reset_data_tool(message::String, session::Session)::String
+    transfer_to_visualization(message::String, session::Session)::Tuple{Agent,String}
 
-Reset the dataset to a new random sample.
+Transfer control to the visualization specialist agent for detailed plot analysis and customization.
+
+Usage:
+    transfer_to_visualization("I need detailed plot analysis", session)
+
+Intent: Hand off to a specialized agent for in-depth visualization work.
 """
-function reset_data_tool(message::String, session::Session)::String
-    reset_data(ResetDataParams(), session.context)
+function transfer_to_visualization(message::String, session::Session)::Tuple{Agent,String}
+    # Create visualization specialist agent
+    viz_agent = Agent(;
+        name = "Visualization Specialist",
+        model = "gpt4o",  # Use OpenAI GPT-4 model
+        instructions = """
+        You are a visualization specialist focused on creating and explaining data visualizations.
+
+        Capabilities:
+        - Create interactive plots using PlotlyJS
+        - Explain visualization insights
+        - Guide users through data interpretation
+        - Customize visualizations based on user needs
+        - Transfer back to main agent when visualization work is complete
+
+        Routines:
+        1. For plot creation:
+           - Use show_plots to generate visualizations
+           - Explain each visual element
+           - Highlight key patterns and outliers
+
+        2. For customization requests:
+           - Modify plot parameters
+           - Adjust visual elements for clarity
+           - Ensure accessibility
+
+        3. For completion:
+           - Use transfer_back_to_main when visualization work is done
+           - Provide summary of changes and insights
+
+        Always explain visualizations in clear terms and suggest ways to explore the data further.
+        """
+    )
+
+    # Add visualization-specific tools
+    add_tools!(viz_agent, [
+        show_plots,
+        transfer_back_to_main
+    ]; hidden_fields=["context"])
+
+    # Share context with new agent
+    viz_agent.context = session.context
+
+    handover_message = """
+    I'm transferring you to our visualization specialist who can help with detailed plot analysis and customization.
+    Current dataset has $(nrow(session.context[:data])) records with columns: $(names(session.context[:data])).
+    """
+
+    return (viz_agent, handover_message)
+end
+
+"""
+    transfer_back_to_main(message::String, session::Session)::Tuple{Agent,String}
+
+Transfer control back to the main car analysis agent.
+
+Usage:
+    transfer_back_to_main("Return to main analysis", session)
+
+Intent: Hand off back to main agent for general analysis tasks.
+"""
+function transfer_back_to_main(message::String, session::Session)::Tuple{Agent,String}
+    # Create main analysis agent
+    main_agent = Agent(;
+        name = "Car Analysis Bot",
+        model = "gpt4o",
+        instructions = """
+        You are a data science agent specialized in analyzing car data.
+        [Previous instructions will be copied here during actual implementation]
+        """
+    )
+
+    # Add all tools to the main agent
+    add_tools!(main_agent, [
+        show_stats,
+        show_insights,
+        show_plots,
+        reset_data,
+        transfer_to_visualization
+    ]; hidden_fields=["context"])
+
+    # Share context with new agent
+    main_agent.context = session.context
+
+    handover_message = """
+    Returning to the main analysis agent for general car data analysis.
+    Current dataset has $(nrow(session.context[:data])) records.
+    """
+
+    return (main_agent, handover_message)
+end
+
+"""
+    reset_data(message::String, session::Session)::String
+
+Usage:
+    reset_data("Generate new data", session)
+
+Intent: Refresh the dataset with new random samples for testing different scenarios.
+"""
+function reset_data(message::String, session::Session)::String
+    session.context[:data] = create_mock_dataset()
+    return "I've generated a new random dataset with $(nrow(session.context[:data])) cars. Would you like to see the basic statistics of this new dataset?"
 end
 
 # Example usage
@@ -153,28 +267,60 @@ function run_example(custom_messages=nothing)
     # Create agent with analysis capabilities
     agent = Agent(;
         name = "Car Analysis Bot",
-        model = "gpt-3.5-turbo",  # Use OpenAI GPT-3.5
+        model = "gpt4o",  # Use OpenAI GPT-4 model
         instructions = """
         You are a data science agent specialized in analyzing car data.
-        You can:
-        - Show basic statistics
-        - Generate insights
-        - Create visualizations
-        Use the available tools to assist users.
+
+        Capabilities:
+        - Generate statistical summaries of car data (means, std devs, ranges)
+        - Create interactive visualizations using PlotlyJS
+        - Discover patterns and insights using AI analysis
+        - Refresh dataset with new random samples
+        - Transfer to visualization specialist for detailed plot analysis
+
+        Routines:
+        1. For statistics requests:
+           - Use show_stats to provide numerical summaries
+           - Explain key metrics in plain language
+           - Suggest relevant follow-up analyses
+
+        2. For insight requests:
+           - Use show_insights to analyze patterns
+           - Connect findings to business implications
+           - Recommend relevant visualizations
+
+        3. For visualization requests:
+           - Use show_plots for basic visual analysis
+           - For detailed visualization needs, transfer to visualization specialist
+           - Guide user through interpretation
+
+        4. For data refresh:
+           - Use reset_data to generate new samples
+           - Automatically show basic stats of new data
+           - Compare with previous dataset if relevant
+
+        5. For specialized visualization needs:
+           - Use transfer_to_visualization to hand off to visualization expert
+           - Provide context and current analysis state
+           - Let specialist handle detailed customization
+
+        Always explain findings in clear, non-technical language and suggest next steps.
+        When visualization needs become complex, transfer to the visualization specialist.
         """
     )
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(show_stats_tool),
-        Tool(show_insights_tool),
-        Tool(show_plots_tool),
-        Tool(reset_data_tool)
-    ])
+        show_stats,
+        show_insights,
+        show_plots,
+        reset_data,
+        transfer_to_visualization
+    ]; hidden_fields=["context"])
 
     # Initialize context with fresh data
     context = Dict{String,Any}()
-    reset_data(ResetDataParams(), context)
+    reset_data("Initialize data", Session(agent; context=context))
 
     # Create session
     session = Session(agent; context=context)
@@ -191,7 +337,16 @@ function run_example(custom_messages=nothing)
 
     for msg in messages
         println("\nUser: $msg")
-        run_full_turn!(session, msg)
+        result = run_full_turn!(session, msg)
+
+        # Check if we need to transfer to visualization specialist
+        if result isa Tuple{Agent,String}
+            new_agent, handover_msg = result
+            println("\nBot: $handover_msg")
+            # Create new session with visualization specialist
+            session = Session(new_agent; context=session.context)
+            println("\nVisualization Specialist: Ready to help with detailed visualization analysis. What would you like to explore?")
+        end
     end
 
     return true
