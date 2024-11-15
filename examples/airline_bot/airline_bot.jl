@@ -152,8 +152,16 @@ function run_example()
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
 
-    # Create tool map using the functions directly (no wrappers needed now)
-    tool_map = PT.tool_call_signature([check_flight_status, change_flight])
+    # Create wrapper functions that handle Dict to ToolArgs conversion
+    wrapped_check_status = function(args::Dict{String,Any})::String
+        check_flight_status(json_to_tool_args(args))
+    end
+    wrapped_change_flight = function(args::Dict{String,Any})::String
+        change_flight(json_to_tool_args(args))
+    end
+
+    # Create tool map using the wrapped functions
+    tool_map = PT.tool_call_signature([wrapped_check_status, wrapped_change_flight])
     tools = collect(values(tool_map))
 
     # Example conversation
@@ -202,9 +210,8 @@ function run_example()
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
                 try
-                    # Convert JSON args to ToolArgs struct and then back to Dict{Symbol}
-                    tool_args = json_to_tool_args(args)
-                    tool.content = PT.execute_tool(tool_map[name], tool_args_to_dict(tool_args))
+                    # Execute tool directly with the args dictionary
+                    tool.content = PT.execute_tool(tool_map[name], args)
                     @info "Tool Output: $(tool.content)"
                 catch e
                     @error "Tool execution failed" exception=(e, catch_backtrace())
