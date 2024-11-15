@@ -30,6 +30,14 @@ Base.@kwdef struct FlightDatabase
 end
 
 # Define tool argument structures that match PromptingTools' expected schema
+Base.@kwdef struct WrapperMessageArgs
+    message::String
+end
+
+Base.@kwdef struct WrapperArgs
+    args::WrapperMessageArgs
+end
+
 Base.@kwdef struct ToolMessageArgs
     message::String
 end
@@ -40,6 +48,32 @@ end
 
 Base.@kwdef struct ToolArgs
     args::ToolInnerArgs
+end
+
+# Convert JSON3/Dict to WrapperArgs
+function dict_to_wrapper_args(args::Union{Dict{Symbol,Any},Dict{String,Any},JSON3.Object})::WrapperArgs
+    try
+        # Handle nested structure from PromptingTools
+        message = if args isa Dict{Symbol,Any}
+            args_obj = args[:args]
+            if haskey(args_obj, "args") && haskey(args_obj["args"], "message")
+                args_obj["args"]["message"]
+            else
+                error("Unable to find message in Symbol-keyed arguments: $args_obj")
+            end
+        else
+            if haskey(args, "args") && haskey(args["args"], "message")
+                args["args"]["message"]
+            else
+                error("Unable to find message in String-keyed arguments: $args")
+            end
+        end
+
+        return WrapperArgs(args=WrapperMessageArgs(message=message))
+    catch e
+        @error "Failed to parse wrapper args" args typeof(args) exception=(e, catch_backtrace())
+        rethrow(e)
+    end
 end
 
 # Convert JSON3/Dict to ToolArgs
@@ -152,15 +186,27 @@ function run_example()
         ENV["OPENAI_API_KEY"] = "$OPENAI_API_KEY"  # Use the secret provided
     end
 
-    # Create wrapper functions that handle Dict to ToolArgs conversion
-    function wrapped_check_status(args::Dict{String,Any})::String
+    # Create wrapper functions that handle struct-based arguments
+    function wrapped_check_status(args::WrapperArgs)::String
         @info "Wrapped check status received args:" args
-        check_flight_status(json_to_tool_args(args))
+        check_flight_status(ToolArgs(
+            args=ToolInnerArgs(
+                args=ToolMessageArgs(
+                    message=args.args.message
+                )
+            )
+        ))
     end
 
-    function wrapped_change_flight(args::Dict{String,Any})::String
+    function wrapped_change_flight(args::WrapperArgs)::String
         @info "Wrapped change flight received args:" args
-        change_flight(json_to_tool_args(args))
+        change_flight(ToolArgs(
+            args=ToolInnerArgs(
+                args=ToolMessageArgs(
+                    message=args.args.message
+                )
+            )
+        ))
     end
 
     # Create tool map using the wrapped functions
@@ -213,8 +259,9 @@ function run_example()
                 name, args = tool.name, tool.args
                 @info "Tool Request: $name, args: $args"
                 try
-                    # Execute tool directly with the args dictionary
-                    tool.content = PT.execute_tool(tool_map[name], args)
+                    # Convert Dict to WrapperArgs before executing tool
+                    wrapper_args = dict_to_wrapper_args(args)
+                    tool.content = PT.execute_tool(tool_map[name], wrapper_args)
                     @info "Tool Output: $(tool.content)"
                 catch e
                     @error "Tool execution failed" exception=(e, catch_backtrace())
