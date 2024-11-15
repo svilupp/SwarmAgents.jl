@@ -57,14 +57,14 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(message::String)::String
+PT.@tool function check_flight_status(message::String)::String
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(message::String)::String
+PT.@tool function change_flight(message::String)::String
     m = match(r"FL\d+", message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
@@ -88,7 +88,7 @@ function run_example()
     end
 
     # Create tool map using PromptingTools tool_call_signature
-    tool_map = PT.tool_call_signature([check_flight_status, change_flight])
+    tool_map = Dict("check_flight_status" => check_flight_status, "change_flight" => change_flight)
 
     # Example conversation
     println("Bot: Welcome to our airline service! How can I help you today?\n")
