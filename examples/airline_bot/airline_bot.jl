@@ -55,11 +55,22 @@ Base.convert(::Type{Dict{Symbol,Any}}, x::FlightChangeArgs) = convert(Dict{Symbo
 function dict_to_message_args(d::Dict{Symbol,Any})::MessageArgs
     # Handle nested JSON structure from PromptingTools
     args_obj = d[:args]
-    if args_obj isa JSON3.Object
-        # Message is directly in args[:args] for JSON3.Object
-        MessageArgs(message=args_obj["message"])
-    else
-        MessageArgs(message=args_obj[:message])
+    try
+        if args_obj isa JSON3.Object
+            # Handle nested structure: args[:args]["args"]["message"]
+            inner_args = args_obj["args"]
+            if inner_args isa Dict || inner_args isa JSON3.Object
+                return MessageArgs(message=inner_args["message"])
+            end
+        end
+        # Fallback to direct access
+        return MessageArgs(message=args_obj[:message])
+    catch e
+        @error "Failed to parse message args" args_obj typeof(args_obj)
+        if args_obj isa JSON3.Object
+            @error "JSON3.Object contents" String(args_obj.bytes)
+        end
+        rethrow(e)
     end
 end
 
