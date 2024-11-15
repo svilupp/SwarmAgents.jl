@@ -16,11 +16,12 @@ A reference to another agent in the system.
 # Fields
 - `name::String`: The name of the referenced agent
 """
-struct AgentRef <: AbstractAgentRef
-    name::String
-    AgentRef(name::String) = new(name)
-    AgentRef(; name::String) = new(name)
+Base.@kwdef struct AgentRef <: AbstractAgentRef
+    name::Symbol
 end
+
+# Provide String constructor for convenience
+AgentRef(name::String) = AgentRef(name=Symbol(name))
 
 """
     Response

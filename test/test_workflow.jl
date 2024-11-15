@@ -162,4 +162,143 @@ func5() = "test"
         @test length(session2.artifacts) == 1
         @test session2.artifacts[end] == "test"
     end
+
+    @testset "add_transfers!" begin
+        @testset "function naming convention" begin
+            session = Session()
+
+            # Create test agents with different name formats
+            booking_agent = Agent(name="Booking Agent")
+            support_agent = Agent(name="Support Agent")
+            sales_agent = Agent(name="Sales Agent")
+
+            # Add agents to session
+            session.agent_map[:booking] = booking_agent
+            session.agent_map[:support] = support_agent
+            session.agent_map[:sales] = sales_agent
+
+            # Add transfer tools
+            add_transfers!(session)
+
+            # Verify tool names follow snake_case convention
+            @test haskey(booking_agent.tool_map, "transfer_to_support_agent")
+            @test haskey(booking_agent.tool_map, "transfer_to_sales_agent")
+            @test haskey(support_agent.tool_map, "transfer_to_booking_agent")
+            @test haskey(support_agent.tool_map, "transfer_to_sales_agent")
+            @test haskey(sales_agent.tool_map, "transfer_to_booking_agent")
+            @test haskey(sales_agent.tool_map, "transfer_to_support_agent")
+
+            # Verify no self-transfer tools were created
+            @test !haskey(booking_agent.tool_map, "transfer_to_booking_agent")
+            @test !haskey(support_agent.tool_map, "transfer_to_support_agent")
+            @test !haskey(sales_agent.tool_map, "transfer_to_sales_agent")
+
+            # Test tool properties and docstrings
+            support_transfer = booking_agent.tool_map["transfer_to_support_agent"]
+            @test support_transfer.name == "transfer_to_support_agent"
+            @test haskey(support_transfer.parameters, "handover_message")
+            @test support_transfer.parameters["handover_message"]["type"] == "string"
+            @test support_transfer.parameters["handover_message"]["required"] == true
+
+            # Verify available agents are listed in docstring
+            @test contains(support_transfer.description, "Support Agent")
+            @test contains(support_transfer.description, "Sales Agent")
+            @test contains(support_transfer.description, "Available agents for transfer from Booking Agent")
+        end
+
+        @testset "handover message handling" begin
+            session = Session()
+
+            # Create test agents
+            agent1 = Agent(name="Agent One")
+            agent2 = Agent(name="Agent Two")
+
+            # Add agents to session
+            session.agent_map[:one] = agent1
+            session.agent_map[:two] = agent2
+
+            # Add transfer tools
+            add_transfers!(session)
+
+            # Get transfer tool and verify its structure
+            transfer_tool = agent1.tool_map["transfer_to_agent_two"]
+            @test transfer_tool isa Tool
+            @test haskey(transfer_tool.parameters, "handover_message")
+
+            # Test transfer function execution
+            handover_msg = "Transferring to specialized agent for technical support"
+            result = transfer_tool.callable(; handover_message=handover_msg)
+
+            # Verify correct AgentRef is returned
+            @test result isa AgentRef
+            @test result.name == Symbol("Agent Two")
+        end
+
+        @testset "end-to-end agent transfers" begin
+            session = Session()
+
+            # Create agents with different specialties
+            booking_agent = Agent(name="Booking Agent", instructions="Handle flight bookings")
+            support_agent = Agent(name="Support Agent", instructions="Handle customer support")
+
+            # Add agents to session
+            session.agent_map[:booking] = booking_agent
+            session.agent_map[:support] = support_agent
+
+            # Add transfer tools
+            add_transfers!(session)
+
+            # Test complete transfer flow
+            booking_to_support = booking_agent.tool_map["transfer_to_support_agent"]
+            support_to_booking = support_agent.tool_map["transfer_to_booking_agent"]
+
+            # Verify tool structure
+            @test booking_to_support isa Tool
+            @test haskey(booking_to_support.parameters, "handover_message")
+            @test booking_to_support.parameters["handover_message"]["type"] == "string"
+            @test booking_to_support.parameters["handover_message"]["required"] == true
+            @test !isnothing(booking_to_support.description)
+            @test contains(booking_to_support.description, "Available agents for transfer from Booking Agent")
+            @test contains(booking_to_support.description, "Support Agent")
+
+            # Transfer from booking to support
+            handover_msg1 = "Customer needs help with existing booking"
+            result1 = booking_to_support.callable(; handover_message=handover_msg1)
+
+            # Verify first transfer
+            @test result1 isa AgentRef
+            @test result1.name == Symbol("Support Agent")
+
+            # Transfer back to booking
+            handover_msg2 = "Customer wants to modify their booking"
+            result2 = support_to_booking.callable(; handover_message=handover_msg2)
+
+            # Verify second transfer
+            @test result2 isa AgentRef
+            @test result2.name == Symbol("Booking Agent")
+        end
+
+        @testset "generic transfer_agent function" begin
+            # Test direct usage of transfer_agent
+            result = transfer_agent("Test Agent", "Testing transfer")
+            @test result isa AgentRef
+            @test result.name == Symbol("Test Agent")
+
+            # Test function introspection
+            arg_names = PT.get_arg_names(transfer_agent)
+            arg_types = PT.get_arg_types(transfer_agent)
+
+            @test length(arg_names) == 2
+            @test arg_names[1] == :target_agent_name
+            @test arg_names[2] == :handover_message
+
+            @test length(arg_types) == 2
+            @test arg_types[1] == String
+            @test arg_types[2] == String
+
+            # Test error handling
+            @test_throws MethodError transfer_agent(Symbol("Test Agent"), "Testing transfer")
+            @test_throws MethodError transfer_agent("Test Agent", 123)
+        end
+    end
 end

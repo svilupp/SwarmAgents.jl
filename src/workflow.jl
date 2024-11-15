@@ -165,3 +165,116 @@ end
 function add_tools!(agent::Agent, callable::Union{Function, Type, Method}; kwargs...)
     add_tools!(agent, Tool(callable; kwargs...))
 end  # End of add_tools!
+
+"""
+    transfer_agent(target_agent_name::String, handover_message::String) -> AgentRef
+
+Generic transfer function that creates an AgentRef for the specified target agent.
+This function supports introspection via PT.get_arg_names and PT.get_arg_types.
+
+# Arguments
+- `target_agent_name::String`: Name of the target agent to transfer to
+- `handover_message::String`: Explanation for why the transfer is needed
+
+# Returns
+- `AgentRef`: Reference to the target agent
+
+# Example
+```julia
+# Transfer to "Support Agent" with explanation
+new_agent = transfer_agent("Support Agent", "Customer needs technical assistance")
+```
+"""
+function transfer_agent(target_agent_name::String, handover_message::String)::AgentRef
+    @info "Transfer agent called" target_agent_name handover_message
+    return AgentRef(target_agent_name)
+end
+
+"""
+    add_transfers!(session::Session)
+
+Add transfer tools to each agent in the session's agent_map to enable transfers between agents.
+For each agent, creates transfer functions to all other agents (except itself) and adds them as tools.
+
+Each transfer tool includes a handover_message parameter to explain the reason for transfer.
+
+Example:
+```julia
+# If agent_map contains "Booking Agent" and "Support Agent"
+# Creates tools:
+# - transfer_to_booking_agent(handover_message::String) for Support Agent
+# - transfer_to_support_agent(handover_message::String) for Booking Agent
+```
+"""
+function add_transfers!(session::Session)
+    # Get all agents from the map
+    agents = collect(values(session.agent_map))
+    agent_names = [agent.name for agent in agents]
+
+    # For each agent, create transfer tools to all other agents
+    for source_agent in agents
+        source_name = source_agent.name
+
+        # Get available target agents (excluding self)
+        available_targets = filter(name -> name != source_name, agent_names)
+        available_targets_str = join(available_targets, ", ")
+
+        # Create transfer tools for all other agents
+        for target_agent in agents
+            target_name = target_agent.name
+
+            # Skip creating transfer to self
+            if source_name == target_name
+                @debug "Skipping self-transfer" source_name target_name
+                continue
+            end
+
+            # Create snake_case function name (e.g., "Booking Agent" -> "transfer_to_booking_agent")
+            target_snake = lowercase(replace(target_name, r"[^a-zA-Z0-9]+" => "_"))
+            function_name = "transfer_to_$target_snake"
+
+            try
+                # Create parameters dictionary
+                parameters = Dict(
+                    "handover_message" => Dict(
+                        "type" => "string",
+                        "description" => "Explanation for why the transfer is needed",
+                        "required" => true
+                    )
+                )
+
+                # Use generic transfer_agent function with target_name binding
+                transfer_fn = (args...; kwargs...) -> transfer_agent(target_name, kwargs[:handover_message])
+
+                # Create docstring
+                docs = """
+                    Transfer conversation to $target_name.
+
+                    Available agents for transfer from $source_name: $available_targets_str
+
+                    Parameters:
+                    - handover_message::String: Required explanation for the transfer
+
+                    Returns:
+                    - AgentRef: Reference to $target_name agent
+                """
+
+                # Create tool with explicit kwargs
+                tool = Tool(;
+                    name=function_name,
+                    parameters=parameters,
+                    description=docs,
+                    callable=transfer_fn
+                )
+
+                add_tools!(source_agent, tool)
+            catch e
+                @error "Failed to create or add tool" exception=(e, catch_backtrace()) function_name target_name
+                @error "Tool creation details" step="last_known" parameters=get(Base.current_exceptions(), :parameters, nothing)
+                @error "Function details" fn_type=get(Base.current_exceptions(), :fn_type, nothing)
+                rethrow(e)
+            end
+        end
+    end
+    return nothing
+end
