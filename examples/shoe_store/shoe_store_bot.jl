@@ -88,30 +88,32 @@ function process_authentication(msg::String)
     return strip(auth_match[1]), strip(auth_match[2])
 end
 
+# Session management
+const CURRENT_SESSION = Ref{Union{Nothing,Session}}(nothing)
+
+function current_session()::Session
+    if isnothing(CURRENT_SESSION[])
+        error("No active session. Please initialize a session first.")
+    end
+    CURRENT_SESSION[]
+end
+
+function set_current_session!(session::Session)
+    CURRENT_SESSION[] = session
+end
+
 # Parameter structures for tools
 # Message argument structures for PromptingTools compatibility
-Base.@kwdef struct AuthMessageArgs
+Base.@kwdef struct AuthArgs
     message::String
 end
 
-Base.@kwdef struct AuthWrapperArgs
-    args::AuthMessageArgs
+Base.@kwdef struct ShowArgs
+    message::String = ""  # Default empty string as this tool doesn't need a message
 end
 
-Base.@kwdef struct ShowMessageArgs
+Base.@kwdef struct SizeArgs
     message::String
-end
-
-Base.@kwdef struct ShowWrapperArgs
-    args::ShowMessageArgs
-end
-
-Base.@kwdef struct SizeMessageArgs
-    message::String
-end
-
-Base.@kwdef struct SizeWrapperArgs
-    args::SizeMessageArgs
 end
 
 # Core parameter structures
@@ -121,6 +123,11 @@ Base.@kwdef struct AuthenticateParams
 end
 
 Base.@kwdef struct ShowInventoryParams
+    context::ShoeStoreSessionContext
+end
+
+Base.@kwdef struct CheckSizeParams
+    msg::String
     context::ShoeStoreSessionContext
 end
 
@@ -231,40 +238,37 @@ end
 Tool function to authenticate users.
 
 # Arguments
-- `msg::String`: The authentication message
-- `session::Session`: The current session containing context
+- `args::AuthArgs`: The authentication arguments containing the message
 
 # Returns
 - `String`: Authentication result message
 """
-function wrapped_authenticate(args::Dict{Symbol,Any})::String
-    # Convert from PromptingTools format to our format
-    wrapper_args = AuthWrapperArgs(args=AuthMessageArgs(message=args[:args]["args"]["message"]))
-    msg = wrapper_args.args.message
-
-    # Get session context from global context
-    store_context = GLOBAL_CONTEXT[:context]::ShoeStoreContext
+function wrapped_authenticate(args::AuthArgs)::String
+    # Get session context from the session
+    session = current_session()
+    store_context = session.context[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
 
     # Create params and call authenticate
-    params = AuthenticateParams(msg=msg, context=session_context)
+    params = AuthenticateParams(msg=args.message, context=session_context)
     authenticate(params)
 end
 
 """
-    wrapped_show_inventory(session::Session)::String
+    wrapped_show_inventory(args::ShowArgs)::String
 
 Tool function to show available inventory.
 
 # Arguments
-- `session::Session`: The current session containing context
+- `args::ShowArgs`: The show inventory arguments (message field is optional)
 
 # Returns
 - `String`: Formatted inventory list
 """
-function wrapped_show_inventory(args::Dict{Symbol,Any})::String
-    # Get session context from global context
-    store_context = GLOBAL_CONTEXT[:context]::ShoeStoreContext
+function wrapped_show_inventory(args::ShowArgs)::String
+    # Get session context from the session
+    session = current_session()
+    store_context = session.context[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
 
     # Create params and call show_inventory
@@ -273,35 +277,36 @@ function wrapped_show_inventory(args::Dict{Symbol,Any})::String
 end
 
 """
-    wrapped_check_size(msg::String, session::Session)::String
+    wrapped_check_size(args::SizeArgs)::String
 
 Tool function to check shoe size availability.
 
 # Arguments
-- `msg::String`: The size check message
-- `session::Session`: The current session containing context
+- `args::SizeArgs`: The size check arguments containing the message
 
 # Returns
 - `String`: Size availability message
 """
-function wrapped_check_size(args::Dict{Symbol,Any})::String
-    # Convert from PromptingTools format to our format
-    wrapper_args = SizeWrapperArgs(args=SizeMessageArgs(message=args[:args]["args"]["message"]))
-    msg = wrapper_args.args.message
-
-    # Get session context from global context
-    store_context = GLOBAL_CONTEXT[:context]::ShoeStoreContext
+function wrapped_check_size(args::SizeArgs)::String
+    # Get session context from the session
+    session = current_session()
+    store_context = session.context[:context]::ShoeStoreContext
     session_context = ShoeStoreSessionContext(context=store_context)
 
     # Create params and call check_size
-    params = CheckSizeParams(msg=msg, context=session_context)
+    params = CheckSizeParams(msg=args.message, context=session_context)
     check_size(params)
 end
 
 # Example usage:
 function run_example(custom_messages=nothing)
-    # Initialize the context
+    # Set up OpenAI API key for PromptingTools
+    ENV["OPENAI_API_KEY"] = ENV["OPENAI_API_KEY"]
+
+    # Initialize the context and session
     context = ShoeStoreContext()
+    session = Session(; context=Dict(:context => context))
+    set_current_session!(session)
 
     # Create tools and agent
     agent = Agent(;
