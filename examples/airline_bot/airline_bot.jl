@@ -15,15 +15,6 @@ This bot demonstrates:
 3. Simple conversation flow with error handling
 """
 
-# Define tool request structures
-Base.@kwdef struct CheckFlightStatus
-    message::String
-end
-
-Base.@kwdef struct ChangeFlightRequest
-    message::String
-end
-
 # Define flight information structure
 Base.@kwdef struct Flight
     from::String
@@ -75,36 +66,36 @@ function get_flight_details(flight_number::String)::String
     "Flight $flight_number: $(flight.from) to $(flight.to) at $(flight.time)"
 end
 
-# SwarmAgents integration wrapper functions
+# SwarmAgents integration functions
 
 """
-    check_status_wrapper(request::CheckFlightStatus)::String
+    check_flight_status(message::String)::String
 
 Check the status of the current flight.
 
 # Arguments
-- `request::CheckFlightStatus`: The request containing the user's message
+- `message::String`: The user's message
 
 # Returns
 - `String`: A formatted string containing the flight details
 """
-function check_status_wrapper(request::CheckFlightStatus)::String
-    check_status_tool(request.message, GLOBAL_SESSION.session)
+function check_flight_status(message::String)::String
+    check_status_tool(message, GLOBAL_SESSION.session)
 end
 
 """
-    change_flight_wrapper(request::ChangeFlightRequest)::String
+    change_flight(message::String)::String
 
 Change the current flight to a new flight number.
 
 # Arguments
-- `request::ChangeFlightRequest`: The request containing the user's message with new flight number
+- `message::String`: The user's message containing the new flight number
 
 # Returns
 - `String`: A confirmation message with the new flight details
 """
-function change_flight_wrapper(request::ChangeFlightRequest)::String
-    change_flight_tool(request.message, GLOBAL_SESSION.session)
+function change_flight(message::String)::String
+    change_flight_tool(message, GLOBAL_SESSION.session)
 end
 
 """
@@ -162,17 +153,15 @@ function run_example()
         """
     )
 
-    # Add tools to the agent
+    # Add tools to the agent with simplified function signatures
     add_tools!(agent, [
-        Tool(check_status_wrapper;
+        Tool(check_flight_status;
             name="check_flight_status",
-            docs="Check the status of the current flight",
-            fields=[:message => String]
+            docs="Check the status of the current flight"
         ),
-        Tool(change_flight_wrapper;
+        Tool(change_flight;
             name="change_flight",
-            docs="Change the current flight to a new flight number",
-            fields=[:message => String]
+            docs="Change the current flight to a new flight number"
         )
     ])
 
