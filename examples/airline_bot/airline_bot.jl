@@ -80,18 +80,25 @@ end
 """
 Check the status of the current flight.
 """
-function check_flight_status(args::Dict{Symbol,Any})::String
+function check_flight_status(args::FlightStatusArgs)::String
     # Use the message from the structured arguments
     get_flight_details(GLOBAL_CONTEXT[:current_flight])
+end
+
+# Add method for Dict arguments
+function check_flight_status(args::Dict{Symbol,Any})::String
+    # Convert Dict to struct
+    message_args = MessageArgs(message=args[:args][:message])
+    struct_args = FlightStatusArgs(args=message_args)
+    check_flight_status(struct_args)
 end
 
 """
 Change the current flight to a new flight number.
 """
-function change_flight(args::Dict{Symbol,Any})::String
+function change_flight(args::FlightChangeArgs)::String
     # Extract flight number from message
-    message = args[:args][:message]
-    m = match(r"FL\d+", message)
+    m = match(r"FL\d+", args.args.message)
     if isnothing(m)
         return "No valid flight number found in request. Please specify a flight number (e.g., FL124)"
     end
@@ -104,6 +111,14 @@ function change_flight(args::Dict{Symbol,Any})::String
     # Update global context
     GLOBAL_CONTEXT[:current_flight] = new_flight
     return "Flight changed successfully to $new_flight\n$(get_flight_details(new_flight))"
+end
+
+# Add method for Dict arguments
+function change_flight(args::Dict{Symbol,Any})::String
+    # Convert Dict to struct
+    message_args = MessageArgs(message=args[:args][:message])
+    struct_args = FlightChangeArgs(args=message_args)
+    change_flight(struct_args)
 end
 
 # Example usage:
