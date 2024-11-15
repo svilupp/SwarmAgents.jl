@@ -91,11 +91,11 @@ function change_flight(params::ChangeFlightParams, msg::PT.AIToolRequest, contex
 end
 
 # Tool wrapper functions for Tool constructor
-function check_status_tool(msg::PT.AIToolRequest, session::Session{AirlineContext})::String
+function check_status_tool(msg::PT.AIToolRequest, session::Session)::String
     check_status(CheckStatusParams(), session.context)
 end
 
-function change_flight_tool(msg::PT.AIToolRequest, session::Session{AirlineContext})::String
+function change_flight_tool(msg::PT.AIToolRequest, session::Session)::String
     change_flight(ChangeFlightParams(), msg, session.context)
 end
 
