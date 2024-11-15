@@ -331,13 +331,6 @@ end
 
 # Example usage:
 function run_example(custom_messages=nothing)
-    # Set up OpenAI API key for PromptingTools
-    if !haskey(ENV, "OPENAI_API_KEY")
-        error("OpenAI API key not found in environment variables")
-    end
-    using PromptingTools: set_openai_key
-    set_openai_key(ENV["OPENAI_API_KEY"])
-
     # Initialize the context
     context = ShoeStoreContext()
 
