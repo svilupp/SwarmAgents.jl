@@ -1,5 +1,5 @@
 using SwarmAgents
-using SwarmAgents: Tool, Session, Agent
+using SwarmAgents: Tool, Session, Agent, @tool
 using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
                      ToolMessage, TestEchoOpenAISchema
@@ -68,7 +68,7 @@ Check the status of the current flight.
 
 Returns detailed information about the flight, including departure city, destination, and time.
 """
-function check_status_tool(message::String)::String
+@tool function check_status_tool(message::String)::String
     if isnothing(GLOBAL_SESSION.session)
         return "Error: Session not initialized"
     end
@@ -83,7 +83,7 @@ end
 Change the current flight to a new flight number.
 Extracts a flight number from the message content and updates the context.
 """
-function change_flight_tool(message::String)::String
+@tool function change_flight_tool(message::String)::String
     if isnothing(GLOBAL_SESSION.session)
         return "Error: Session not initialized"
     end
@@ -124,8 +124,8 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(check_status_tool; name="check_status"),
-        Tool(change_flight_tool; name="change_flight")
+        check_status_tool,
+        change_flight_tool
     ])
 
     # Create a session with proper context and store it globally
