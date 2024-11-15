@@ -113,23 +113,21 @@ function run_example()
 
     # Add tools to the agent
     add_tools!(agent, [
-        Tool(
-            name="check_status",
-            parameters=Dict(),
-            description="Check the status of your current flight",
-            strict=false,
-            callable=function(msg::PT.AIToolRequest, session)
-                check_status(CheckStatusParams(), session.context)
-            end
+        Tool("check_status",
+             :return => String,  # Return type as Symbol => Type pair
+             "Check the status of your current flight",
+             Dict{Symbol,Any}(),  # Empty parameters dictionary
+             function(msg::PT.AIToolRequest, session)
+                 check_status(CheckStatusParams(), session.context)
+             end
         ),
-        Tool(
-            name="change_flight",
-            parameters=Dict(),
-            description="Change your flight to a new flight number",
-            strict=false,
-            callable=function(msg::PT.AIToolRequest, session)
-                change_flight(ChangeFlightParams(), msg, session.context)
-            end
+        Tool("change_flight",
+             :return => String,  # Return type as Symbol => Type pair
+             "Change your flight to a new flight number",
+             Dict{Symbol,Any}(),  # Empty parameters dictionary
+             function(msg::PT.AIToolRequest, session)
+                 change_flight(ChangeFlightParams(), msg, session.context)
+             end
         )
     ])
 
