@@ -158,13 +158,11 @@ function run_example()
     add_tools!(agent, [
         Tool(check_flight_status;
             name="check_flight_status",
-            docs="Check the status of the current flight",
-            fields=[Symbol("message") => String]
+            docs="Check the status of the current flight"
         ),
         Tool(change_flight;
             name="change_flight",
-            docs="Change the current flight to a new flight number",
-            fields=[Symbol("message") => String]
+            docs="Change the current flight to a new flight number"
         )
     ])
 
