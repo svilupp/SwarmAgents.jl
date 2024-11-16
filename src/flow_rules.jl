@@ -71,20 +71,19 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
 
     # Combine results using the specified function
     if combine === vcat
-        # For vcat, maintain order and duplicates from each rule
-        # First concatenate all results
+        # For vcat, maintain exact order and duplicates from each rule
         combined = reduce(vcat, valid_results)
-        # Filter against all_tools but preserve order and duplicates
-        allowed_set = Set(all_tools)
-        return [t for t in combined if t ∈ allowed_set]
+        # Filter against all_tools but preserve exact order and duplicates
+        return filter(t -> t ∈ all_tools, combined)
     else
         # For other combine functions (default: union), combine results
+        # For multiple rules, we want the intersection of allowed tools
         # First validate each result against all_tools
-        validated_results = [intersect(Set(result), Set(all_tools)) for result in valid_results]
-        # Then combine using the specified function (default: union)
-        combined = reduce(combine, validated_results)
-        # Convert back to vector and maintain order from all_tools
-        return filter(t -> t ∈ combined, all_tools)
+        validated_results = [filter(t -> t ∈ all_tools, result) for result in valid_results]
+        # Then combine using intersection to ensure all rules agree
+        combined = reduce(intersect, validated_results)
+        # Return the combined result maintaining order from first rule
+        return collect(combined)
     end
 end
 
