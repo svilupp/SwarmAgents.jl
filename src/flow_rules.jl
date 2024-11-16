@@ -77,13 +77,27 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         return filter(t -> t ∈ all_tools, combined)
     else
         # For other combine functions (default: union), combine results
-        # For multiple rules, we want the intersection of allowed tools
         # First validate each result against all_tools
         validated_results = [filter(t -> t ∈ all_tools, result) for result in valid_results]
-        # Then combine using intersection to ensure all rules agree
-        combined = reduce(intersect, validated_results)
-        # Return the combined result maintaining order from first rule
-        return collect(combined)
+        # Then combine using the specified function
+        # For union, we want to maintain order from the first rule that provides each tool
+        if combine === union
+            result = String[]
+            seen = Set{String}()
+            for tools in validated_results
+                for tool in tools
+                    if tool ∉ seen
+                        push!(seen, tool)
+                        push!(result, tool)
+                    end
+                end
+            end
+            return result
+        else
+            # For other combine functions, use as provided
+            combined = reduce(combine, validated_results)
+            return collect(combined)
+        end
     end
 end
 
@@ -138,24 +152,20 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
     valid_tools = filter(t -> t ∈ all_tools, rule.order)
     isempty(valid_tools) && return String[]
 
-    if combine === vcat
-        # For vcat, return only the next unused tool in sequence
-        used_set = Set(used_tools)
-        for tool in valid_tools
-            if tool ∉ used_set
-                return [tool]
-            end
+    # Get the next unused tool in sequence
+    used_set = Set(used_tools)
+    for tool in valid_tools
+        if tool ∉ used_set
+            return [tool]  # Return only the next unused tool
         end
-        # If all tools in sequence have been used, start over from beginning
+    end
+
+    # If all tools have been used
+    if combine === vcat
+        # For vcat, start over from beginning
         return [valid_tools[1]]
     else
-        # For other combine functions (like union), return first unused tool
-        used_set = Set(used_tools)
-        for tool in valid_tools
-            if tool ∉ used_set
-                return [tool]
-            end
-        end
+        # For other combine functions (like union), return empty list
         return String[]
     end
 end
