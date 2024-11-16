@@ -170,7 +170,8 @@ using JSON3
         @test !isempty(response.messages)
         @test response.messages[end].name == "func5"
         @test length(session2.artifacts) == 1
-        @test session2.artifacts[end] == "test"
+        @test session2.artifacts[end] isa PT.ToolNotFoundError
+        @test session2.artifacts[end].message == "Tool `func5` not found"
     end
 
     @testset "run_full_turn termination and tool filtering" begin
@@ -247,11 +248,11 @@ using JSON3
 
         # Test default combine (union) behavior
         allowed_tools_union = get_allowed_tools(mixed_rules, String[], all_tools)
-        @test Set(allowed_tools_union) == Set(["func1", "func5"])  # Only tool rules processed, duplicates collapsed with union
+        @test Set(allowed_tools_union) == Set(["func1", "func5"])  # Only tool rules processed, duplicates removed by design
 
-        # Test vcat combine behavior (preserves order and duplicates)
+        # Test vcat combine behavior (maintains order but deduplicates input tools)
         allowed_tools_vcat = get_allowed_tools(mixed_rules, String[], all_tools; combine=vcat)
-        @test allowed_tools_vcat == ["func1", "func5", "func1"]  # Order preserved, duplicates maintained
+        @test allowed_tools_vcat == ["func1", "func5"]  # Tools deduplicated before processing, order preserved
 
         # Test full turn with vcat combine
         session_vcat = Session(agent)

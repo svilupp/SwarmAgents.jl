@@ -57,8 +57,11 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no tool rules, return all tools (passthrough)
     isempty(tool_rules) && return all_tools
 
-    # Get allowed tools from each rule and validate against all_tools
-    rule_results = [filter(t -> t ∈ all_tools, get_allowed_tools(rule, used_tools, all_tools; combine=combine)) for rule in tool_rules]
+    # Deduplicate all_tools first while preserving order
+    unique_tools = unique(all_tools)
+
+    # Get allowed tools from each rule and validate against unique_tools
+    rule_results = [filter(t -> t ∈ unique_tools, get_allowed_tools(rule, used_tools, unique_tools; combine=combine)) for rule in tool_rules]
 
     # Filter out empty results
     valid_results = filter(!isempty, rule_results)
@@ -142,38 +145,23 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
     valid_tools = filter(t -> t ∈ all_tools, rule.order)
     isempty(valid_tools) && return String[]
 
-    # For vcat, allow tools to be repeated in sequence
-    if combine === vcat
-        # If no tools used yet, return first tool
-        if isempty(used_tools)
-            return [valid_tools[1]]
-        end
-
-        # Get the last used tool and find its position in valid_tools
-        last_used = used_tools[end]
-        idx = findfirst(==(last_used), valid_tools)
-
-        if isnothing(idx)
-            # If last used tool not in sequence, start over
-            return [valid_tools[1]]
-        else
-            # If at end of sequence, start over, else return next tool
-            next_idx = (idx % length(valid_tools)) + 1
-            return [valid_tools[next_idx]]
-        end
+    # For all combine functions, maintain sequential behavior
+    if isempty(used_tools)
+        return [valid_tools[1]]  # Start with first tool
     end
 
-    # For other combine functions (union, intersect)
-    # Get the next unused tool in sequence
-    used_set = Set(used_tools)
-    for tool in valid_tools
-        if tool ∉ used_set
-            return [tool]  # Return only the next unused tool
-        end
-    end
+    # Get the last used tool and find its position in valid_tools
+    last_used = used_tools[end]
+    idx = findfirst(==(last_used), valid_tools)
 
-    # If all tools have been used, return empty list for non-vcat combines
-    return String[]
+    if isnothing(idx)
+        # If last used tool not in sequence, start over
+        return [valid_tools[1]]
+    else
+        # Return next tool in sequence, wrapping around if needed
+        next_idx = (idx % length(valid_tools)) + 1
+        return [valid_tools[next_idx]]
+    end
 end
 
 """
