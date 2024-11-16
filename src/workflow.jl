@@ -20,10 +20,12 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         # Check if tool exists in agent's tool_map or session rules
         tool_impl = get(active_agent.tool_map, name, nothing)
         if isnothing(tool_impl)
-            tool_impl = findfirst(r -> r isa AbstractToolFlowRules && r.tool.name == name, session.rules)
-            tool_impl = isnothing(tool_impl) ? nothing : tool_impl.tool
+            # Check if tool is allowed by any FixedOrder rule
+            rule_with_tool = findfirst(r -> r isa AbstractToolFlowRules && name ∈ r.order, session.rules)
+            isnothing(rule_with_tool) && error("Tool $name not found in agent $(active_agent.name)'s tool map or session rules.")
+            # Create a Tool instance for the found tool
+            tool_impl = Tool(name)
         end
-        isnothing(tool_impl) && error("Tool $name not found in agent $(active_agent.name)'s tool map or session rules.")
 
         # Execute tool
         output = PT.execute_tool(Dict(name => tool_impl), tool, session.context)
