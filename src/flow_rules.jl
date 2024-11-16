@@ -130,15 +130,15 @@ end
 
 function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
     isempty(rule.order) && return all_tools
-    used_set = Set(used_tools)
 
-    # For vcat, return all remaining tools in order
+    # For vcat, preserve order and duplicates, only filter against all_tools
     if combine === vcat
-        # Filter tools that are in all_tools and haven't been used
-        return filter(t -> t ∈ all_tools && t ∉ used_set, rule.order)
+        # Only filter against all_tools, ignore used_tools to preserve duplicates
+        return filter(t -> t ∈ all_tools, rule.order)
     end
 
     # For other combine functions, return first unused tool
+    used_set = Set(used_tools)
     for tool in rule.order
         if tool ∉ used_set && tool ∈ all_tools
             return [tool]
