@@ -51,6 +51,83 @@ A handoff occurs when one AI agent passes the conversation to another specialize
 
 Handoffs allow seamless transitions between different expertise areas, enhancing the overall interaction.
 
+## Flow Rules and Tool Control
+
+Flow rules control how tools are executed in your agent system. They determine which tools are available at any given time and in what order they should be executed.
+
+### Flow Rule Types
+
+SwarmAgents supports different types of flow rules:
+- `AbstractToolFlowRules`: Base type for all tool-related flow rules
+- `FixedOrder`: Controls tool execution order (replaces deprecated ToolFlowRules)
+- `FixedPrerequisites`: Enforces tool prerequisites (coming soon)
+
+Note: The `ToolFlowRules` type has been removed in favor of using `FixedOrder` directly, which provides clearer semantics and better control over tool execution order.
+
+### Tool Execution Order
+
+You can control tool execution using `FixedOrder`:
+
+```julia
+# Make a single tool always available (first in cycle)
+agent = Agent(name="MyAgent", instructions="Test agent")
+add_tools!(agent, my_tool)
+add_rules!(session, FixedOrder(my_tool))  # Convenience constructor for single tool
+
+# Control execution order of multiple tools
+tools = [tool1, tool2, tool3]
+rules = [FixedOrder(tool) for tool in tools]  # Broadcast FixedOrder over tools
+add_rules!(session, rules)  # Add rules to enforce tool order
+```
+
+### Tool Filtering and Combination
+
+The `run_full_turn` function supports controlling how tools from multiple rules are combined:
+
+```julia
+# Default behavior uses union (removes duplicates)
+response = run_full_turn(agent, messages, session)
+
+# Use vcat to preserve tool order and duplicates (recommended for sequential tool execution)
+response = run_full_turn(agent, messages, session; combine=vcat)
+```
+
+Why use `vcat`? When you have multiple rules that might reference the same tool in different positions, `vcat` preserves both the order and duplicates, ensuring tools execute in the exact sequence you specified. For example:
+
+```julia
+# Create rules that use the same tool in different positions
+rules = [
+    FixedOrder(["validate", "process"]),      # First sequence
+    FixedOrder(["process", "validate"])       # Second sequence
+]
+
+# With union (default), you lose the intended sequence:
+# get_allowed_tools(rules, [], all_tools) → ["validate", "process"]
+
+# With vcat, you preserve the exact sequence:
+# get_allowed_tools(rules, [], all_tools; combine=vcat) → ["validate", "process", "process", "validate"]
+```
+
+### Tool Availability Rules
+
+Tools are filtered using `get_allowed_tools`, which determines available tools based on:
+- Current flow rules (must be subtypes of AbstractToolFlowRules)
+- Previously used tools (tracking tool usage history)
+- All available tools in the agent's tool map (passed as all_tools argument)
+
+```julia
+# Get all tool names from agent
+all_tools = String[string(name) for name in keys(agent.tool_map)]
+
+# Get allowed tools based on rules and history
+allowed_tools = get_allowed_tools(session.rules, used_tools, all_tools)
+
+# Use custom combine function for multiple rules
+allowed_tools = get_allowed_tools(session.rules, used_tools, all_tools; combine=vcat)
+```
+
+If no tool rules are present, all agent tools are available (passthrough behavior).
+
 ## Usage
 
 ```julia
@@ -93,6 +170,5 @@ run_full_turn!(sess, "What do you mean?")
 >> Tool Output: {"assistant":"English Agent"}
 >> Assistant: You were speaking in Spanish, so I transferred you to a Spanish-speaking agent. How can I assist you in English today?
 ```
-
 
 See folder `examples/` for more examples.

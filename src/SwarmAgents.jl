@@ -30,7 +30,7 @@ export PrivateMessage, is_visible, filter_history, maybe_private_message
 include("flow_rules.jl")
 export TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
     FixedOrder, FixedPrerequisites, is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools,
-    get_allowed_tools, ToolWrapper
+    get_allowed_tools
 
 # Workflow (run_full_turn, handle tool calls)
 include("workflow.jl")

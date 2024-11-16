@@ -95,15 +95,15 @@ func2() = nothing
 
         # Test session rules management
         tools = [Tool(func1), Tool(func2)]
-        tool_rules = [ToolWrapper(tool) for tool in tools]
+        tool_rules = [FixedOrder(tool) for tool in tools]
 
         add_rules!(session, tool_rules)
         @test length(session.rules) == 2
-        @test any(r -> r isa ToolWrapper && r.name == "func1", session.rules)
-        @test any(r -> r isa ToolWrapper && r.name == "func2", session.rules)
+        @test any(r -> r isa FixedOrder && r.order == ["func1"], session.rules)
+        @test any(r -> r isa FixedOrder && r.order == ["func2"], session.rules)
 
         # Test adding duplicate rule (should append)
-        add_rules!(session, ToolWrapper(Tool(func1)))
+        add_rules!(session, FixedOrder(Tool(func1)))
         @test length(session.rules) == 3
     end
 end

@@ -17,17 +17,11 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         name, args = tool.name, tool.args
         print_progress(session.io, active_agent, tool)
 
-        # Check if tool exists in agent's tool_map or session rules
-        tool_impl = get(active_agent.tool_map, name, nothing)
-        if isnothing(tool_impl)
-            # Look for tool in session rules
-            tool_rule = findfirst(r -> r isa ToolWrapper && r.name == name, session.rules)
-            isnothing(tool_rule) && error("Tool $name not found in agent $(active_agent.name)'s tool map or session rules.")
-            tool_impl = session.rules[tool_rule].tool
-        end
+        # Check if tool exists in agent's tool_map
+        name ∉ keys(active_agent.tool_map) && error("Tool $name not found in agent $(active_agent.name)'s tool map.")
 
         # Execute tool
-        output = PT.execute_tool(Dict(name => tool_impl), tool, session.context)
+        output = PT.execute_tool(active_agent.tool_map, tool, session.context)
         push!(session.artifacts, output)
 
         ## Changing the agent
@@ -69,7 +63,7 @@ function update_system_message!(history::AbstractVector{T}, active_agent::Union{
 end
 
 """
-    run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5)
+    run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5, combine::Function = vcat)
 
 Run a full turn of an agent, executing all tool calls with proper tool filtering and termination checks.
 
@@ -78,33 +72,66 @@ Run a full turn of an agent, executing all tool calls with proper tool filtering
 - `messages::AbstractVector{<:PT.AbstractMessage}`: Initial message history
 - `session::Session`: Session containing rules and context
 - `max_turns::Int = 5`: Maximum number of turns to execute
+- `combine::Function = vcat`: Function to combine results from multiple tool rules (must use vcat for multiple tools)
 
 # Notes
 - Tools are filtered using get_allowed_tools based on session rules
 - Available tools come from agent's tool_map
 - If no tool rules exist, all agent tools are available
 - Tool selection respects AbstractToolFlowRules filtering
+- For single tool usage, wrap tool in FixedOrder: FixedOrder(tool)
+- For multiple tools, use vcat as combine function to merge tool lists
 - Termination checks are run after each tool execution
 """
-function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5, kwargs...)
+function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5, combine::Function = vcat, kwargs...)
     active_agent = isabstractagentref(agent) ? find_agent(session.agent_map, agent) : agent
     history = deepcopy(messages)
     init_len = length(messages)
     used_tools = String[]
+
+    # Add tools from session rules to agent's tool map
+    tool_rules = filter(r -> r isa AbstractToolFlowRules, session.rules)
+    for rule in tool_rules
+        # Get tools from each rule's order
+        if rule isa FixedOrder
+            for tool_name in rule.order
+                # Find tool in session rules
+                tool_impl = findfirst(r -> r isa Tool && string(r.name) == tool_name, session.rules)
+                if !isnothing(tool_impl) && !haskey(active_agent.tool_map, tool_name)
+                    active_agent.tool_map[tool_name] = session.rules[tool_impl]
+                end
+            end
+        end
+    end
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
         # Get all available tools from the agent's tool_map
         all_tools = String[string(name) for name in keys(active_agent.tool_map)]
 
         # Get allowed tools based on rules and used tools
-        allowed_names = get_allowed_tools(session.rules, used_tools, all_tools)
+        allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
 
-        # Convert allowed tools to a vector for aitools
+        # Convert allowed tools to a vector for aitools, handling duplicates
         tools = Tool[]
-        for name in allowed_names
+        seen_tools = Set{String}()
+        for (idx, name) in enumerate(allowed_names)
             tool = get(active_agent.tool_map, name, nothing)
             if !isnothing(tool)
-                push!(tools, tool)
+                # Create a unique tool instance for duplicates
+                if name in seen_tools
+                    # Create a copy of the tool with a unique name
+                    unique_name = "$(name)_$(idx)"
+                    unique_tool = Tool(
+                        name=unique_name,
+                        callable=tool.callable,
+                        parameters=tool.parameters,
+                        description=tool.description
+                    )
+                    push!(tools, unique_tool)
+                else
+                    push!(tools, tool)
+                    push!(seen_tools, name)
+                end
             end
         end
 

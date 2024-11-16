@@ -17,7 +17,7 @@ using JSON3
             Tool(name="custom_tool", callable=func_no_output)
         ])
         session = Session(agent)
-        add_rules!(session, Tool(func5))
+        add_rules!(session, FixedOrder(Tool(func5)))
 
         # Test original tool from agent's tool_map
         history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
@@ -61,7 +61,7 @@ using JSON3
         # Test with custom io
         io = IOBuffer()
         session_with_io = Session(agent; io=io)
-        add_rules!(session_with_io, Tool(func5))
+        add_rules!(session_with_io, FixedOrder(Tool(func5)))
         test_history = AbstractMessage[PT.AIToolRequest(
             content="Testing tool execution",
             tool_calls = [ToolMessage(
@@ -122,7 +122,7 @@ using JSON3
 
         # Test with both agent tools and session rules
         session = Session(agent)
-        add_rules!(session, Tool(func5))
+        add_rules!(session, FixedOrder(Tool(func5)))
 
         response = run_full_turn(agent, messages, session; max_turns = 1)
         @test response isa Response
@@ -133,7 +133,7 @@ using JSON3
         # Test with custom io
         io = IOBuffer()
         session_with_io = Session(agent; io=io)
-        add_rules!(session_with_io, Tool(func5))
+        add_rules!(session_with_io, FixedOrder(Tool(func5)))
         updated_session = run_full_turn!(session_with_io, "Hello")
         @test length(updated_session.messages) > 1
         @test updated_session.agent === agent
@@ -163,7 +163,7 @@ using JSON3
         agent2 = Agent(
             name = "TestAgent2", instructions = "You are a test agent.", model = "mocktools2")
         session2 = Session(agent2)
-        add_rules!(session2, Tool(func5))
+        add_rules!(session2, FixedOrder(Tool(func5)))
 
         response = run_full_turn(agent2, messages, session2; max_turns = 1)
         @test response isa Response
@@ -237,15 +237,28 @@ using JSON3
         @test !isempty(response3.messages)
         @test length(response3.messages) > 0
 
-        # Test that non-tool rules are ignored in get_allowed_tools
+        # Test that non-tool rules are ignored in get_allowed_tools and combine behavior
         mixed_rules = [
             FixedOrder(order=["func1"]),
             TerminationRepeatCheck(2),
-            FixedOrder(order=["func5"])
+            FixedOrder(order=["func5", "func1"])  # Intentional duplicate of func1
         ]
         all_tools = ["func1", "func5"]
-        allowed_tools_mixed = get_allowed_tools(mixed_rules, String[], all_tools)
-        @test Set(allowed_tools_mixed) == Set(["func1", "func5"])  # Only tool rules processed
+
+        # Test default combine (union) behavior
+        allowed_tools_union = get_allowed_tools(mixed_rules, String[], all_tools)
+        @test Set(allowed_tools_union) == Set(["func1", "func5"])  # Only tool rules processed, duplicates collapsed with union
+
+        # Test vcat combine behavior (preserves order and duplicates)
+        allowed_tools_vcat = get_allowed_tools(mixed_rules, String[], all_tools; combine=vcat)
+        @test allowed_tools_vcat == ["func1", "func5", "func1"]  # Order preserved, duplicates maintained
+
+        # Test full turn with vcat combine
+        session_vcat = Session(agent)
+        add_rules!(session_vcat, mixed_rules)
+        response_vcat = run_full_turn(agent, messages, session_vcat; max_turns=5, combine=vcat)
+        @test response_vcat isa Response
+        @test !isempty(response_vcat.messages)
 
         # Test passthrough with only non-tool rules
         non_tool_rules = [TerminationRepeatCheck(2), generic_rule]

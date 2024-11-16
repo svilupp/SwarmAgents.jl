@@ -85,7 +85,7 @@ representation that can be used in tool messages.
 
 # Behavior
 The function handles three cases in order of precedence:
-1. String input: returns the string directly
+1. AbstractString input: returns the string directly
 2. Struct with :output property: returns the output property value as string
 3. Other types: converts to string using show method
 
@@ -138,7 +138,7 @@ See also: [`handle_tool_calls!`](@ref)
 """
 function tool_output(output::Any)
     # Direct passthrough for strings
-    output isa String && return output
+    output isa AbstractString && return output
 
     # Check for :output property in structs
     if hasproperty(output, :output)

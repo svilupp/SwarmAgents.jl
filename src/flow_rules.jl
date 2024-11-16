@@ -13,34 +13,25 @@ abstract type AbstractTerminationFlowRules <: AbstractFlowRules end
 abstract type AbstractToolFlowRules <: AbstractFlowRules end
 
 """
-    ToolWrapper <: AbstractToolFlowRules
+    get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
 
-Wraps a Tool type to make it compatible with AbstractToolFlowRules.
+Get the list of allowed tools based on flow rules and usage history.
 
-# Fields
-- `name::String`: Name of the tool
-- `tool::Tool`: The wrapped tool
+# Arguments
+- `rules::Vector{<:AbstractFlowRules}`: Vector of flow rules to apply
+- `used_tools::Vector{String}`: List of tools that have been used
+- `all_tools::Vector{String}`: Complete set of available tools
+- `combine::Function=union`: Function to combine results from multiple rules (default: union for OR behavior)
 
-# Example
-```julia
-tool = Tool("example", callable=example_function)
-wrapped = ToolWrapper(tool)
-```
+# Returns
+- `Vector{String}`: List of allowed tool names
+
+# Notes
+- Only processes rules that are subtypes of AbstractToolFlowRules
+- If no tool rules are present, returns all_tools (passthrough)
+- Empty result from a rule means no tools allowed by that rule
+- Results are combined using union by default (OR behavior)
 """
-Base.@kwdef struct ToolWrapper <: AbstractToolFlowRules
-    name::String
-    tool::Tool
-end
-
-# Constructor from Tool
-function ToolWrapper(tool::Tool)
-    ToolWrapper(name=tool.name, tool=tool)
-end
-
-function get_allowed_tools(wrapper::ToolWrapper, used_tools::Vector{String}, all_tools::Vector{String})
-    # If the tool is in all_tools, return it
-    wrapper.name ∈ all_tools ? [wrapper.name] : String[]
-end
 
 """
     get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
@@ -78,8 +69,17 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # Combine results using the specified function (default to union for OR behavior)
-    return reduce(combine, valid_results)
+    # Combine results using the specified function
+    if combine === vcat
+        # For vcat, maintain order and duplicates
+        combined = reduce(vcat, valid_results)
+        # Filter against all_tools but preserve order and duplicates
+        return [t for t in combined if t ∈ Set(all_tools)]
+    else
+        # For other combine functions (like union), validate against all_tools first
+        validated_results = [intersect(result, all_tools) for result in valid_results]
+        return reduce(combine, validated_results)
+    end
 end
 
 """
@@ -93,23 +93,37 @@ Enforces a fixed order of tool execution.
 
 # Examples
 ```julia
-# Create with keyword constructor
-rule = FixedOrder(order=["tool2", "tool3"])
+# Single tool (always available as first in cycle)
+rule = FixedOrder(tool)  # Convenience constructor for single tool
+
+# Multiple tools in sequence
+tools = [tool1, tool2, tool3]
+rules = [FixedOrder(tool) for tool in tools]  # Broadcast FixedOrder over tools
+add_rules!(session, rules)  # Add as flow rules
+
+# Create with explicit order
+rule = FixedOrder(["tool1", "tool2", "tool3"])
 ```
 
 # Notes
 - Only allows one tool at a time in strict sequence
 - Returns empty list when all tools have been used
 - If order is empty, returns all_tools (passthrough)
+- Single tool constructor makes the tool always available (first in cycle)
 """
 Base.@kwdef struct FixedOrder <: AbstractToolFlowRules
     name::String = "FixedOrder"
     order::Vector{String} = String[]
 end
 
-# Constructor for order-based initialization
+# Constructors for FixedOrder
 function FixedOrder(order::Vector{String})
     FixedOrder(; order=order)
+end
+
+# Convenience constructor for single tool
+function FixedOrder(tool::Tool)
+    FixedOrder(; order=[tool.name])
 end
 
 function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_tools::Vector{String})
@@ -158,18 +172,8 @@ function add_rules!(session::Session, rule::AbstractFlowRules)
     push!(session.rules, rule)
 end
 
-"""
-    add_rules!(session::Session, tools::Vector{Tool})
-
-Add a vector of tools as rules to a session.
-
-# Arguments
-- `session::Session`: The session to add the rules to
-- `tools::Vector{Tool}`: Tools to add as rules
-"""
-function add_rules!(session::Session, tools::Vector{Tool})
-    append!(session.rules, [ToolWrapper(tool) for tool in tools])
-end
+# Removed add_rules! for tools vector - users should use FixedOrder directly
+# Example: add_rules!(session, [FixedOrder(tool) for tool in tools])
 
 """
     TerminationCycleCheck(n_cycles::Int=3, span::Int=3)
@@ -424,10 +428,8 @@ function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Un
     return tools
 end
 
-function add_rules!(session::Session, tool::Tool)
-    # Wrap tool in ToolWrapper and add to rules vector
-    push!(session.rules, ToolWrapper(tool))
-end
+# Removed add_rules! for single tool - users should use FixedOrder directly
+# Example: add_rules!(session, FixedOrder(tool))
 
 """
     FixedPrerequisites <: AbstractFlowRules
@@ -452,7 +454,7 @@ rule = FixedPrerequisites(prerequisites=prereqs)
 - Tools can only be used after their prerequisites
 - Tools without prerequisites are always allowed
 """
-Base.@kwdef struct FixedPrerequisites <: AbstractFlowRules
+Base.@kwdef struct FixedPrerequisites <: AbstractToolFlowRules
     name::String = "FixedPrerequisites"
     prerequisites::Dict{String,Vector{String}} = Dict{String,Vector{String}}()
 end
