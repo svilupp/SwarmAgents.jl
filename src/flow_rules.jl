@@ -62,7 +62,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no tool rules, return all_tools in their original order
     isempty(tool_rules) && return copy(all_tools)
 
-    # Get allowed tools from each rule
+    # Get allowed tools from each rule - let rules handle used_tools filtering
     rule_results = [
         get_allowed_tools(rule, used_tools, all_tools)
         for rule in tool_rules
@@ -72,21 +72,36 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     valid_results = filter(!isempty, rule_results)
     isempty(valid_results) && return String[]
 
-    # Get the intersection of all rule results (tools allowed by all rules)
-    allowed_set = reduce(intersect, Set.(valid_results))
-    isempty(allowed_set) && return String[]
+    # Ensure all tools exist in all_tools
+    filtered_results = [
+        filter(t -> t ∈ all_tools, result)
+        for result in valid_results
+    ]
 
-    # If there's a FixedOrder rule, use it to order the allowed tools
-    fixed_order_rule = findfirst(r -> r isa FixedOrder, tool_rules)
-    if !isnothing(fixed_order_rule)
-        # Get the ordered tools from the FixedOrder rule
-        ordered_tools = get_allowed_tools(tool_rules[fixed_order_rule], used_tools, all_tools)
-        # Return only the tools that are in the intersection, maintaining the order
-        return filter(t -> t ∈ allowed_set, ordered_tools)
+    # Filter out any empty results after filtering
+    filtered_results = filter(!isempty, filtered_results)
+    isempty(filtered_results) && return String[]
+
+    # Combine results using the provided function
+    if combine == intersect
+        # For intersect, we want tools that appear in all results
+        combined = collect(reduce(intersect, Set.(filtered_results)))
+        # Maintain original order from all_tools
+        return filter(t -> t ∈ combined, all_tools)
+    else
+        # For union/vcat, maintain order of first appearance while deduplicating
+        seen = Set{String}()
+        result = String[]
+        for tools in filtered_results
+            for tool in tools
+                if tool ∉ seen
+                    push!(seen, tool)
+                    push!(result, tool)
+                end
+            end
+        end
+        return result
     end
-
-    # If no FixedOrder rule, return the intersection in the original all_tools order
-    filter(t -> t ∈ allowed_set, all_tools)
 end
 
 """
