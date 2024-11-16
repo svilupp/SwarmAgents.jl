@@ -69,10 +69,20 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # For vcat, maintain exact order and duplicates from each rule
+    # For vcat, maintain order within each rule's results but deduplicate across rules
     if combine === vcat
-        # Concatenate results in order, preserving duplicates
-        return reduce(vcat, valid_results)
+        # Process each rule's results in order, keeping only first occurrence of each tool
+        seen = Set{String}()
+        result = String[]
+        for tools in valid_results
+            for tool in tools
+                if tool ∉ seen
+                    push!(seen, tool)
+                    push!(result, tool)
+                end
+            end
+        end
+        return result
     end
 
     # For intersection, start with first result and intersect with others
