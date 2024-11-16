@@ -62,39 +62,53 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no tool rules, return all_tools in their original order
     isempty(tool_rules) && return copy(all_tools)
 
-    # Get allowed tools from each rule - let rules handle used_tools filtering
+    # Check for FixedOrder rules first
+    fixed_order_rules = filter(r -> r isa FixedOrder, tool_rules)
+    if !isempty(fixed_order_rules)
+        # Get allowed tools from FixedOrder rules
+        fixed_order_results = [
+            get_allowed_tools(rule, used_tools, all_tools)
+            for rule in fixed_order_rules
+        ]
+        # Filter out empty results
+        valid_fixed_results = filter(!isempty, fixed_order_results)
+
+        # If any FixedOrder rule returns tools, use only those tools
+        if !isempty(valid_fixed_results)
+            # Take the first non-empty result from FixedOrder rules
+            return first(valid_fixed_results)
+        end
+    end
+
+    # If no FixedOrder rules or they return empty, process other rules
+    other_rules = filter(r -> !(r isa FixedOrder), tool_rules)
+    if isempty(other_rules)
+        return String[]
+    end
+
+    # Get allowed tools from other rules
     rule_results = [
         get_allowed_tools(rule, used_tools, all_tools)
-        for rule in tool_rules
+        for rule in other_rules
     ]
 
     # Filter out empty results
     valid_results = filter(!isempty, rule_results)
     isempty(valid_results) && return String[]
 
-    # Ensure all tools exist in all_tools
-    filtered_results = [
-        filter(t -> t ∈ all_tools, result)
-        for result in valid_results
-    ]
-
-    # Filter out any empty results after filtering
-    filtered_results = filter(!isempty, filtered_results)
-    isempty(filtered_results) && return String[]
-
     # Combine results using the provided function
     if combine == intersect
         # For intersect, we want tools that appear in all results
-        combined = collect(reduce(intersect, Set.(filtered_results)))
+        combined = collect(reduce(intersect, Set.(valid_results)))
         # Maintain original order from all_tools
-        return filter(t -> t ∈ combined, all_tools)
+        return filter(t -> t ∈ combined && t ∈ all_tools, all_tools)
     else
-        # For union/vcat, maintain order of first appearance while deduplicating
+        # For union/vcat, maintain order while deduplicating
         seen = Set{String}()
         result = String[]
-        for tools in filtered_results
+        for tools in valid_results
             for tool in tools
-                if tool ∉ seen
+                if tool ∉ seen && tool ∈ all_tools
                     push!(seen, tool)
                     push!(result, tool)
                 end
@@ -161,23 +175,26 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
         return [valid_tools[1]]
     end
 
-    # Check that tools are used in sequence
-    # Find the position where sequence breaks or ends
-    sequence_pos = 0
-    for (i, expected_tool) in enumerate(valid_tools)
-        if i > length(used_tools) || used_tools[i] != expected_tool
-            break
+    # Find the last used tool from our sequence
+    last_used_idx = 0
+    for (i, tool) in enumerate(valid_tools)
+        if tool ∈ used_tools
+            last_used_idx = i
         end
-        sequence_pos = i
     end
 
-    # If sequence is complete or broken, return empty
-    if sequence_pos == length(valid_tools)
+    # If we haven't used any tools from our sequence, return the first one
+    if last_used_idx == 0
+        return [valid_tools[1]]
+    end
+
+    # If we've used all tools in sequence, return empty
+    if last_used_idx == length(valid_tools)
         return String[]
     end
 
     # Return the next tool in sequence
-    return [valid_tools[sequence_pos + 1]]
+    return [valid_tools[last_used_idx + 1]]
 end
 
 """
