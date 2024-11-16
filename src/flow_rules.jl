@@ -8,9 +8,6 @@ Abstract type hierarchy for flow rules in SwarmAgents.
 - Flow rules, including termination checks, ignore PrivateMessage visibility
 - They operate on the underlying messages regardless of privacy settings
 """
-abstract type AbstractFlowRules end
-abstract type AbstractTerminationFlowRules <: AbstractFlowRules end
-abstract type AbstractToolFlowRules <: AbstractFlowRules end
 
 """
     get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
