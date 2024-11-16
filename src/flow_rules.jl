@@ -439,7 +439,6 @@ function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Un
             end
         end
     end
-    unique!(tools)
     return tools
 end
 
@@ -486,30 +485,27 @@ function FixedPrerequisites(order::Vector{String})
 end
 
 function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
-    # First, strictly intersect with all_tools to ensure only available tools are considered
-    available_tools = intersect(keys(rule.prerequisites), all_tools)
-
-    # If no prerequisites defined, return all_tools (passthrough)
+    # If no prerequisites defined, return all available tools
     isempty(rule.prerequisites) && return all_tools
 
-    # If no available tools after intersection, return empty list
-    isempty(available_tools) && return String[]
-
+    # Create set of used tools for efficient lookup
     used_set = Set(used_tools)
     allowed = String[]
 
-    # Process only available tools
-    for tool in available_tools
-        # Check if tool has prerequisites and if they're met
+    # Check each tool in all_tools (not just those with prerequisites)
+    for tool in all_tools
+        # Get prerequisites for this tool (empty if none defined)
         prereqs = get(rule.prerequisites, tool, String[])
-        # Only consider prerequisites that are in all_tools
+
+        # Tool is allowed if either:
+        # 1. It has no prerequisites defined
+        # 2. All its prerequisites (that exist in all_tools) have been used
         valid_prereqs = intersect(prereqs, all_tools)
-        # Tool is allowed if it has no valid prerequisites or all valid prerequisites are met
         if isempty(valid_prereqs) || all(p -> p ∈ used_set, valid_prereqs)
             push!(allowed, tool)
         end
     end
 
-    # Return the allowed tools (already strictly within all_tools due to available_tools intersection)
+    # Return the allowed tools (already strictly within all_tools)
     return allowed
 end

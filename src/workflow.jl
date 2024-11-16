@@ -88,19 +88,19 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
         # Get all available tools from the agent's tool_map
-        all_tools = String[string(name) for name in keys(active_agent.tool_map)]
+        all_tools = collect(keys(active_agent.tool_map))
 
         # Get allowed tools based on rules and used tools
-        allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
+        allowed_names = get_allowed_tools(session.rules, used_tools, string.(all_tools); combine=combine)
 
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)
         update_system_message!(filtered_history, active_agent)
 
-        # Get AI response using filtered history
+        # Get AI response using filtered history and tools from tool_map
         response = PT.aitools(filtered_history;
             model = active_agent.model,
-            tools = allowed_names,
+            tools = [active_agent.tool_map[name] for name in allowed_names],
             name_user = "User",
             name_assistant = scrub_agent_name(active_agent),
             return_all = true,
@@ -126,11 +126,7 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         # Run tool calls and update used tools
         (; active_agent, history) = handle_tool_calls!(active_agent, history, session)
         new_tools = get_used_tools(history)
-        append!(used_tools, String[string(t) for t in new_tools])
-        # Don't use unique! here to preserve duplicates for vcat
-        if combine !== vcat
-            unique!(used_tools)
-        end
+        append!(used_tools, new_tools)  # No deduplication needed, preserve order and duplicates
 
         # Run termination checks
         termination_rules = filter(r -> r isa AbstractTerminationFlowRules, session.rules)

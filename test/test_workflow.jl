@@ -129,23 +129,40 @@ using JSON3
 
         agent = Agent(
             name = "TestAgent", instructions = "You are a test agent.", model = "mocktools")
-        add_tools!(agent, Tool(func1))
+        tool1 = Tool(func1)
+        add_tools!(agent, tool1)
         messages = AbstractMessage[PT.UserMessage("Hello")]
 
         # Test with both agent tools and session rules
         session = Session(agent)
-        add_rules!(session, FixedOrder(Tool(func5)))
+        tool5 = Tool(func5)
+        add_rules!(session, FixedOrder(tool5))
 
-        response = run_full_turn(agent, messages, session; max_turns = 1)
-        @test response isa Response
-        @test !isempty(response.messages)
-        @test response.messages[end].name == "func1"
-        @test length(session.artifacts) == 1
+        # Mock aitools to verify tool objects
+        original_aitools = PT.aitools
+        try
+            tools_passed = Tool[]
+            PT.aitools = function(args...; kwargs...)
+                tools_passed = kwargs[:tools]
+                original_aitools(args...; kwargs...)
+            end
+
+            response = run_full_turn(agent, messages, session; max_turns = 1)
+            @test response isa Response
+            @test !isempty(response.messages)
+            @test response.messages[end].name == "func1"
+            @test length(session.artifacts) == 1
+            # Verify we're passing Tool objects
+            @test all(t -> t isa Tool, tools_passed)
+            @test tools_passed[1] === agent.tool_map["func1"]
+        finally
+            PT.aitools = original_aitools
+        end
 
         # Test with custom io
         io = IOBuffer()
         session_with_io = Session(agent; io=io)
-        add_rules!(session_with_io, FixedOrder(Tool(func5)))
+        add_rules!(session_with_io, FixedOrder(tool5))
         updated_session = run_full_turn!(session_with_io, "Hello")
         @test length(updated_session.messages) > 1
         @test updated_session.agent === agent
@@ -175,7 +192,7 @@ using JSON3
         agent2 = Agent(
             name = "TestAgent2", instructions = "You are a test agent.", model = "mocktools2")
         session2 = Session(agent2)
-        add_rules!(session2, FixedOrder(Tool(func5)))
+        add_rules!(session2, FixedOrder(tool5))
 
         response = run_full_turn(agent2, messages, session2; max_turns = 1)
         @test response isa Response
@@ -415,5 +432,47 @@ using JSON3
             @test_throws MethodError transfer_agent(Symbol("Test Agent"), "Testing transfer")
             @test_throws MethodError transfer_agent("Test Agent", 123)
         end
+    end
+
+    @testset "get_used_tools behavior" begin
+        # Test extraction from AIToolRequests only
+        history = AbstractMessage[]
+
+        # Add AIToolRequest with multiple tool calls (including duplicates)
+        push!(history, PT.AIToolRequest(tool_calls = [
+            ToolMessage(tool_call_id="1", raw="{}", name="tool_a", args=Dict()),
+            ToolMessage(tool_call_id="2", raw="{}", name="tool_a", args=Dict())
+        ]))
+
+        # Add another AIToolRequest
+        push!(history, PT.AIToolRequest(tool_calls = [
+            ToolMessage(tool_call_id="3", raw="{}", name="tool_b", args=Dict())
+        ]))
+
+        # Add a regular ToolMessage (should be ignored)
+        push!(history, ToolMessage(tool_call_id="4", raw="{}", name="tool_c", args=Dict()))
+
+        # Add another AIToolRequest with duplicate tool
+        push!(history, PT.AIToolRequest(tool_calls = [
+            ToolMessage(tool_call_id="5", raw="{}", name="tool_a", args=Dict())
+        ]))
+
+        # Test that get_used_tools only looks at AIToolRequests and preserves order with duplicates
+        used_tools = get_used_tools(history)
+        @test used_tools == ["tool_a", "tool_a", "tool_b", "tool_a"]  # Order preserved, duplicates maintained
+
+        # Test that direct ToolMessages are ignored
+        @test !in("tool_c", used_tools)
+
+        # Test empty history
+        @test isempty(get_used_tools(AbstractMessage[]))
+
+        # Test history with only non-AIToolRequest messages
+        mixed_history = [
+            PT.UserMessage("test"),
+            ToolMessage(tool_call_id="1", raw="{}", name="tool_d", args=Dict()),
+            PT.AIMessage("test")
+        ]
+        @test isempty(get_used_tools(mixed_history))
     end
 end
