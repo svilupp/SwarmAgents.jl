@@ -100,7 +100,9 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # Finally, remove used tools from the combined result
     # But only if we have tool rules that care about used tools
     if !isempty(tool_rules)
-        return filter(t -> t ∉ used_tools, combined)
+        # Deduplicate used_tools while maintaining their order
+        unique_used = unique(used_tools)
+        return filter(t -> t ∉ unique_used, combined)
     else
         return combined
     end
