@@ -172,10 +172,12 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
         end
     end
 
-    # If the last used tool isn't in our sequence or was the last tool,
-    # start over from the beginning
-    if isnothing(last_used_idx) || last_used_idx == length(valid_tools)
+    # If the last used tool isn't in our sequence, start from beginning
+    # If it was the last tool in sequence, return empty (sequence complete)
+    if isnothing(last_used_idx)
         return [valid_tools[1]]
+    elseif last_used_idx == length(valid_tools)
+        return String[]
     end
 
     # Return the next tool in sequence
