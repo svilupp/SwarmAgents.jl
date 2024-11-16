@@ -4,6 +4,11 @@ const PT = PromptingTools
 """
 Abstract type hierarchy for flow rules in SwarmAgents.
 
+# Type Hierarchy
+- AbstractFlowRules
+  - AbstractToolFlowRules: Rules for controlling tool execution order and availability
+  - AbstractTerminationFlowRules: Rules for determining when to terminate execution
+
 # Notes
 - Flow rules, including termination checks, ignore PrivateMessage visibility
 - They operate on the underlying messages regardless of privacy settings
@@ -69,45 +74,17 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # For vcat, maintain order within each rule's results but deduplicate across rules
-    if combine === vcat
-        # Process each rule's results in order, keeping only first occurrence of each tool
-        seen = Set{String}()
-        result = String[]
-        for tools in valid_results
-            for tool in tools
-                if tool ∉ seen
-                    push!(seen, tool)
-                    push!(result, tool)
-                end
-            end
-        end
-        return result
-    end
-
-    # For intersection, start with first result and intersect with others
-    if combine === intersect
-        result = Set(valid_results[1])
-        for tools in valid_results[2:end]
-            intersect!(result, tools)
-        end
-        # Return deduplicated and sorted result
-        return sort(collect(result))
-    end
-
-    # For union (default) or any other combine function
-    # Use Set to deduplicate and sort for consistent ordering
-    result = Set{String}()
-    for tools in valid_results
-        union!(result, tools)
-    end
-    return sort(collect(result))
+    # Combine results using the provided function and ensure uniqueness
+    # Convert to Vector{String} if needed (e.g., if combine returns a Set)
+    result = combine(valid_results...)
+    return result isa Vector{String} ? unique(result) : collect(String, unique(result))
 end
 
 """
     FixedOrder <: AbstractToolFlowRules
 
-Enforces a fixed order of tool execution.
+A concrete implementation of AbstractToolFlowRules that enforces a fixed order of tool execution.
+Controls tool availability based on execution sequence.
 
 # Fields
 - `name::String`: Name of the rule
@@ -437,25 +414,22 @@ and authentication state management.
 - `agent::Union{AbstractAgent,Nothing}=nothing`: Optional agent (kept for API compatibility)
 
 # Returns
-- `Vector{Symbol}`: List of all tool names used in the message history
+- `Vector{String}`: List of all tool names used in the message history
 
 # Notes
 - Ignores PrivateMessage visibility, operates on underlying messages
 - Essential for flow control and authentication state management
+- Only extracts tool names from AIToolRequest messages
 """
 function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{AbstractAgent,Nothing}=nothing)
     tools = String[]
     for msg in history
         # First check if it's a PrivateMessage and get the underlying message
         actual_msg = msg isa PrivateMessage ? msg.object : msg
-        # Then check if the actual message is a tool message or contains tool usage
-        if PT.istoolmessage(actual_msg)
-            push!(tools, actual_msg.name)
-        elseif PT.isaimessage(actual_msg)
-            # Parse "Using tool" from AI messages
-            m = match(r"Using tool (\w+)", actual_msg.content)
-            if !isnothing(m)
-                push!(tools, m.captures[1])
+        # Only scan AIToolRequests and extract tool_calls
+        if actual_msg isa PT.AIToolRequest
+            for tool_call in actual_msg.tool_calls
+                push!(tools, tool_call.name)
             end
         end
     end
@@ -467,21 +441,22 @@ end
 # Example: add_rules!(session, FixedOrder(tool))
 
 """
-    FixedPrerequisites <: AbstractFlowRules
+    FixedPrerequisites <: AbstractToolFlowRules
 
-Enforces prerequisites for tool execution.
+A concrete implementation of AbstractToolFlowRules that enforces prerequisites for tool execution.
+Controls tool availability based on prerequisite completion.
 
 # Fields
 - `name::String`: Name of the rule
-- `prerequisites::Dict{Symbol,Vector{Symbol}}`: Map of tools to their prerequisites
+- `prerequisites::Dict{String,Vector{String}}`: Map of tools to their prerequisites
 
 # Examples
 ```julia
 # Create with keyword constructor and ordered list
-rule = FixedPrerequisites(order=[:search, :analyze, :summarize])
+rule = FixedPrerequisites(order=["search", "analyze", "summarize"])
 
 # Create with explicit prerequisites
-prereqs = Dict(:analyze => [:search], :summarize => [:search, :analyze])
+prereqs = Dict("analyze" => ["search"], "summarize" => ["search", "analyze"])
 rule = FixedPrerequisites(prerequisites=prereqs)
 ```
 
@@ -505,21 +480,26 @@ function FixedPrerequisites(order::Vector{String})
 end
 
 function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
-    # If no prerequisites defined, return all available tools
-    isempty(rule.prerequisites) && return all_tools
+    # First, strictly intersect with all_tools to ensure only available tools are considered
+    available_tools = intersect(keys(rule.prerequisites), all_tools)
+
+    # If no prerequisites defined or no available tools, return empty list
+    isempty(available_tools) && return String[]
 
     used_set = Set(used_tools)
     allowed = String[]
 
-    # Process tools in the order they appear in all_tools
-    for tool in all_tools
+    # Process only available tools
+    for tool in available_tools
         # Check if tool has prerequisites and if they're met
         prereqs = get(rule.prerequisites, tool, String[])
-        if isempty(prereqs) || all(p -> p ∈ used_set, prereqs)
+        # Only consider prerequisites that are in all_tools
+        valid_prereqs = intersect(prereqs, all_tools)
+        if isempty(valid_prereqs) || all(p -> p ∈ used_set, valid_prereqs)
             push!(allowed, tool)
         end
     end
 
-    # Only apply unique! for non-vcat combine functions
-    return combine === vcat ? allowed : unique!(allowed)
+    # Return the allowed tools (already strictly within all_tools due to available_tools intersection)
+    return allowed
 end

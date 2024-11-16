@@ -18,4 +18,5 @@ include("shared_test_utils.jl")
     include("test_flow_rules.jl")
     include("test_workflow.jl")
     include("test_swarm.jl")
+    include("test_tool_errors.jl")
 end
