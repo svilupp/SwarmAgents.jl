@@ -59,8 +59,8 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # Filter for tool rules only
     tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
 
-    # If no tool rules, return only tools that exist in all_tools
-    isempty(tool_rules) && return filter(t -> t ∈ all_tools, all_tools)
+    # If no tool rules, return all_tools (but ensure they exist)
+    isempty(tool_rules) && return collect(String, intersect(Set(all_tools), Set(all_tools)))
 
     # Get allowed tools from each rule
     rule_results = [
@@ -74,12 +74,21 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # Combine results using the provided function
-    result = combine(valid_results...)
+    # Combine results using the provided function and ensure strict intersection with all_tools
+    result = intersect(Set(all_tools), combine(valid_results...))
 
-    # Ensure result is a Vector{String} and strictly intersect with all_tools
-    result_vec = result isa Vector{String} ? result : collect(String, result)
-    return filter(t -> t ∈ all_tools, result_vec)
+    # Convert to Vector{String} while preserving order of appearance
+    seen = Set{String}()
+    deduped = String[]
+    for tools in valid_results
+        for tool in tools
+            if tool ∉ seen && tool ∈ result
+                push!(seen, tool)
+                push!(deduped, tool)
+            end
+        end
+    end
+    return deduped
 end
 
 """

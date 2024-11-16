@@ -142,7 +142,7 @@ using JSON3
         global tools_passed = Tool[]  # Use global to ensure tools_passed is accessible
         original_aitools = PT.aitools  # Store the original function
         mock_aitools = function(args...; kwargs...)
-            global tools_passed = copy(get(kwargs, :tools, Tool[]))  # Make a copy to ensure we capture the tools
+            global tools_passed = Vector{Tool}(kwargs[:tools])  # Convert to Vector{Tool} explicitly
             original_aitools(args...; kwargs...)
         end
 
