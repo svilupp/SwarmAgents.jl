@@ -96,7 +96,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         combined = String[]
         for result in filtered_results
             for tool in result
-                if tool ∉ seen
+                if tool ∉ seen && tool ∉ used_tools
                     push!(seen, tool)
                     push!(combined, tool)
                 end
@@ -104,8 +104,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         end
     end
 
-    # Finally, filter out used tools from the combined result
-    return filter(t -> t ∉ used_tools, combined)
+    return combined
 end
 
 """
