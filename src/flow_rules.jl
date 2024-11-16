@@ -85,24 +85,29 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     isempty(filtered_results) && return String[]
 
     # Then combine results using the provided function while maintaining order
-    if combine == intersect
+    combined = if combine == intersect
         # For intersect, we want tools that appear in all results
         combined = collect(reduce(intersect, Set.(filtered_results)))
         # Maintain original order from all_tools
-        combined = filter(t -> t ∈ combined, all_tools)
+        filter(t -> t ∈ combined, all_tools)
     else
-        # For union/vcat, maintain order of first appearance while deduplicating
+        # For union/vcat, maintain order of first appearance
         seen = Set{String}()
-        combined = String[]
-        for result in filtered_results
-            for tool in result
-                if tool ∉ seen && tool ∉ used_tools
+        result = String[]
+        for tools in filtered_results
+            for tool in tools
+                if tool ∉ seen
                     push!(seen, tool)
-                    push!(combined, tool)
+                    push!(result, tool)
                 end
             end
         end
+        result
     end
+
+    # Filter out used tools after combining results
+    filter(t -> t ∉ used_tools, combined)
+end
 
     return combined
 end
