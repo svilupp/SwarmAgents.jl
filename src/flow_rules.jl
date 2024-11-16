@@ -62,7 +62,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no tool rules, return all_tools in their original order
     isempty(tool_rules) && return copy(all_tools)
 
-    # Get allowed tools from each rule
+    # Get allowed tools from each rule - let rules handle used_tools filtering
     rule_results = [
         get_allowed_tools(rule, used_tools, all_tools)
         for rule in tool_rules
@@ -74,9 +74,9 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # First ensure strict intersection with all_tools and filter out used tools
+    # First ensure strict intersection with all_tools
     filtered_results = [
-        filter(t -> t ∈ all_tools && t ∉ used_tools, result)
+        filter(t -> t ∈ all_tools, result)
         for result in valid_results
     ]
 
@@ -163,25 +163,25 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
         return [valid_tools[1]]
     end
 
-    # Find the last used tool from our sequence
-    last_used_idx = nothing
-    for (i, tool) in enumerate(valid_tools)
-        if tool == used_tools[end]
-            last_used_idx = i
-            break
+    # Track through all used tools to find our position in the sequence
+    current_idx = 1
+    for used_tool in used_tools
+        # Find the used tool in our sequence
+        if used_tool ∈ valid_tools
+            idx = findfirst(==(used_tool), valid_tools)
+            if !isnothing(idx)
+                current_idx = idx + 1
+            end
         end
     end
 
-    # If the last used tool isn't in our sequence, start from beginning
-    # If it was the last tool in sequence, return empty (sequence complete)
-    if isnothing(last_used_idx)
-        return [valid_tools[1]]
-    elseif last_used_idx == length(valid_tools)
+    # If we've completed the sequence, return empty
+    if current_idx > length(valid_tools)
         return String[]
     end
 
     # Return the next tool in sequence
-    return [valid_tools[last_used_idx + 1]]
+    return [valid_tools[current_idx]]
 end
 
 """
