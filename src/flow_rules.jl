@@ -126,11 +126,17 @@ function FixedOrder(tool::Tool)
     FixedOrder(; order=[tool.name])
 end
 
-function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_tools::Vector{String})
+function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
     isempty(rule.order) && return all_tools
     used_set = Set(used_tools)
 
-    # Find the first tool in order that hasn't been used
+    # For vcat, return all remaining tools in order
+    if combine === vcat
+        # Filter tools that are in all_tools and haven't been used
+        return filter(t -> t ∈ all_tools && t ∉ used_set, rule.order)
+    end
+
+    # For other combine functions, return first unused tool
     for tool in rule.order
         if tool ∉ used_set && tool ∈ all_tools
             return [tool]
