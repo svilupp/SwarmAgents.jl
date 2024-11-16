@@ -102,8 +102,9 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         # Get allowed tools based on rules and used tools
         allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
 
-        # Create tools list, ensuring no duplicates
-        tools = unique([active_agent.tool_map[name] for name in allowed_names if haskey(active_agent.tool_map, name)])
+        # Create tools list from allowed names
+        tools = [active_agent.tool_map[name] for name in allowed_names if haskey(active_agent.tool_map, name)]
+        isempty(tools) && break  # Exit if no tools are available
 
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)

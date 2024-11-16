@@ -522,8 +522,8 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
 
         # Only include tool if all its prerequisites are in all_tools
         if all(prereq -> prereq ∈ all_tools, prereqs)
-            # Then check if all prerequisites have been used and tool hasn't been used
-            if (isempty(prereqs) || all(prereq -> prereq ∈ used_set, prereqs)) && tool ∉ used_set
+            # Then check if all prerequisites have been used
+            if isempty(prereqs) || all(prereq -> prereq ∈ used_set, prereqs)
                 push!(allowed, tool)
             end
         end
