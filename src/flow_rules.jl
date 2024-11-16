@@ -91,6 +91,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
             return collect(combined)
         end
     end
+end
 
 """
     FixedOrder <: AbstractToolFlowRules
