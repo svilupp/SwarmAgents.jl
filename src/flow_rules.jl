@@ -163,25 +163,23 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
         return [valid_tools[1]]
     end
 
-    # Track through all used tools to find our position in the sequence
-    current_idx = 1
-    for used_tool in used_tools
-        # Find the used tool in our sequence
-        if used_tool ∈ valid_tools
-            idx = findfirst(==(used_tool), valid_tools)
-            if !isnothing(idx)
-                current_idx = idx + 1
-            end
+    # Check that tools are used in sequence
+    # Find the position where sequence breaks or ends
+    sequence_pos = 0
+    for (i, expected_tool) in enumerate(valid_tools)
+        if i > length(used_tools) || used_tools[i] != expected_tool
+            break
         end
+        sequence_pos = i
     end
 
-    # If we've completed the sequence, return empty
-    if current_idx > length(valid_tools)
+    # If sequence is complete or broken, return empty
+    if sequence_pos == length(valid_tools)
         return String[]
     end
 
     # Return the next tool in sequence
-    return [valid_tools[current_idx]]
+    return [valid_tools[sequence_pos + 1]]
 end
 
 """
