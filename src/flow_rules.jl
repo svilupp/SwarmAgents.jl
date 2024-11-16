@@ -107,10 +107,6 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
 
     # Filter out used tools after combining results
     filter(t -> t ∉ used_tools, combined)
-end
-
-    return combined
-end
 
 """
     FixedOrder <: AbstractToolFlowRules
