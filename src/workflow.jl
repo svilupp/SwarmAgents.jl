@@ -1,7 +1,7 @@
 """
     handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage}, session::Session)
 
-Handle tool calls for an agent.
+Handle tool calls for an agent. Tools are executed directly using the agent's tool_map.
 """
 function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage}, session::Session)
     last_msg = PT.last_message(history)
@@ -17,19 +17,8 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         name, args = tool.name, tool.args
         print_progress(session.io, active_agent, tool)
 
-        # Check if tool exists in agent's tool_map or session rules
-        tool_impl = get(active_agent.tool_map, name, nothing)
-        if isnothing(tool_impl)
-            # Check if tool is allowed by any FixedOrder rule
-            rule_with_tool = findfirst(r -> r isa AbstractToolFlowRules && name ∈ r.order, session.rules)
-            isnothing(rule_with_tool) && error("Tool $name not found in agent $(active_agent.name)'s tool map or session rules.")
-            # Create a Tool instance for the found tool with required parameters
-            callable = getproperty(Main, Symbol(name))
-            tool_impl = Tool(; name=name, parameters=Dict{String,Any}(), description="Tool from flow rules", strict=false, callable=callable)
-        end
-
-        # Execute tool
-        output = PT.execute_tool(Dict(name => tool_impl), tool, session.context)
+        # Execute tool directly using agent's tool_map
+        output = PT.execute_tool(active_agent.tool_map, tool, session.context)
         push!(session.artifacts, output)
 
         ## Changing the agent
