@@ -1,8 +1,8 @@
 # SwarmAgents.jl
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://svilupp.github.io/SwarmAgents.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://svilupp.github.io/SwarmAgents.jl/dev/) 
-[![Build Status](https://github.com/svilupp/SwarmAgents.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/svilupp/SwarmAgents.jl/actions/workflows/CI.yml?query=branch%3Amain) 
-[![Coverage](https://codecov.io/gh/svilupp/SwarmAgents.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/svilupp/SwarmAgents.jl) 
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://svilupp.github.io/SwarmAgents.jl/stable/) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://svilupp.github.io/SwarmAgents.jl/dev/)
+[![Build Status](https://github.com/svilupp/SwarmAgents.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/svilupp/SwarmAgents.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/svilupp/SwarmAgents.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/svilupp/SwarmAgents.jl)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 # ⚠️ Experimental Package ⚠️
@@ -186,9 +186,18 @@ checks = [
     TerminationRepeatCheck(5),    # Detect 5 consecutive uses of the same tool
     TerminationGenericCheck((h, a) -> length(h) > 10 ? nothing : a)  # Custom check
 ]
+
+# Using FixedOrder for individual tools or tool sequences
+tool_rules = [
+    FixedOrder(Tool(my_tool)),  # Single tool always available
+    FixedOrder(order=["tool1", "tool2"]),  # Sequence of tools
+]
 ```
 
-**Important Note**: Flow rules and termination checks operate on the complete message history, ignoring PrivateMessage visibility restrictions. This ensures proper flow control even when some messages are private.
+**Important Notes**:
+- Flow rules and termination checks operate on the complete message history, ignoring PrivateMessage visibility restrictions. This ensures proper flow control even when some messages are private.
+- When using individual tools, wrap them with `FixedOrder(tool)` to make them always available in the tool sequence.
+- Tool execution is handled directly through the agent's tool_map, ensuring efficient and straightforward tool access.
 
 See `examples/flow_rules_example.jl` for flow control examples.
 
