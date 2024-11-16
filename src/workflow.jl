@@ -24,6 +24,8 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         catch e
             if e isa PT.ToolNotFoundError
                 output = e
+                # Preserve the tool name in the error message
+                tool.name = name
             else
                 rethrow(e)
             end
@@ -104,7 +106,6 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
 
         # Create tools list from allowed names
         tools = [active_agent.tool_map[name] for name in allowed_names if haskey(active_agent.tool_map, name)]
-        isempty(tools) && break  # Exit if no tools are available
 
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)
