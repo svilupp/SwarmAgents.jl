@@ -138,16 +138,16 @@ using JSON3
         tool5 = Tool(func5)
         add_rules!(session, FixedOrder(tool5))
 
-        # Mock aitools to verify tool objects
-        original_aitools = PT.aitools
-        try
-            tools_passed = Tool[]
-            PT.aitools = function(args...; kwargs...)
-                tools_passed = kwargs[:tools]
-                original_aitools(args...; kwargs...)
-            end
+        # Test with tools verification using a mock function
+        tools_passed = Tool[]
+        mock_aitools = function(args...; kwargs...)
+            tools_passed = kwargs[:tools]
+            original_aitools(args...; kwargs...)
+        end
 
-            response = run_full_turn(agent, messages, session; max_turns = 1)
+        # Use let block for local scope
+        let
+            response = run_full_turn(agent, messages, session; max_turns = 1, aitools_override=mock_aitools)
             @test response isa Response
             @test !isempty(response.messages)
             @test response.messages[end].name == "func1"
@@ -155,8 +155,6 @@ using JSON3
             # Verify we're passing Tool objects
             @test all(t -> t isa Tool, tools_passed)
             @test tools_passed[1] === agent.tool_map["func1"]
-        finally
-            PT.aitools = original_aitools
         end
 
         # Test with custom io

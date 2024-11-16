@@ -18,7 +18,16 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         print_progress(session.io, active_agent, tool)
 
         # Execute tool directly using agent's tool_map
-        output = PT.execute_tool(active_agent.tool_map, tool, session.context)
+        local output
+        try
+            output = PT.execute_tool(active_agent.tool_map, tool, session.context)
+        catch e
+            if e isa PT.ToolNotFoundError
+                output = e
+            else
+                rethrow(e)
+            end
+        end
         push!(session.artifacts, output)
 
         ## Changing the agent
@@ -98,7 +107,8 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         update_system_message!(filtered_history, active_agent)
 
         # Get AI response using filtered history and tools from tool_map
-        response = PT.aitools(filtered_history;
+        aitools_fn = get(kwargs, :aitools_override, PT.aitools)
+        response = aitools_fn(filtered_history;
             model = active_agent.model,
             tools = [active_agent.tool_map[name] for name in allowed_names],
             name_user = "User",
