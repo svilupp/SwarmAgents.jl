@@ -73,11 +73,20 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         # Filter out empty results
         valid_fixed_results = filter(!isempty, fixed_order_results)
 
-        # If any FixedOrder rule returns tools, use only those tools
+        # If any FixedOrder rule returns tools, combine their results
         if !isempty(valid_fixed_results)
-            # Take the first non-empty result from FixedOrder rules
-            # This maintains strict sequencing
-            return first(valid_fixed_results)
+            # For union/vcat, maintain order while deduplicating
+            seen = Set{String}()
+            result = String[]
+            for tools in valid_fixed_results
+                for tool in tools
+                    if tool ∉ seen && tool ∈ all_tools
+                        push!(seen, tool)
+                        push!(result, tool)
+                    end
+                end
+            end
+            return result
         end
     end
 
