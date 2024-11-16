@@ -69,12 +69,12 @@ using Test
         history = PT.AbstractMessage[
             PT.UserMessage("Start"),
             PrivateMessage(
-                ToolMessage("output", nothing, "auth", "auth", Dict(), "auth", :default),
+                PT.AIToolRequest(tool_calls=[ToolMessage("output", nothing, "auth", "auth", Dict(), "auth", :default)]),
                 ["Agent1"]
             ),
-            ToolMessage("output", nothing, "public", "public", Dict(), "public", :default),
+            PT.AIToolRequest(tool_calls=[ToolMessage("output", nothing, "public", "public", Dict(), "public", :default)]),
             PrivateMessage(
-                ToolMessage("output", nothing, "private", "private", Dict(), "private", :default),
+                PT.AIToolRequest(tool_calls=[ToolMessage("output", nothing, "private", "private", Dict(), "private", :default)]),
                 ["Agent2"]
             )
         ]
@@ -122,8 +122,8 @@ using Test
         @test is_visible(private_assistant, Agent(name="OtherAgent", private=false))
 
         # Test agent handoff visibility
-        tool_msg = ToolMessage("test", nothing, "id", "id", Dict{Symbol,Any}(), "test", :default)
-        handoff_msg = maybe_private_message(tool_msg, agent; last_turn=true)
+        tool_request = PT.AIToolRequest(tool_calls=[ToolMessage("test", nothing, "id", "id", Dict{Symbol,Any}(), "test", :default)])
+        handoff_msg = maybe_private_message(tool_request, agent; last_turn=true)
         @test is_visible(handoff_msg, Agent(name="NextAgent", private=true))
     end
 end
