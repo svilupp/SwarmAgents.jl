@@ -513,7 +513,3 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
 
     return allowed
 end
-
-    # Return the allowed tools (already strictly within all_tools)
-    return allowed
-end
