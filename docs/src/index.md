@@ -57,56 +57,68 @@ Flow rules control how tools are executed in your agent system. They determine w
 
 ### Flow Rule Types
 
-SwarmAgents supports different types of flow rules:
-- `AbstractToolFlowRules`: Base type for all tool-related flow rules
-- `FixedOrder`: Controls tool execution order (replaces deprecated ToolFlowRules)
-- `FixedPrerequisites`: Enforces tool prerequisites (coming soon)
+SwarmAgents supports different types of flow rules that inherit from `AbstractToolFlowRules`:
+- `FixedOrder`: Controls tool execution order, allowing you to specify a sequence of tools to be executed
+- `FixedPrerequisites`: Enforces tool prerequisites, ensuring tools are only available after their prerequisites are met
 
-Note: The `ToolFlowRules` type has been removed in favor of using `FixedOrder` directly, which provides clearer semantics and better control over tool execution order.
+Both `FixedOrder` and `FixedPrerequisites` are subtypes of `AbstractToolFlowRules`, providing consistent behavior for tool filtering and execution control.
 
 ### Tool Execution Order
 
-You can control tool execution using `FixedOrder`:
+You can control tool execution using either `FixedOrder` or `FixedPrerequisites`:
 
 ```julia
-# Make a single tool always available (first in cycle)
+# Make a single tool always available
 agent = Agent(name="MyAgent", instructions="Test agent")
 add_tools!(agent, my_tool)
-add_rules!(session, FixedOrder(my_tool))  # Convenience constructor for single tool
+session = Session(agent)
+add_rules!(session, FixedOrder([string(my_tool.name)]))  # Use tool name as string
 
 # Control execution order of multiple tools
-tools = [tool1, tool2, tool3]
-rules = [FixedOrder(tool) for tool in tools]  # Broadcast FixedOrder over tools
-add_rules!(session, rules)  # Add rules to enforce tool order
+tools = ["tool1", "tool2", "tool3"]
+rules = [FixedOrder(tools)]  # Specify complete tool sequence
+add_rules!(session, rules)
+
+# Use prerequisites to control tool availability
+prereqs = Dict("analyze" => ["search"], "summarize" => ["search", "analyze"])
+add_rules!(session, FixedPrerequisites(prerequisites=prereqs))
 ```
 
 ### Tool Filtering and Combination
 
-The `run_full_turn` function supports controlling how tools from multiple rules are combined:
+The `get_allowed_tools` function determines which tools are available based on your flow rules. When multiple rules are present, you can control how their results are combined:
 
 ```julia
-# Default behavior uses union (removes duplicates)
+# Default behavior uses union (OR behavior, removes duplicates)
 response = run_full_turn(agent, messages, session)
 
-# Use vcat to preserve tool order and duplicates (recommended for sequential tool execution)
+# Use vcat to preserve tool order and duplicates
 response = run_full_turn(agent, messages, session; combine=vcat)
 ```
 
-Why use `vcat`? When you have multiple rules that might reference the same tool in different positions, `vcat` preserves both the order and duplicates, ensuring tools execute in the exact sequence you specified. For example:
+Why use different combine functions?
+- `union` (default): Combines tools from all rules with OR behavior, removing duplicates
+- `vcat`: Preserves exact tool sequence and duplicates, useful for complex workflows
 
+Example with multiple rules:
 ```julia
-# Create rules that use the same tool in different positions
+# Create rules that use tools in different sequences
 rules = [
     FixedOrder(["validate", "process"]),      # First sequence
     FixedOrder(["process", "validate"])       # Second sequence
 ]
 
-# With union (default), you lose the intended sequence:
+# With union (default), you get unique tools:
 # get_allowed_tools(rules, [], all_tools) → ["validate", "process"]
 
 # With vcat, you preserve the exact sequence:
 # get_allowed_tools(rules, [], all_tools; combine=vcat) → ["validate", "process", "process", "validate"]
 ```
+
+Tools can return any arbitrary struct as output. The system will:
+1. Use the `:output` property if available
+2. Convert to string if it's already a string
+3. Use the `show` method for any other type
 
 ### Tool Availability Rules
 
