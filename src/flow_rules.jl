@@ -426,11 +426,13 @@ function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Un
     for msg in history
         # First check if it's a PrivateMessage and get the underlying message
         actual_msg = msg isa PrivateMessage ? msg.object : msg
-        # Only scan AIToolRequests and extract tool_calls
+        # Extract tool names from both AIToolRequest and ToolMessage
         if actual_msg isa PT.AIToolRequest
             for tool_call in actual_msg.tool_calls
                 push!(tools, tool_call.name)
             end
+        elseif PT.istoolmessage(actual_msg)
+            push!(tools, actual_msg.name)
         end
     end
     unique!(tools)
