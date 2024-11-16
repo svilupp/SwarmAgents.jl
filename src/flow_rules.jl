@@ -158,23 +158,28 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
     valid_tools = filter(t -> t ∈ all_tools, rule.order)
     isempty(valid_tools) && return String[]
 
-    # For all combine functions, maintain sequential behavior
+    # If no tools have been used, start with the first valid tool
     if isempty(used_tools)
-        return [valid_tools[1]]  # Start with first valid tool
+        return [valid_tools[1]]
     end
 
-    # Get the last used tool and find its position in valid_tools
-    last_used = used_tools[end]
-    idx = findfirst(==(last_used), valid_tools)
-
-    if isnothing(idx)
-        # If last used tool not in sequence, start over
-        return [valid_tools[1]]  # Always start from beginning if sequence is broken
-    else
-        # Return next tool in sequence if it exists
-        next_idx = idx + 1
-        return next_idx <= length(valid_tools) ? [valid_tools[next_idx]] : String[]
+    # Find the last used tool from our sequence
+    last_used_idx = nothing
+    for (i, tool) in enumerate(valid_tools)
+        if tool == used_tools[end]
+            last_used_idx = i
+            break
+        end
     end
+
+    # If the last used tool isn't in our sequence or was the last tool,
+    # start over from the beginning
+    if isnothing(last_used_idx) || last_used_idx == length(valid_tools)
+        return [valid_tools[1]]
+    end
+
+    # Return the next tool in sequence
+    return [valid_tools[last_used_idx + 1]]
 end
 
 """
