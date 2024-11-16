@@ -24,7 +24,7 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
             rule_with_tool = findfirst(r -> r isa AbstractToolFlowRules && name ∈ r.order, session.rules)
             isnothing(rule_with_tool) && error("Tool $name not found in agent $(active_agent.name)'s tool map or session rules.")
             # Create a Tool instance for the found tool with required parameters
-            tool_impl = Tool(; name=name, parameters=Dict{String,Any}(), description="Tool from flow rules", strict=false, callable=nothing)
+            tool_impl = Tool(; name=name, parameters=Dict{String,Any}(), description="Tool from flow rules", strict=false, callable=(args...; kwargs...) -> "Using tool: $name")
         end
 
         # Execute tool

@@ -61,7 +61,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     isempty(tool_rules) && return all_tools
 
     # Get allowed tools from each rule
-    rule_results = [get_allowed_tools(rule, used_tools, all_tools) for rule in tool_rules]
+    rule_results = [get_allowed_tools(rule, used_tools, all_tools; combine=combine) for rule in tool_rules]
 
     # Filter out empty results
     valid_results = filter(!isempty, rule_results)
@@ -71,10 +71,10 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
 
     # Combine results using the specified function
     if combine === vcat
-        # For vcat, maintain order and duplicates
+        # For vcat, maintain order and duplicates from each rule
+        # First concatenate all results, then filter against all_tools
         combined = reduce(vcat, valid_results)
         # Filter against all_tools but preserve order and duplicates
-        # Create a Set for O(1) lookup but don't use it for the final result
         allowed_set = Set(all_tools)
         return filter(t -> t ∈ allowed_set, combined)
     else
