@@ -76,6 +76,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         # If any FixedOrder rule returns tools, use only those tools
         if !isempty(valid_fixed_results)
             # Take the first non-empty result from FixedOrder rules
+            # This maintains strict sequencing
             return first(valid_fixed_results)
         end
     end
