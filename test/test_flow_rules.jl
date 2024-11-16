@@ -240,3 +240,4 @@ using SwarmAgents: PrivateMessage
         history = [PT.UserMessage("test")]
         @test isempty(get_used_tools(history))
     end
+end
