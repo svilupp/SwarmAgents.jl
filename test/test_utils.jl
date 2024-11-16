@@ -3,6 +3,9 @@ using SwarmAgents
 using PromptingTools
 using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
 
+# Include shared test utilities
+include("shared_test_utils.jl")
+
 @testset "Utilities" begin
     @testset "scrub_agent_name" begin
         agent = Agent(name = "Test Agent", model = "gpt-3.5-turbo")
@@ -44,5 +47,34 @@ using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
         print_progress(io, agent, msg)
         output = String(take!(io))
         @test contains(output, "Tool response: output")
+    end
+
+    @testset "tool_output" begin
+        # Create test structs
+        test_struct = TestStructWithOutput("test output", 42)
+        test_struct_no_output = TestStructNoOutput("42")  # Changed to use String
+        test_struct_custom = TestStructCustomOutput("custom data")
+
+        # Test string passthrough
+        @test tool_output("direct string") == "direct string"
+
+        # Test struct with output property
+        @test tool_output(test_struct) == "test output"
+
+        # Test struct without output property (uses show method)
+        output = tool_output(test_struct_no_output)
+        @test contains(output, "42")
+        @test contains(output, "TestStructNoOutput")
+
+        # Test custom tool_output method
+        @test tool_output(test_struct_custom) == "Custom: custom data"
+
+        # Test other types (using show method)
+        @test tool_output(42) == "42"
+        @test tool_output([1, 2, 3]) == "[1, 2, 3]"
+
+        # Test Dict type
+        test_dict = Dict("key" => "value")
+        @test tool_output(test_dict) == "Dict(\"key\" => \"value\")"
     end
 end

@@ -2,7 +2,6 @@ using Test
 using SwarmAgents
 using PromptingTools
 using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
-using SwarmAgents: ToolFlowRules
 import Base.Logging
 
 # Define test utility functions at module level
@@ -95,16 +94,16 @@ func2() = nothing
         @test session.agent === agent
 
         # Test session rules management
-        flow_rules = [ToolFlowRules(Tool(func1)), ToolFlowRules(Tool(func2))]
+        tools = [Tool(func1), Tool(func2)]
+        tool_rules = [FixedOrder(tool) for tool in tools]
 
-        add_rules!(session, flow_rules)
+        add_rules!(session, tool_rules)
         @test length(session.rules) == 2
-        @test haskey(session.rules, "func1")
-        @test haskey(session.rules, "func2")
-        @test session.rules["func1"] isa ToolFlowRules
-        @test session.rules["func2"] isa ToolFlowRules
+        @test any(r -> r isa FixedOrder && r.order == ["func1"], session.rules)
+        @test any(r -> r isa FixedOrder && r.order == ["func2"], session.rules)
 
-        # Test error on duplicate rule
-        @test_logs (:warn, "Overwriting existing rule 'func1' in session rules") add_rules!(session, ToolFlowRules(Tool(func1)))
+        # Test adding duplicate rule (should append)
+        add_rules!(session, FixedOrder(Tool(func1)))
+        @test length(session.rules) == 3
     end
 end

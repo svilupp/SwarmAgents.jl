@@ -32,11 +32,13 @@ Container for the results of a workflow operation.
 - `messages::Vector{<:PT.AbstractMessage}`: New messages generated during the operation
 - `agent::Union{AbstractAgent, Nothing}`: The resulting agent state
 - `context::Dict{Symbol, Any}`: The resulting context state
+- `tools_used::Vector{AbstractTool}`: Tools used during the operation
 """
 Base.@kwdef struct Response
     messages::Vector{<:PT.AbstractMessage} = PT.AbstractMessage[]
     agent::Union{AbstractAgent, Nothing} = nothing
     context::Dict{Symbol, Any} = Dict{Symbol, Any}()
+    tools_used::Vector{AbstractTool} = AbstractTool[]
 end
 
 """
@@ -74,7 +76,7 @@ Main container for managing agent interactions and state.
 - `context::Dict{Symbol, Any}`: Context variables
 - `artifacts::Vector{Any}`: Tool outputs
 - `io::Union{Nothing,IO}`: Output stream
-- `rules::Dict{String, AbstractFlowRules}`: Session rules
+- `rules::Vector{AbstractFlowRules}`: Session rules
 - `agent_map::Dict{Symbol, <:AbstractAgent}`: Agent reference map
 """
 Base.@kwdef mutable struct Session
@@ -83,13 +85,13 @@ Base.@kwdef mutable struct Session
     context::Dict{Symbol, Any} = Dict{Symbol, Any}()
     artifacts::Vector{Any} = Any[]
     io::Union{Nothing,IO} = stdout
-    rules::Dict{String, AbstractFlowRules} = Dict{String, AbstractFlowRules}()
+    rules::Vector{AbstractFlowRules} = AbstractFlowRules[]
     agent_map::Dict{Symbol, <:AbstractAgent} = Dict{Symbol, AbstractAgent}()
 end
 
 # Constructor for Session with agent
 Session(agent::AbstractAgent; io::Union{Nothing,IO}=stdout, context::Dict{Symbol,Any}=Dict{Symbol,Any}()) =
-    Session(PT.AbstractMessage[], agent, context, Any[], io, Dict{String,AbstractFlowRules}(), Dict{Symbol,AbstractAgent}())
+    Session(PT.AbstractMessage[], agent, context, Any[], io, AbstractFlowRules[], Dict{Symbol,AbstractAgent}())
 
 # Show methods
 function Base.show(io::IO, t::AbstractAgent)

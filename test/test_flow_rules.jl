@@ -2,7 +2,7 @@ using Test
 using SwarmAgents
 using PromptingTools
 using PromptingTools: ToolMessage, UserMessage, AIMessage, Tool
-using SwarmAgents: ToolFlowRules, PrivateMessage
+using SwarmAgents: PrivateMessage
 
 @testset "Flow Rules" begin
     @testset "TerminationCycleCheck" begin
@@ -13,8 +13,8 @@ using SwarmAgents: ToolFlowRules, PrivateMessage
         check = TerminationCycleCheck(3, 3)
         history = []
 
-        # Create repeating cycle
-        tool_sequence = ["tool1", "tool2", "tool3"]
+        # Create repeating cycle with generic tool names
+        tool_sequence = ["tool_a", "tool_b", "tool_c"]
         for _ in 1:3, tool in tool_sequence
             push!(history, ToolMessage("", nothing, "id", "id", Dict(), tool, :default))
         end
@@ -80,8 +80,8 @@ using SwarmAgents: ToolFlowRules, PrivateMessage
 
         # Test cycle termination
         for _ in 1:2
-            push!(history, ToolMessage("", nothing, "id", "id", Dict(), "tool1", :default))
-            push!(history, ToolMessage("", nothing, "id", "id", Dict(), "tool2", :default))
+            push!(history, ToolMessage("", nothing, "id", "id", Dict(), "tool_a", :default))
+            push!(history, ToolMessage("", nothing, "id", "id", Dict(), "tool_b", :default))
         end
         @test isnothing(run_termination_checks(history, agent, io, checks))
 
@@ -93,85 +93,145 @@ using SwarmAgents: ToolFlowRules, PrivateMessage
     @testset "FixedOrder" begin
         # Create a session with tools
         session = Session()
-        tool1 = Tool(name="tool1", parameters=Dict(), description="Test tool 1", strict=false, callable=identity)
-        tool2 = Tool(name="tool2", parameters=Dict(), description="Test tool 2", strict=false, callable=identity)
-        tool3 = Tool(name="tool3", parameters=Dict(), description="Test tool 3", strict=false, callable=identity)
+        tool_a = Tool(name="tool_a", parameters=Dict(), description="Test tool A", strict=false, callable=identity)
+        tool_b = Tool(name="tool_b", parameters=Dict(), description="Test tool B", strict=false, callable=identity)
+        tool_c = Tool(name="tool_c", parameters=Dict(), description="Test tool C", strict=false, callable=identity)
+        all_tools = ["tool_a", "tool_b", "tool_c"]
 
         # Create FixedOrder rule with keyword constructor
-        rule = FixedOrder(order=[:tool1, :tool2, :tool3])
+        rule = FixedOrder(order=["tool_a", "tool_b", "tool_c"])
         add_rules!(session, rule)
+        @test length(session.rules) == 1
+        @test session.rules[1] === rule
 
         # Test initial state (only first tool allowed)
         history = PT.AbstractMessage[]
-        tools = [tool1, tool2, tool3]
-        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
+        @test get_allowed_tools(rule, String[], all_tools) == ["tool_a"]
 
         # Test after using first tool
-        push!(history, AIMessage(content="Using tool tool1"))
-        @test get_allowed_tools(rule, [:tool1]) == ["tool2"]
+        push!(history, AIMessage(content="Using tool tool_a"))
+        @test get_allowed_tools(rule, ["tool_a"], all_tools) == ["tool_b"]
 
         # Test after using all tools
-        @test isempty(get_allowed_tools(rule, [:tool1, :tool2, :tool3]))
+        @test isempty(get_allowed_tools(rule, ["tool_a", "tool_b", "tool_c"], all_tools))
+
+        # Test passthrough when no order defined
+        empty_rule = FixedOrder()
+        @test get_allowed_tools(empty_rule, String[], all_tools) == all_tools
     end
 
     @testset "FixedPrerequisites" begin
         # Create a session with tools
         session = Session()
-        tool1 = Tool(name="tool1", parameters=Dict(), description="Test tool 1", strict=false, callable=identity)
-        tool2 = Tool(name="tool2", parameters=Dict(), description="Test tool 2", strict=false, callable=identity)
-        tool3 = Tool(name="tool3", parameters=Dict(), description="Test tool 3", strict=false, callable=identity)
+        tool_a = Tool(name="tool_a", parameters=Dict(), description="Test tool A", strict=false, callable=identity)
+        tool_b = Tool(name="tool_b", parameters=Dict(), description="Test tool B", strict=false, callable=identity)
+        tool_c = Tool(name="tool_c", parameters=Dict(), description="Test tool C", strict=false, callable=identity)
+        all_tools = ["tool_a", "tool_b", "tool_c"]
 
         # Create FixedPrerequisites rule with explicit prerequisites
-        prereqs = Dict(:tool2 => [:tool1], :tool3 => [:tool1, :tool2])
+        prereqs = Dict("tool_b" => ["tool_a"], "tool_c" => ["tool_a", "tool_b"])
         rule = FixedPrerequisites(prerequisites=prereqs)
         add_rules!(session, rule)
+        @test length(session.rules) == 1
+        @test session.rules[1] === rule
 
-        # Test initial state (only tool1 allowed)
-        @test get_allowed_tools(rule, Symbol[]) == ["tool1"]
+        # Test initial state (tool_a and any unrestricted tools allowed)
+        @test Set(get_allowed_tools(rule, String[], all_tools)) == Set(["tool_a"])
 
         # Test after using first tool (first and second allowed)
-        @test Set(get_allowed_tools(rule, [:tool1])) == Set(["tool1", "tool2"])
+        @test Set(get_allowed_tools(rule, ["tool_a"], all_tools)) == Set(["tool_a", "tool_b"])
 
         # Test after using first and second tools (all tools allowed)
-        @test Set(get_allowed_tools(rule, [:tool1, :tool2])) == Set(["tool1", "tool2", "tool3"])
+        @test Set(get_allowed_tools(rule, ["tool_a", "tool_b"], all_tools)) == Set(["tool_a", "tool_b", "tool_c"])
+
+        # Test passthrough when no prerequisites defined
+        empty_rule = FixedPrerequisites()
+        @test get_allowed_tools(empty_rule, String[], all_tools) == all_tools
     end
 
     @testset "Multiple Rules" begin
         # Create a session with tools
         session = Session()
-        tool1 = Tool(name="tool1", parameters=Dict(), description="Test tool 1", strict=false, callable=identity)
-        tool2 = Tool(name="tool2", parameters=Dict(), description="Test tool 2", strict=false, callable=identity)
-        tool3 = Tool(name="tool3", parameters=Dict(), description="Test tool 3", strict=false, callable=identity)
+        tool_a = Tool(name="tool_a", parameters=Dict(), description="Test tool A", strict=false, callable=identity)
+        tool_b = Tool(name="tool_b", parameters=Dict(), description="Test tool B", strict=false, callable=identity)
+        tool_c = Tool(name="tool_c", parameters=Dict(), description="Test tool C", strict=false, callable=identity)
+        all_tools = ["tool_a", "tool_b", "tool_c"]
 
         # Add both types of rules
-        fixed_order = FixedOrder(order=[:tool1, :tool2])
-        prereqs = Dict(:tool2 => [:tool1], :tool3 => [:tool1, :tool2])
+        fixed_order = FixedOrder(order=["tool_a", "tool_b"])
+        prereqs = Dict("tool_b" => ["tool_a"], "tool_c" => ["tool_a", "tool_b"])
         prerequisites = FixedPrerequisites(prerequisites=prereqs)
 
-        # Test combining rules
-        used_tools = Symbol[]
-        allowed = get_allowed_tools([fixed_order, prerequisites], used_tools)
-        @test allowed == ["tool1"] # tool1 is first in order and has no prerequisites
+        # Add rules to session
+        add_rules!(session, [fixed_order, prerequisites])
+        @test length(session.rules) == 2
+        @test session.rules[1] === fixed_order
+        @test session.rules[2] === prerequisites
 
-        # Test after using tool1
-        used_tools = [:tool1]
-        allowed = get_allowed_tools([fixed_order, prerequisites], used_tools)
-        @test allowed == ["tool2"] # tool2 is next in fixed_order and allowed by prerequisites
+        # Test combining rules with union (default)
+        used_tools = String[]
+        allowed = get_allowed_tools(session.rules, used_tools, all_tools)
+        @test allowed == ["tool_a"] # tool_a is first in order and has no prerequisites
 
-        # Test with vcat
-        used_tools = Symbol[]
-        allowed = get_allowed_tools([fixed_order, prerequisites], used_tools; combine=vcat)
-        @test Set(allowed) == Set(["tool1"]) # tool1 is first in both rules
+        # Test after using tool_a
+        used_tools = ["tool_a"]
+        allowed = get_allowed_tools(session.rules, used_tools, all_tools)
+        @test allowed == ["tool_b"] # tool_b is next in fixed_order and allowed by prerequisites
+
+        # Test with vcat (should deduplicate like union)
+        used_tools = ["tool_a"]
+        allowed = get_allowed_tools(session.rules, used_tools, all_tools; combine=vcat)
+        @test allowed == ["tool_b"] # Should be same as union, deduplicated
+
+        # Test with intersect
+        used_tools = String[]
+        allowed = get_allowed_tools(session.rules, used_tools, all_tools; combine=intersect)
+        @test Set(allowed) == Set(["tool_a"]) # tool_a is first in both rules
+
+        # Test passthrough when no tool rules present
+        termination_rule = TerminationCycleCheck(2, 2)
+        @test get_allowed_tools([termination_rule], used_tools, all_tools) == all_tools
+
+        # Test deduplication with duplicate tools in input
+        duplicate_tools = ["tool_a", "tool_b", "tool_a", "tool_c", "tool_b"]
+        @test length(get_allowed_tools(session.rules, duplicate_tools, all_tools)) == length(unique(duplicate_tools))
+
+        # Test strict intersection with all_tools
+        @testset "Strict intersection with all_tools" begin
+            # Test FixedOrder with tools not in all_tools
+            extended_order = FixedOrder(order=["tool_a", "tool_d", "tool_b"])
+            @test get_allowed_tools(extended_order, String[], all_tools) == ["tool_a"]
+            @test get_allowed_tools(extended_order, ["tool_a"], all_tools) == ["tool_b"]
+
+            # Test FixedPrerequisites with tools not in all_tools
+            extended_prereqs = Dict(
+                "tool_b" => ["tool_a"],
+                "tool_d" => ["tool_a"],  # tool_d not in all_tools
+                "tool_c" => ["tool_a", "tool_d"]  # requires non-existent tool
+            )
+            prereq_rule = FixedPrerequisites(prerequisites=extended_prereqs)
+
+            # Initial state should only show tool_a
+            @test Set(get_allowed_tools(prereq_rule, String[], all_tools)) == Set(["tool_a"])
+
+            # After tool_a, only tool_b should be available (tool_d is not in all_tools)
+            @test Set(get_allowed_tools(prereq_rule, ["tool_a"], all_tools)) == Set(["tool_a", "tool_b"])
+
+            # tool_c should never be available as its prerequisite tool_d isn't in all_tools
+            @test Set(get_allowed_tools(prereq_rule, ["tool_a", "tool_b"], all_tools)) == Set(["tool_a", "tool_b"])
+        end
     end
 
     @testset "get_used_tools" begin
-        # Create history with tool usage
+        # Create history with tool usage via AIToolRequests
         history = PT.AbstractMessage[]
-        push!(history, AIMessage(content="Using tool tool1"))
-        push!(history, AIMessage(content="Using tool tool2"))
+        push!(history, PT.AIToolRequest(tool_calls = [ToolMessage(;
+            tool_call_id = "1", raw = "{}", name = "tool_a", args = Dict())]))
+        push!(history, PT.AIToolRequest(tool_calls = [ToolMessage(;
+            tool_call_id = "2", raw = "{}", name = "tool_b", args = Dict())]))
 
         used_tools = get_used_tools(history)
-        @test used_tools == [:tool1, :tool2]
+        @test used_tools == ["tool_a", "tool_b"]
 
         # Test empty history
         @test isempty(get_used_tools(PT.AbstractMessage[]))

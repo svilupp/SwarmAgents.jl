@@ -69,26 +69,26 @@ using Test
         history = PT.AbstractMessage[
             PT.UserMessage("Start"),
             PrivateMessage(
-                ToolMessage("output", nothing, "auth", "auth", Dict(), "auth", :default),
+                PT.AIToolRequest(tool_calls=[ToolMessage("output", nothing, "auth", "auth", Dict(), "auth", :default)]),
                 ["Agent1"]
             ),
-            ToolMessage("output", nothing, "public", "public", Dict(), "public", :default),
+            PT.AIToolRequest(tool_calls=[ToolMessage("output", nothing, "public", "public", Dict(), "public", :default)]),
             PrivateMessage(
-                ToolMessage("output", nothing, "private", "private", Dict(), "private", :default),
+                PT.AIToolRequest(tool_calls=[ToolMessage("output", nothing, "private", "private", Dict(), "private", :default)]),
                 ["Agent2"]
             )
         ]
 
         # Test get_used_tools ignores privacy settings (important for flow control and auth state)
         tools1 = get_used_tools(history, agent1)
-        @test Set(tools1) == Set([:auth, :private, :public])  # Should see all tools
+        @test Set(tools1) == Set(["auth", "private", "public"])  # Should see all tools
 
         tools2 = get_used_tools(history, agent2)
-        @test Set(tools2) == Set([:auth, :private, :public])  # Should see all tools
+        @test Set(tools2) == Set(["auth", "private", "public"])  # Should see all tools
 
         # Test get_used_tools without agent
         tools_all = get_used_tools(history)
-        @test Set(tools_all) == Set([:auth, :private, :public])  # Should see all tools
+        @test Set(tools_all) == Set(["auth", "private", "public"])  # Should see all tools
 
         # Verify that while tools are tracked, message visibility still respects privacy
         filtered_history = filter_history(history, agent1)
@@ -122,8 +122,8 @@ using Test
         @test is_visible(private_assistant, Agent(name="OtherAgent", private=false))
 
         # Test agent handoff visibility
-        tool_msg = ToolMessage("test", nothing, "id", "id", Dict{Symbol,Any}(), "test", :default)
-        handoff_msg = maybe_private_message(tool_msg, agent; last_turn=true)
+        tool_request = PT.AIToolRequest(tool_calls=[ToolMessage("test", nothing, "id", "id", Dict{Symbol,Any}(), "test", :default)])
+        handoff_msg = maybe_private_message(tool_request, agent; last_turn=true)
         @test is_visible(handoff_msg, Agent(name="NextAgent", private=true))
     end
 end

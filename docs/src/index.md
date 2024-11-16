@@ -51,6 +51,88 @@ A handoff occurs when one AI agent passes the conversation to another specialize
 
 Handoffs allow seamless transitions between different expertise areas, enhancing the overall interaction.
 
+## Flow Rules and Tool Control
+
+Flow rules control how tools are executed in your agent system. They determine which tools are available at any given time and in what order they should be executed.
+
+### Flow Rule Types
+
+SwarmAgents supports different types of flow rules that inherit from `AbstractToolFlowRules`:
+- `FixedOrder`: Controls tool execution order, allowing you to specify a sequence of tools to be executed
+- `FixedPrerequisites`: Enforces tool prerequisites, ensuring tools are only available after their prerequisites are met
+
+Both `FixedOrder` and `FixedPrerequisites` are subtypes of `AbstractToolFlowRules`, providing consistent behavior for tool filtering and execution control.
+
+### Tool Execution Order
+
+You can control tool execution using either `FixedOrder` or `FixedPrerequisites`:
+
+```julia
+# Make a single tool always available
+agent = Agent(name="MyAgent", instructions="Test agent")
+add_tools!(agent, my_tool)
+session = Session(agent)
+add_rules!(session, FixedOrder(string(my_tool.name)))  # Single tool wrapped in FixedOrder
+
+# Control execution order of multiple tools
+rules = [FixedOrder(["tool1", "tool2"]), FixedOrder(["tool3", "tool4"])]
+add_rules!(session, rules)  # Pass vector of rules directly
+```
+
+### Tool Filtering and Error Handling
+
+The `get_allowed_tools` function determines which tools are available based on your flow rules and ensures tools exist in the agent's tool map. If a requested tool is not found, a `ToolNotFoundError` will be raised:
+
+```julia
+# Tools must exist in agent's tool_map
+response = run_full_turn(agent, messages, session)
+# If a tool is not found, ToolNotFoundError is raised
+```
+
+### Tool Output Handling
+
+Tools can return any arbitrary struct as output. The system processes tool output in this order:
+1. If output is an AbstractString, use it directly
+2. Look for the `:output` property if available
+3. Use the `show` method for any other type
+
+To customize output handling for your structs, either:
+- Define an `:output` property that returns an AbstractString
+- Implement a custom `show` method for your type
+
+Example:
+```julia
+struct CustomTool
+    output::String
+end
+
+# Will automatically use the output property
+my_tool = CustomTool("Hello")
+
+# Or implement show method
+struct AnotherTool
+    data::Any
+end
+Base.show(io::IO, t::AnotherTool) = print(io, "Tool output: $(t.data)")
+```
+
+### Tool Availability and Deduplication
+
+Tools are filtered using `get_allowed_tools`, which:
+1. Ensures tools exist in agent's tool_map (all_tools argument)
+2. Removes duplicates while preserving order
+3. Applies flow rule constraints
+
+```julia
+# Get allowed tools based on rules and history
+allowed_tools = get_allowed_tools(session.rules, used_tools, all_tools)
+
+# Note: get_allowed_tools always deduplicates tools to ensure each tool
+# appears only once in the final sequence
+```
+
+If no rules are present, all agent tools are available (passthrough behavior).
+
 ## Usage
 
 ```julia
@@ -93,6 +175,5 @@ run_full_turn!(sess, "What do you mean?")
 >> Tool Output: {"assistant":"English Agent"}
 >> Assistant: You were speaking in Spanish, so I transferred you to a Spanish-speaking agent. How can I assist you in English today?
 ```
-
 
 See folder `examples/` for more examples.

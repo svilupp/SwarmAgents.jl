@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `add_transfers!` function to automatically create transfer tools between agents with handover messages
 
 ### Fixed
+- Simplified tool execution by removing ToolWrapper and tool_impl search, using agent's tool_map directly
+- Improved tool filtering with proper handling of duplicates in get_allowed_tools
 
 ## [0.2.0]
 

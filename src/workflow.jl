@@ -1,7 +1,7 @@
 """
     handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage}, session::Session)
 
-Handle tool calls for an agent.
+Handle tool calls for an agent. Tools are executed directly using the agent's tool_map.
 """
 function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::AbstractVector{<:PT.AbstractMessage}, session::Session)
     last_msg = PT.last_message(history)
@@ -16,18 +16,20 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         end
         name, args = tool.name, tool.args
         print_progress(session.io, active_agent, tool)
-        @assert name ∈ keys(active_agent.tool_map) || name ∈ keys(session.rules) "Tool $name not found in agent $(active_agent.name)'s tool map or session rules."
 
-        # Get tool from agent's tool_map or session rules
-        tool_impl = get(active_agent.tool_map, name, nothing)
-        if isnothing(tool_impl)
-            tool_impl = session.rules[name]
+        # Execute tool directly using agent's tool_map
+        local output
+        try
+            output = PT.execute_tool(active_agent.tool_map, tool, session.context)
+        catch e
+            if e isa PT.ToolNotFoundError
+                output = e
+                # Preserve the tool name in the error message
+                tool.name = name
+            else
+                rethrow(e)
+            end
         end
-
-        ## Execute tool and store full output in artifacts
-        # Extract the underlying tool if it's a ToolFlowRules
-        tool_impl = tool_impl isa ToolFlowRules ? tool_impl.tool : tool_impl
-        output = PT.execute_tool(Dict(name => tool_impl), tool, session.context)
         push!(session.artifacts, output)
 
         ## Changing the agent
@@ -43,10 +45,10 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
                 end
             end
         end
-        # Create a new ToolMessage with the output content and wrap if agent is private
-        output_msg = ToolMessage(string(output), nothing, tool.tool_call_id, tool.tool_call_id, Dict{Symbol,Any}(), tool.name, :default)
+        # Update the tool's content using our custom tool_output for proper string conversion of various output types
+        tool.content = tool_output(output)
         # Tool messages are private unless they're the last in a sequence (when next_agent changes)
-        output_msg = maybe_private_message(output_msg, active_agent; last_turn=(next_agent !== active_agent))
+        output_msg = maybe_private_message(tool, active_agent; last_turn=(next_agent !== active_agent))
         print_progress(session.io, active_agent, output_msg)
         push!(history, output_msg)
     end
@@ -69,29 +71,51 @@ function update_system_message!(history::AbstractVector{T}, active_agent::Union{
 end
 
 """
-    run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5)
+    run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5, combine::Function = vcat)
 
-Run a full turn of an agent (executes all tool calls).
+Run a full turn of an agent, executing all tool calls with proper tool filtering and termination checks.
+
+# Arguments
+- `agent::AbstractAgent`: The agent to run the turn for
+- `messages::AbstractVector{<:PT.AbstractMessage}`: Initial message history
+- `session::Session`: Session containing rules and context
+- `max_turns::Int = 5`: Maximum number of turns to execute
+- `combine::Function = vcat`: Function to combine results from multiple tool rules (must use vcat for multiple tools)
+
+# Notes
+- Tools are filtered using get_allowed_tools based on session rules
+- Available tools come from agent's tool_map
+- If no tool rules exist, all agent tools are available
+- Tool selection respects AbstractToolFlowRules filtering
+- For single tool usage, wrap tool in FixedOrder: FixedOrder(tool)
+- For multiple tools, use vcat as combine function to merge tool lists
+- Termination checks are run after each tool execution
 """
-function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5, kwargs...)
+function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.AbstractMessage}, session::Session; max_turns::Int = 5, combine::Function = vcat, kwargs...)
     active_agent = isabstractagentref(agent) ? find_agent(session.agent_map, agent) : agent
     history = deepcopy(messages)
     init_len = length(messages)
+    used_tools = String[]
+    tools_used = Tool[]  # Track actual Tool objects used
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
-        # Combine tools from agent and session, ensuring we only have Tool objects
-        agent_tools = collect(values(active_agent.tool_map))
-        session_tools = [rule isa ToolFlowRules ? rule.tool : rule for rule in values(session.rules) if rule isa Union{Tool, ToolFlowRules}]
-        tools = vcat(agent_tools, session_tools)
+        # Get all available tools from the agent's tool_map
+        all_tools = collect(keys(active_agent.tool_map))
+
+        # Get allowed tools based on rules and used tools
+        allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
+
+        # Create tools list from allowed names
+        tools = [active_agent.tool_map[name] for name in allowed_names if haskey(active_agent.tool_map, name)]
 
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)
         update_system_message!(filtered_history, active_agent)
 
-        # Get AI response using filtered history
+        # Get AI response using filtered history and tools
         response = PT.aitools(filtered_history;
             model = active_agent.model,
-            tools,
+            tools = tools,
             name_user = "User",
             name_assistant = scrub_agent_name(active_agent),
             return_all = true,
@@ -114,14 +138,28 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         end
         isempty(tool_calls(response[end])) && break
 
-        # Run tool calls
+        # Run tool calls and update used tools
         (; active_agent, history) = handle_tool_calls!(active_agent, history, session)
+        new_tools = get_used_tools(history)
+        append!(used_tools, new_tools)  # No deduplication needed, preserve order and duplicates
+
+        # Track actual Tool objects used
+        for tool_name in new_tools
+            if haskey(active_agent.tool_map, tool_name)
+                push!(tools_used, active_agent.tool_map[tool_name])
+            end
+        end
+
+        # Run termination checks
+        termination_rules = filter(r -> r isa AbstractTerminationFlowRules, session.rules)
+        active_agent = run_termination_checks(history, active_agent, session.io, termination_rules)
     end
 
     return Response(;
         messages = history[min(init_len + 2, end):end],
         agent = active_agent,
-        context = session.context
+        context = session.context,
+        tools_used = tools_used
     )
 end
 
@@ -186,7 +224,6 @@ new_agent = transfer_agent("Support Agent", "Customer needs technical assistance
 ```
 """
 function transfer_agent(target_agent_name::String, handover_message::String)::AgentRef
-    @info "Transfer agent called" target_agent_name handover_message
     return AgentRef(target_agent_name)
 end
 
