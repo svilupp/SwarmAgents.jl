@@ -513,5 +513,3 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
     # Only apply unique! for non-vcat combine functions
     return combine === vcat ? allowed : unique!(allowed)
 end
-
-# Removed duplicate get_allowed_tools implementation
