@@ -57,8 +57,8 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no tool rules, return all tools (passthrough)
     isempty(tool_rules) && return all_tools
 
-    # Get allowed tools from each rule
-    rule_results = [get_allowed_tools(rule, used_tools, all_tools; combine=combine) for rule in tool_rules]
+    # Get allowed tools from each rule and validate against all_tools
+    rule_results = [filter(t -> t ∈ all_tools, get_allowed_tools(rule, used_tools, all_tools)) for rule in tool_rules]
 
     # Filter out empty results
     valid_results = filter(!isempty, rule_results)
@@ -66,31 +66,31 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # Combine results using the specified function
+    # For vcat, maintain exact order and duplicates
     if combine === vcat
-        # For vcat, maintain exact order and duplicates from each rule
-        # First concatenate all results, then filter against all_tools
-        combined = reduce(vcat, valid_results)
-        # Filter against all_tools but preserve exact order and duplicates
-        return filter(t -> t ∈ all_tools, combined)
-    else
-        # For other combine functions (default: union)
-        # First validate each result against all_tools
-        validated_results = [filter(t -> t ∈ all_tools, result) for result in valid_results]
-        # For union, combine all valid results (OR behavior)
-        if combine === union
-            # Start with empty set and union with each result
-            result = Set{String}()
-            for tools in validated_results
-                union!(result, tools)
-            end
-            return sort(collect(result))  # Convert to Vector before sorting
-        else
-            # For other combine functions, use as provided
-            combined = reduce(combine, validated_results)
-            return collect(combined)
-        end
+        return reduce(vcat, valid_results)
     end
+
+    # For intersection, start with first result and intersect with others
+    if combine === intersect
+        result = Set(valid_results[1])
+        for tools in valid_results[2:end]
+            intersect!(result, tools)
+        end
+        return sort(collect(result))
+    end
+
+    # For union (default)
+    if combine === union
+        result = Set{String}()
+        for tools in valid_results
+            union!(result, tools)
+        end
+        return sort(collect(result))
+    end
+
+    # For other combine functions, use as provided
+    return collect(reduce(combine, valid_results))
 end
 
 """
