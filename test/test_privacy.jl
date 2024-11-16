@@ -81,14 +81,14 @@ using Test
 
         # Test get_used_tools ignores privacy settings (important for flow control and auth state)
         tools1 = get_used_tools(history, agent1)
-        @test Set(tools1) == Set([:auth, :private, :public])  # Should see all tools
+        @test Set(tools1) == Set(["auth", "private", "public"])  # Should see all tools
 
         tools2 = get_used_tools(history, agent2)
-        @test Set(tools2) == Set([:auth, :private, :public])  # Should see all tools
+        @test Set(tools2) == Set(["auth", "private", "public"])  # Should see all tools
 
         # Test get_used_tools without agent
         tools_all = get_used_tools(history)
-        @test Set(tools_all) == Set([:auth, :private, :public])  # Should see all tools
+        @test Set(tools_all) == Set(["auth", "private", "public"])  # Should see all tools
 
         # Verify that while tools are tracked, message visibility still respects privacy
         filtered_history = filter_history(history, agent1)

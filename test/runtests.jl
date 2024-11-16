@@ -5,6 +5,9 @@ using JSON3
 using Test
 using Aqua
 
+# Include shared test utilities first
+include("shared_test_utils.jl")
+
 @testset "SwarmAgents.jl" begin
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(SwarmAgents)

@@ -141,8 +141,8 @@ function tool_output(output::Any)
     output isa String && return output
 
     # Check for :output property in structs
-    if hasfield(typeof(output), :output)
-        return string(getfield(output, :output))
+    if hasproperty(output, :output)
+        return string(getproperty(output, :output))
     end
 
     # Fallback to show method for other types
@@ -150,3 +150,6 @@ function tool_output(output::Any)
     show(io, output)
     return String(take!(io))
 end
+
+# Export the function
+export tool_output

@@ -20,7 +20,7 @@ export Agent, AgentRef, Session, isabstractagent, isabstractagentref, isabstract
 
 # Utilities (shared functions)
 include("utils.jl")
-export print_progress, scrub_agent_name, convert_message, update_system_message!
+export print_progress, scrub_agent_name, convert_message, update_system_message!, tool_output
 
 # Privacy functionality
 include("privacy.jl")
@@ -30,7 +30,7 @@ export PrivateMessage, is_visible, filter_history, maybe_private_message
 include("flow_rules.jl")
 export TerminationCycleCheck, TerminationRepeatCheck, TerminationGenericCheck,
     FixedOrder, FixedPrerequisites, is_cycle, num_subsequent_repeats, run_termination_checks, get_used_tools,
-    get_allowed_tools
+    get_allowed_tools, ToolWrapper
 
 # Workflow (run_full_turn, handle tool calls)
 include("workflow.jl")

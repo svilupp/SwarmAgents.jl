@@ -3,30 +3,12 @@ using SwarmAgents
 using PromptingTools
 using PromptingTools: AbstractMessage, UserMessage, SystemMessage, AIToolRequest,
                      ToolMessage, TestEchoOpenAISchema
-
-# Define test functions at module level
-func1() = nothing
-func5() = "test"
+using JSON3
 
 @testset "Workflow" begin
 
     @testset "handle_tool_calls!" begin
         agent = Agent(name = "TestAgent")
-
-        # Define test structs for tool output testing
-        struct TestStructWithOutput
-            output::String
-            data::Int
-        end
-        struct TestStructNoOutput
-            value::String
-        end
-
-        # Define test tools with different output types
-        func1() = nothing  # Original test function
-        func5() = "test"   # Original test function
-        func_struct_output() = TestStructWithOutput("struct output", 42)
-        func_no_output() = TestStructNoOutput("custom value")
 
         # Add tools to agent
         add_tools!(agent, [
@@ -53,7 +35,7 @@ func5() = "test"
             name = "struct_tool", args = Dict())])]
 
         result = handle_tool_calls!(agent, history, session)
-        @test result.history[end].output == "struct output"
+        @test result.history[end].content == "struct output"
         @test session.artifacts[end] isa TestStructWithOutput
 
         # Test struct without output property (uses show)
@@ -62,8 +44,8 @@ func5() = "test"
             name = "custom_tool", args = Dict())])]
 
         result = handle_tool_calls!(agent, history, session)
-        @test occursin("custom value", result.history[end].output)
-        @test occursin("TestStructNoOutput", result.history[end].output)
+        @test occursin("custom value", result.history[end].content)
+        @test occursin("TestStructNoOutput", result.history[end].content)
 
         # Test with no active agent
         push!(history, PT.AIToolRequest(; content = "Hi"))
@@ -220,7 +202,7 @@ func5() = "test"
         session = Session(agent)
 
         # Create different types of rules
-        tool_rule = FixedOrder(order=[:func1])
+        tool_rule = FixedOrder(order=["func1"])
         termination_rule = TerminationRepeatCheck(2)  # Terminate after 2 tool calls
         generic_rule = TerminationGenericCheck(callable=(h, a) -> length(h) > 5 ? nothing : a)
 
@@ -228,8 +210,8 @@ func5() = "test"
         add_rules!(session, [tool_rule, termination_rule, generic_rule])
 
         # Test get_allowed_tools filtering
-        rules = collect(values(session.rules))
-        allowed_tools = get_allowed_tools(rules, Symbol[])
+        all_tools = String[string(name) for name in keys(agent.tool_map)]
+        allowed_tools = get_allowed_tools(session.rules, String[], all_tools)
         @test allowed_tools == ["func1"]  # Only tool rules should be processed
         @test length(allowed_tools) == 1  # Should only get tools from AbstractToolFlowRules
 
@@ -248,60 +230,73 @@ func5() = "test"
         response2 = run_full_turn(agent, messages, session2; max_turns = 10)
         @test length(response2.messages) <= 6  # Should terminate when history length > 5
 
+        # Test passthrough with no rules
+        session3 = Session(agent)
+        response3 = run_full_turn(agent, messages, session3; max_turns = 1)
+        @test response3 isa Response
+        @test !isempty(response3.messages)
+        @test length(response3.messages) > 0
+
         # Test that non-tool rules are ignored in get_allowed_tools
         mixed_rules = [
-            FixedOrder(order=[:func1]),
+            FixedOrder(order=["func1"]),
             TerminationRepeatCheck(2),
-            FixedOrder(order=[:func5])
+            FixedOrder(order=["func5"])
         ]
-        allowed_tools_mixed = get_allowed_tools(mixed_rules, Symbol[])
+        all_tools = ["func1", "func5"]
+        allowed_tools_mixed = get_allowed_tools(mixed_rules, String[], all_tools)
         @test Set(allowed_tools_mixed) == Set(["func1", "func5"])  # Only tool rules processed
-        @test length(allowed_tools_mixed) == 2  # Should only get tools from AbstractToolFlowRules
-    end
+
+        # Test passthrough with only non-tool rules
+        non_tool_rules = [TerminationRepeatCheck(2), generic_rule]
+        passthrough_tools = get_allowed_tools(non_tool_rules, String[], all_tools)
+        @test passthrough_tools == all_tools  # Should passthrough when no tool rules present
 
     @testset "add_transfers!" begin
+        # Initialize session first
+        session = Session()
 
-            # Create test agents with different name formats
-            booking_agent = Agent(name="Booking Agent")
-            support_agent = Agent(name="Support Agent")
-            sales_agent = Agent(name="Sales Agent")
+        # Create test agents with different name formats
+        booking_agent = Agent(name="Booking Agent")
+        support_agent = Agent(name="Support Agent")
+        sales_agent = Agent(name="Sales Agent")
 
-            # Add agents to session
-            session.agent_map[:booking] = booking_agent
-            session.agent_map[:support] = support_agent
-            session.agent_map[:sales] = sales_agent
+        # Add agents to session
+        session.agent_map[:booking] = booking_agent
+        session.agent_map[:support] = support_agent
+        session.agent_map[:sales] = sales_agent
 
-            # Add transfer tools
-            add_transfers!(session)
+        # Add transfer tools
+        add_transfers!(session)
 
-            # Verify tool names follow snake_case convention
-            @test haskey(booking_agent.tool_map, "transfer_to_support_agent")
-            @test haskey(booking_agent.tool_map, "transfer_to_sales_agent")
-            @test haskey(support_agent.tool_map, "transfer_to_booking_agent")
-            @test haskey(support_agent.tool_map, "transfer_to_sales_agent")
-            @test haskey(sales_agent.tool_map, "transfer_to_booking_agent")
-            @test haskey(sales_agent.tool_map, "transfer_to_support_agent")
+        # Verify tool names follow snake_case convention
+        @test haskey(booking_agent.tool_map, "transfer_to_support_agent")
+        @test haskey(booking_agent.tool_map, "transfer_to_sales_agent")
+        @test haskey(support_agent.tool_map, "transfer_to_booking_agent")
+        @test haskey(support_agent.tool_map, "transfer_to_sales_agent")
+        @test haskey(sales_agent.tool_map, "transfer_to_booking_agent")
+        @test haskey(sales_agent.tool_map, "transfer_to_support_agent")
 
-            # Verify no self-transfer tools were created
-            @test !haskey(booking_agent.tool_map, "transfer_to_booking_agent")
-            @test !haskey(support_agent.tool_map, "transfer_to_support_agent")
-            @test !haskey(sales_agent.tool_map, "transfer_to_sales_agent")
+        # Verify no self-transfer tools were created
+        @test !haskey(booking_agent.tool_map, "transfer_to_booking_agent")
+        @test !haskey(support_agent.tool_map, "transfer_to_support_agent")
+        @test !haskey(sales_agent.tool_map, "transfer_to_sales_agent")
 
-            # Test tool properties and docstrings
-            support_transfer = booking_agent.tool_map["transfer_to_support_agent"]
-            @test support_transfer.name == "transfer_to_support_agent"
-            @test haskey(support_transfer.parameters, "handover_message")
-            @test support_transfer.parameters["handover_message"]["type"] == "string"
-            @test support_transfer.parameters["handover_message"]["required"] == true
+        # Test tool properties and docstrings
+        support_transfer = booking_agent.tool_map["transfer_to_support_agent"]
+        @test support_transfer.name == "transfer_to_support_agent"
+        @test haskey(support_transfer.parameters, "handover_message")
+        @test support_transfer.parameters["handover_message"]["type"] == "string"
+        @test support_transfer.parameters["handover_message"]["required"] == true
 
-            # Verify available agents are listed in docstring
-            @test contains(support_transfer.description, "Support Agent")
-            @test contains(support_transfer.description, "Sales Agent")
-            @test contains(support_transfer.description, "Available agents for transfer from Booking Agent")
-        end
+        # Verify available agents are listed in docstring
+        @test contains(support_transfer.description, "Support Agent")
+        @test contains(support_transfer.description, "Sales Agent")
+        @test contains(support_transfer.description, "Available agents for transfer from Booking Agent")
+    end
 
-        @testset "handover message handling" begin
-            session = Session()
+    @testset "handover message handling" begin
+        session = Session()
 
             # Create test agents
             agent1 = Agent(name="Agent One")

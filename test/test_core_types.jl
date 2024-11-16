@@ -95,15 +95,15 @@ func2() = nothing
 
         # Test session rules management
         tools = [Tool(func1), Tool(func2)]
+        tool_rules = [ToolWrapper(tool) for tool in tools]
 
-        add_rules!(session, tools)
+        add_rules!(session, tool_rules)
         @test length(session.rules) == 2
-        @test haskey(session.rules, "func1")
-        @test haskey(session.rules, "func2")
-        @test session.rules["func1"] isa Tool
-        @test session.rules["func2"] isa Tool
+        @test any(r -> r isa ToolWrapper && r.name == "func1", session.rules)
+        @test any(r -> r isa ToolWrapper && r.name == "func2", session.rules)
 
-        # Test error on duplicate rule
-        @test_logs (:warn, "Overwriting existing rule 'func1' in session rules") add_rules!(session, Tool(func1))
+        # Test adding duplicate rule (should append)
+        add_rules!(session, ToolWrapper(Tool(func1)))
+        @test length(session.rules) == 3
     end
 end

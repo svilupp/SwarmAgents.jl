@@ -3,6 +3,9 @@ using SwarmAgents
 using PromptingTools
 using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
 
+# Include shared test utilities
+include("shared_test_utils.jl")
+
 @testset "Utilities" begin
     @testset "scrub_agent_name" begin
         agent = Agent(name = "Test Agent", model = "gpt-3.5-turbo")
@@ -47,25 +50,9 @@ using PromptingTools: UserMessage, AIMessage, ToolMessage, Tool
     end
 
     @testset "tool_output" begin
-        # Test struct with output property
-        struct TestStructWithOutput
-            output::String
-            other::Int
-        end
+        # Create test structs
         test_struct = TestStructWithOutput("test output", 42)
-
-        # Test struct without output property
-        struct TestStructNoOutput
-            value::Int
-        end
-        test_struct_no_output = TestStructNoOutput(42)
-
-        # Test struct with custom tool_output method
-        struct TestStructCustomOutput
-            data::String
-        end
-        # Define custom tool_output method
-        SwarmAgents.tool_output(x::TestStructCustomOutput) = "Custom: $(x.data)"
+        test_struct_no_output = TestStructNoOutput("42")  # Changed to use String
         test_struct_custom = TestStructCustomOutput("custom data")
 
         # Test string passthrough
