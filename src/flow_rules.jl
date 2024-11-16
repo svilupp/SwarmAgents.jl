@@ -74,9 +74,9 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # First ensure strict intersection with all_tools and filter out used tools
+    # First ensure strict intersection with all_tools
     filtered_results = [
-        filter(t -> t ∈ all_tools && t ∉ used_tools, result)
+        filter(t -> t ∈ all_tools, result)
         for result in valid_results
     ]
 
@@ -104,7 +104,8 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         end
     end
 
-    return combined
+    # Finally, filter out used tools from the combined result
+    return filter(t -> t ∉ used_tools, combined)
 end
 
 """
