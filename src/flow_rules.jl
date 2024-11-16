@@ -74,8 +74,15 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # First ensure strict intersection with all_tools for each result
-    filtered_results = [intersect(Set(all_tools), Set(result)) for result in valid_results]
+    # First ensure strict intersection with all_tools and filter out used tools
+    filtered_results = [
+        filter(t -> t ∈ all_tools && t ∉ used_tools, result)
+        for result in valid_results
+    ]
+
+    # Filter out any empty results after filtering
+    filtered_results = filter(!isempty, filtered_results)
+    isempty(filtered_results) && return String[]
 
     # Then combine results using the provided function while maintaining order
     if combine == intersect
@@ -89,7 +96,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         combined = String[]
         for result in filtered_results
             for tool in result
-                if tool ∉ seen && tool ∈ all_tools
+                if tool ∉ seen
                     push!(seen, tool)
                     push!(combined, tool)
                 end
