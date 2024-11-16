@@ -59,14 +59,19 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # Filter for tool rules only
     tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
 
-    # If no tool rules, return intersection with all_tools
-    isempty(tool_rules) && return filter(t -> t ∈ all_tools, all_tools)
-
-    # Deduplicate all_tools while preserving order
+    # Deduplicate all_tools first while preserving order
     unique_tools = unique(all_tools)
 
-    # Get allowed tools from each rule and validate against unique_tools
-    rule_results = [get_allowed_tools(rule, used_tools, unique_tools; combine=combine) for rule in tool_rules]
+    # If no tool rules, return the deduplicated tools
+    isempty(tool_rules) && return unique_tools
+
+    # Get allowed tools from each rule, ensuring they exist in unique_tools
+    rule_results = [
+        filter(t -> t ∈ unique_tools,
+            get_allowed_tools(rule, used_tools, unique_tools; combine=combine)
+        )
+        for rule in tool_rules
+    ]
 
     # Filter out empty results
     valid_results = filter(!isempty, rule_results)
@@ -74,10 +79,11 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # Combine results using the provided function and ensure strict intersection with all_tools
+    # Combine results using the provided function
     result = combine(valid_results...)
-    # Ensure result is a Vector{String} and strictly intersects with all_tools
-    return filter(t -> t ∈ unique_tools, result isa Vector{String} ? result : collect(String, result))
+
+    # Ensure result is a Vector{String} and deduplicated
+    return result isa Vector{String} ? unique(result) : unique(collect(String, result))
 end
 
 """
