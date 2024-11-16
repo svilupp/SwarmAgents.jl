@@ -51,9 +51,9 @@ Get the list of allowed tools based on flow rules and usage history.
 - Only processes rules that are subtypes of AbstractToolFlowRules
 - If no tool rules are present, returns all_tools (passthrough)
 - Empty result from a rule means no tools allowed by that rule
-- Results are combined using union by default (OR behavior)
+- Results are combined using intersection by default (AND behavior)
 """
-function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
+function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=intersect)
     # Filter for tool rules only
     tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
 
@@ -71,15 +71,17 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
 
     # Combine results using the specified function
     if combine === vcat
-        # For vcat, maintain order and duplicates from each rule
-        # First concatenate all results, then filter against all_tools
+        # For vcat, maintain order from each rule and include duplicates
+        # First concatenate all results
         combined = reduce(vcat, valid_results)
         # Filter against all_tools but preserve order and duplicates
         allowed_set = Set(all_tools)
         return filter(t -> t ∈ allowed_set, combined)
     else
-        # For other combine functions (like union), validate against all_tools first
+        # For other combine functions (default: intersect), find tools allowed by all rules
+        # First validate each result against all_tools
         validated_results = [intersect(result, all_tools) for result in valid_results]
+        # Then combine using the specified function (default: intersect)
         return reduce(combine, validated_results)
     end
 end
@@ -131,20 +133,30 @@ end
 function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
     isempty(rule.order) && return all_tools
 
-    # For vcat, preserve order and duplicates, only filter against all_tools
-    if combine === vcat
-        # Only filter against all_tools, ignore used_tools to preserve duplicates
-        return filter(t -> t ∈ all_tools, rule.order)
-    end
+    # Filter tools that exist in all_tools
+    valid_tools = filter(t -> t ∈ all_tools, rule.order)
+    isempty(valid_tools) && return String[]
 
-    # For other combine functions, return first unused tool
-    used_set = Set(used_tools)
-    for tool in rule.order
-        if tool ∉ used_set && tool ∈ all_tools
-            return [tool]
+    if combine === vcat
+        # For vcat, return only the next unused tool in sequence
+        used_set = Set(used_tools)
+        for tool in valid_tools
+            if tool ∉ used_set
+                return [tool]
+            end
         end
+        # If all tools in sequence have been used, start over from beginning
+        return [valid_tools[1]]
+    else
+        # For other combine functions (like union), return first unused tool
+        used_set = Set(used_tools)
+        for tool in valid_tools
+            if tool ∉ used_set
+                return [tool]
+            end
+        end
+        return String[]
     end
-    return String[]
 end
 
 """
@@ -481,19 +493,14 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
     # If no prerequisites defined, return all available tools
     isempty(rule.prerequisites) && return all_tools
 
-    allowed = String[]
     used_set = Set(used_tools)
+    allowed = String[]
 
-    # Check each tool in all_tools
+    # Process tools in the order they appear in all_tools
     for tool in all_tools
-        # If tool has prerequisites, check if they're met
-        if haskey(rule.prerequisites, tool)
-            prereqs = rule.prerequisites[tool]
-            if isempty(prereqs) || all(p -> p ∈ used_set, prereqs)
-                push!(allowed, tool)
-            end
-        else
-            # Tools without prerequisites are allowed by default
+        # Check if tool has prerequisites and if they're met
+        prereqs = get(rule.prerequisites, tool, String[])
+        if isempty(prereqs) || all(p -> p ∈ used_set, prereqs)
             push!(allowed, tool)
         end
     end

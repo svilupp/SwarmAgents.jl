@@ -119,27 +119,20 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         # Get allowed tools based on rules and used tools
         allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
 
-        # Convert allowed tools to a vector for aitools, handling duplicates
+        # Convert allowed tools to a vector for aitools, preserving duplicates when combine=vcat
         tools = Tool[]
-        seen_tools = Set{String}()
-        for (idx, name) in enumerate(allowed_names)
+        for name in allowed_names
             tool = get(active_agent.tool_map, name, nothing)
             if !isnothing(tool)
-                # Create a unique tool instance for duplicates
-                if name in seen_tools
-                    # Create a copy of the tool with a unique name
-                    unique_name = "$(name)_$(idx)"
-                    unique_tool = Tool(
-                        name=unique_name,
-                        callable=tool.callable,
-                        parameters=tool.parameters,
-                        description=tool.description
-                    )
-                    push!(tools, unique_tool)
-                else
-                    push!(tools, tool)
-                    push!(seen_tools, name)
-                end
+                # Create a new instance of the tool to avoid duplicate name issues
+                new_tool = Tool(
+                    name=string(tool.name),
+                    parameters=copy(tool.parameters),
+                    description=tool.description,
+                    strict=tool.strict,
+                    callable=tool.callable
+                )
+                push!(tools, new_tool)
             end
         end
 
@@ -177,7 +170,10 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         (; active_agent, history) = handle_tool_calls!(active_agent, history, session)
         new_tools = get_used_tools(history)
         append!(used_tools, String[string(t) for t in new_tools])
-        unique!(used_tools)
+        # Don't use unique! here to preserve duplicates for vcat
+        if combine !== vcat
+            unique!(used_tools)
+        end
 
         # Run termination checks
         termination_rules = filter(r -> r isa AbstractTerminationFlowRules, session.rules)
