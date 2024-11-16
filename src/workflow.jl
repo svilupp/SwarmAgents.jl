@@ -121,12 +121,13 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
 
         # Convert allowed tools to a vector for aitools, preserving duplicates when combine=vcat
         tools = Tool[]
-        for name in allowed_names
+        for (idx, name) in enumerate(allowed_names)
             tool = get(active_agent.tool_map, name, nothing)
             if !isnothing(tool)
-                # Create a new instance of the tool to avoid duplicate name issues
+                # Create a new instance of the tool with a unique name if needed
+                tool_name = combine === vcat ? "$(name)_$(idx)" : name
                 new_tool = Tool(
-                    name=string(tool.name),
+                    name=tool_name,
                     parameters=copy(tool.parameters),
                     description=tool.description,
                     strict=tool.strict,

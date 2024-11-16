@@ -51,9 +51,9 @@ Get the list of allowed tools based on flow rules and usage history.
 - Only processes rules that are subtypes of AbstractToolFlowRules
 - If no tool rules are present, returns all_tools (passthrough)
 - Empty result from a rule means no tools allowed by that rule
-- Results are combined using intersection by default (AND behavior)
+- Results are combined using union by default (OR behavior)
 """
-function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=intersect)
+function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
     # Filter for tool rules only
     tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
 
@@ -78,10 +78,10 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         allowed_set = Set(all_tools)
         return filter(t -> t ∈ allowed_set, combined)
     else
-        # For other combine functions (default: intersect), find tools allowed by all rules
+        # For other combine functions (default: union), combine results
         # First validate each result against all_tools
         validated_results = [intersect(result, all_tools) for result in valid_results]
-        # Then combine using the specified function (default: intersect)
+        # Then combine using the specified function (default: union)
         return reduce(combine, validated_results)
     end
 end
