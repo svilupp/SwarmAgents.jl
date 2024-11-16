@@ -86,21 +86,6 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
     init_len = length(messages)
     used_tools = String[]
 
-    # Add tools from session rules to agent's tool map
-    tool_rules = filter(r -> r isa AbstractToolFlowRules, session.rules)
-    for rule in tool_rules
-        # Get tools from each rule's order
-        if rule isa FixedOrder
-            for tool_name in rule.order
-                # Find tool in session rules
-                tool_impl = findfirst(r -> r isa Tool && string(r.name) == tool_name, session.rules)
-                if !isnothing(tool_impl) && !haskey(active_agent.tool_map, tool_name)
-                    active_agent.tool_map[tool_name] = session.rules[tool_impl]
-                end
-            end
-        end
-    end
-
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
         # Get all available tools from the agent's tool_map
         all_tools = String[string(name) for name in keys(active_agent.tool_map)]
