@@ -47,6 +47,18 @@ using JSON3
         @test occursin("custom value", result.history[end].content)
         @test occursin("TestStructNoOutput", result.history[end].content)
 
+        # Test non-existent tool returns ToolNotFoundError
+        history = AbstractMessage[PT.AIToolRequest(tool_calls = [ToolMessage(;
+            tool_call_id = "4", raw = "{}",
+            name = "nonexistent_tool", args = Dict())])]
+
+        result = handle_tool_calls!(agent, history, session)
+        @test length(result.history) == 2
+        @test length(session.artifacts) == 2  # Previous artifacts + new one
+        @test session.artifacts[end] isa PT.ToolNotFoundError
+        @test session.artifacts[end].message == "Tool `nonexistent_tool` not found"
+        @test occursin("Tool `nonexistent_tool` not found", result.history[end].content)
+
         # Test with no active agent
         push!(history, PT.AIToolRequest(; content = "Hi"))
         result_no_agent = handle_tool_calls!(nothing, history, session)

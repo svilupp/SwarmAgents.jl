@@ -18,12 +18,7 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         print_progress(session.io, active_agent, tool)
 
         # Execute tool directly using agent's tool_map
-        if !haskey(active_agent.tool_map, name)
-            tool.content = "Tool `$name` not found in agent's tool_map"
-            output = "Tool `$name` not found"  # Changed from ToolNotFoundError to string
-        else
-            output = PT.execute_tool(active_agent.tool_map, tool, session.context)
-        end
+        output = PT.execute_tool(active_agent.tool_map, tool, session.context)
         push!(session.artifacts, output)
 
         ## Changing the agent
@@ -99,14 +94,7 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
 
         # Convert allowed tools to a vector for aitools
-        # All tools must exist since they came from agent.tool_map
-        tools = [Tool(
-            name = name,
-            parameters = active_agent.tool_map[name].parameters,
-            description = active_agent.tool_map[name].description,
-            strict = active_agent.tool_map[name].strict,
-            callable = active_agent.tool_map[name].callable
-        ) for name in allowed_names if haskey(active_agent.tool_map, name)]
+        tools = [active_agent.tool_map[name] for name in allowed_names]
 
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)
