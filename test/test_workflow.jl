@@ -54,9 +54,9 @@ using JSON3
 
         result = handle_tool_calls!(agent, history, session)
         @test length(result.history) == 2
-        @test length(session.artifacts) == 2  # Previous artifacts + new one
+        @test length(session.artifacts) == 4  # All previous artifacts + new one
         @test session.artifacts[end] isa PT.ToolNotFoundError
-        @test session.artifacts[end].message == "Tool `nonexistent_tool` not found"
+        @test string(session.artifacts[end]) == "PromptingTools.ToolNotFoundError(\"Tool `nonexistent_tool` not found\")"
         @test occursin("Tool `nonexistent_tool` not found", result.history[end].content)
 
         # Test with no active agent
@@ -139,9 +139,10 @@ using JSON3
         add_rules!(session, FixedOrder(tool5))
 
         # Test with tools verification using a mock function
-        tools_passed = Tool[]
+        global tools_passed = Tool[]  # Use global to ensure tools_passed is accessible
+        original_aitools = PT.aitools  # Store the original function
         mock_aitools = function(args...; kwargs...)
-            tools_passed = kwargs[:tools]
+            global tools_passed = copy(get(kwargs, :tools, Tool[]))  # Make a copy to ensure we capture the tools
             original_aitools(args...; kwargs...)
         end
 
@@ -198,7 +199,7 @@ using JSON3
         @test response.messages[end].name == "func5"
         @test length(session2.artifacts) == 1
         @test session2.artifacts[end] isa PT.ToolNotFoundError
-        @test session2.artifacts[end].message == "Tool `func5` not found"
+        @test string(session2.artifacts[end]) == "PromptingTools.ToolNotFoundError(\"Tool `func5` not found\")"
     end
 
     @testset "run_full_turn termination and tool filtering" begin
