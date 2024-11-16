@@ -68,76 +68,70 @@ Both `FixedOrder` and `FixedPrerequisites` are subtypes of `AbstractToolFlowRule
 You can control tool execution using either `FixedOrder` or `FixedPrerequisites`:
 
 ```julia
-# Make a single tool always available (it will be first in cycle)
+# Make a single tool always available
 agent = Agent(name="MyAgent", instructions="Test agent")
 add_tools!(agent, my_tool)
 session = Session(agent)
-add_rules!(session, FixedOrder(string(my_tool.name)))  # Wrap single tool in FixedOrder
+add_rules!(session, FixedOrder(string(my_tool.name)))  # Single tool wrapped in FixedOrder
 
 # Control execution order of multiple tools
-tools = ["tool1", "tool2", "tool3"]
-add_rules!(session, [FixedOrder(tools)])  # Pass vector of rules directly
-
-# Use prerequisites to control tool availability
-prereqs = Dict("analyze" => ["search"], "summarize" => ["search", "analyze"])
-add_rules!(session, FixedPrerequisites(prerequisites=prereqs))
+rules = [FixedOrder(["tool1", "tool2"]), FixedOrder(["tool3", "tool4"])]
+add_rules!(session, rules)  # Pass vector of rules directly
 ```
 
-### Tool Filtering and Combination
+### Tool Filtering and Error Handling
 
-The `get_allowed_tools` function determines which tools are available based on your flow rules. When multiple rules are present, you can control how their results are combined:
+The `get_allowed_tools` function determines which tools are available based on your flow rules and ensures tools exist in the agent's tool map. If a requested tool is not found, a `ToolNotFoundError` will be raised:
 
 ```julia
-# Default behavior uses union (OR behavior, removes duplicates)
+# Tools must exist in agent's tool_map
 response = run_full_turn(agent, messages, session)
-
-# Use vcat to preserve tool order and duplicates
-response = run_full_turn(agent, messages, session; combine=vcat)
+# If a tool is not found, ToolNotFoundError is raised
 ```
 
-Why use different combine functions?
-- `union` (default): Combines tools from all rules with OR behavior, removing duplicates
-- `vcat`: Preserves exact tool sequence and duplicates, useful for complex workflows
+### Tool Output Handling
 
-Example with multiple rules:
-```julia
-# Create rules that use tools in different sequences
-rules = [
-    FixedOrder(["validate", "process"]),      # First sequence
-    FixedOrder(["process", "validate"])       # Second sequence
-]
-
-# With union (default), you get unique tools:
-# get_allowed_tools(rules, [], all_tools) → ["validate", "process"]
-
-# With vcat, you preserve the exact sequence:
-# get_allowed_tools(rules, [], all_tools; combine=vcat) → ["validate", "process", "process", "validate"]
-```
-
-Tools can return any arbitrary struct as output. The system will:
-1. Use the `:output` property if available
-2. Convert to string if it's already a string
+Tools can return any arbitrary struct as output. The system processes tool output in this order:
+1. If output is an AbstractString, use it directly
+2. Look for the `:output` property if available
 3. Use the `show` method for any other type
 
-### Tool Availability Rules
+To customize output handling for your structs, either:
+- Define an `:output` property that returns an AbstractString
+- Implement a custom `show` method for your type
 
-Tools are filtered using `get_allowed_tools`, which determines available tools based on:
-- Current flow rules (must be subtypes of AbstractToolFlowRules)
-- Previously used tools (tracking tool usage history)
-- All available tools in the agent's tool map (passed as all_tools argument)
+Example:
+```julia
+struct CustomTool
+    output::String
+end
+
+# Will automatically use the output property
+my_tool = CustomTool("Hello")
+
+# Or implement show method
+struct AnotherTool
+    data::Any
+end
+Base.show(io::IO, t::AnotherTool) = print(io, "Tool output: $(t.data)")
+```
+
+### Tool Availability and Deduplication
+
+Tools are filtered using `get_allowed_tools`, which:
+1. Ensures tools exist in agent's tool_map (all_tools argument)
+2. Removes duplicates while preserving order
+3. Applies flow rule constraints
 
 ```julia
-# Get all tool names from agent
-all_tools = String[string(name) for name in keys(agent.tool_map)]
-
 # Get allowed tools based on rules and history
 allowed_tools = get_allowed_tools(session.rules, used_tools, all_tools)
 
-# Use custom combine function for multiple rules
-allowed_tools = get_allowed_tools(session.rules, used_tools, all_tools; combine=vcat)
+# Note: get_allowed_tools always deduplicates tools to ensure each tool
+# appears only once in the final sequence
 ```
 
-If no tool rules are present, all agent tools are available (passthrough behavior).
+If no rules are present, all agent tools are available (passthrough behavior).
 
 ## Usage
 
