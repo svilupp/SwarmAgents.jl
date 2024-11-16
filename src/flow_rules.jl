@@ -59,17 +59,12 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # Filter for tool rules only
     tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
 
-    # Deduplicate all_tools first while preserving order
-    unique_tools = unique(all_tools)
+    # If no tool rules, return only tools that exist in all_tools
+    isempty(tool_rules) && return filter(t -> t ∈ all_tools, all_tools)
 
-    # If no tool rules, return the deduplicated tools
-    isempty(tool_rules) && return unique_tools
-
-    # Get allowed tools from each rule, ensuring they exist in unique_tools
+    # Get allowed tools from each rule
     rule_results = [
-        filter(t -> t ∈ unique_tools,
-            get_allowed_tools(rule, used_tools, unique_tools; combine=combine)
-        )
+        get_allowed_tools(rule, used_tools, all_tools; combine=combine)
         for rule in tool_rules
     ]
 
@@ -82,8 +77,9 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # Combine results using the provided function
     result = combine(valid_results...)
 
-    # Ensure result is a Vector{String} and deduplicated
-    return result isa Vector{String} ? unique(result) : unique(collect(String, result))
+    # Ensure result is a Vector{String} and strictly intersect with all_tools
+    result_vec = result isa Vector{String} ? result : collect(String, result)
+    return filter(t -> t ∈ all_tools, result_vec)
 end
 
 """
@@ -134,13 +130,13 @@ end
 function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
     isempty(rule.order) && return all_tools
 
-    # Filter tools that exist in all_tools
+    # Filter tools that exist in all_tools first
     valid_tools = filter(t -> t ∈ all_tools, rule.order)
     isempty(valid_tools) && return String[]
 
     # For all combine functions, maintain sequential behavior
     if isempty(used_tools)
-        return [valid_tools[1]]  # Start with first tool
+        return [valid_tools[1]]  # Start with first valid tool
     end
 
     # Get the last used tool and find its position in valid_tools
@@ -151,9 +147,9 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
         # If last used tool not in sequence, start over
         return [valid_tools[1]]
     else
-        # Return next tool in sequence, wrapping around if needed
-        next_idx = (idx % length(valid_tools)) + 1
-        return [valid_tools[next_idx]]
+        # Return next tool in sequence if it exists, otherwise empty list (no wrapping)
+        next_idx = idx + 1
+        return next_idx <= length(valid_tools) ? [valid_tools[next_idx]] : String[]
     end
 end
 
