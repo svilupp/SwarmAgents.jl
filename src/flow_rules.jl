@@ -79,14 +79,20 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         # For other combine functions (default: union)
         # First validate each result against all_tools
         validated_results = [filter(t -> t ∈ all_tools, result) for result in valid_results]
-        # For union, return only the first available tool from any rule
+        # For union, combine all unique tools from all rules
         if combine === union
+            # Combine all tools while maintaining order of first appearance
+            result = String[]
+            seen = Set{String}()
             for tools in validated_results
-                if !isempty(tools)
-                    return [first(tools)]  # Return only the first tool
+                for tool in tools
+                    if tool ∉ seen
+                        push!(seen, tool)
+                        push!(result, tool)
+                    end
                 end
             end
-            return String[]  # If no tools found
+            return result
         else
             # For other combine functions, use as provided
             combined = reduce(combine, validated_results)
