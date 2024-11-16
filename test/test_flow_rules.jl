@@ -178,6 +178,11 @@ using SwarmAgents: PrivateMessage
         allowed = get_allowed_tools(session.rules, used_tools, all_tools)
         @test allowed == ["tool_b"] # tool_b is next in fixed_order and allowed by prerequisites
 
+        # Test with vcat (should deduplicate like union)
+        used_tools = ["tool_a"]
+        allowed = get_allowed_tools(session.rules, used_tools, all_tools; combine=vcat)
+        @test allowed == ["tool_b"] # Should be same as union, deduplicated
+
         # Test with intersect
         used_tools = String[]
         allowed = get_allowed_tools(session.rules, used_tools, all_tools; combine=intersect)
@@ -186,13 +191,44 @@ using SwarmAgents: PrivateMessage
         # Test passthrough when no tool rules present
         termination_rule = TerminationCycleCheck(2, 2)
         @test get_allowed_tools([termination_rule], used_tools, all_tools) == all_tools
+
+        # Test deduplication with duplicate tools in input
+        duplicate_tools = ["tool_a", "tool_b", "tool_a", "tool_c", "tool_b"]
+        @test length(get_allowed_tools(session.rules, duplicate_tools, all_tools)) == length(unique(duplicate_tools))
+
+        # Test strict intersection with all_tools
+        @testset "Strict intersection with all_tools" begin
+            # Test FixedOrder with tools not in all_tools
+            extended_order = FixedOrder(order=["tool_a", "tool_d", "tool_b"])
+            @test get_allowed_tools(extended_order, String[], all_tools) == ["tool_a"]
+            @test get_allowed_tools(extended_order, ["tool_a"], all_tools) == ["tool_b"]
+
+            # Test FixedPrerequisites with tools not in all_tools
+            extended_prereqs = Dict(
+                "tool_b" => ["tool_a"],
+                "tool_d" => ["tool_a"],  # tool_d not in all_tools
+                "tool_c" => ["tool_a", "tool_d"]  # requires non-existent tool
+            )
+            prereq_rule = FixedPrerequisites(prerequisites=extended_prereqs)
+
+            # Initial state should only show tool_a
+            @test Set(get_allowed_tools(prereq_rule, String[], all_tools)) == Set(["tool_a"])
+
+            # After tool_a, only tool_b should be available (tool_d is not in all_tools)
+            @test Set(get_allowed_tools(prereq_rule, ["tool_a"], all_tools)) == Set(["tool_a", "tool_b"])
+
+            # tool_c should never be available as its prerequisite tool_d isn't in all_tools
+            @test Set(get_allowed_tools(prereq_rule, ["tool_a", "tool_b"], all_tools)) == Set(["tool_a", "tool_b"])
+        end
     end
 
     @testset "get_used_tools" begin
-        # Create history with tool usage
+        # Create history with tool usage via AIToolRequests
         history = PT.AbstractMessage[]
-        push!(history, AIMessage(content="Using tool tool_a"))
-        push!(history, AIMessage(content="Using tool tool_b"))
+        push!(history, PT.AIToolRequest(tool_calls = [ToolMessage(;
+            tool_call_id = "1", raw = "{}", name = "tool_a", args = Dict())]))
+        push!(history, PT.AIToolRequest(tool_calls = [ToolMessage(;
+            tool_call_id = "2", raw = "{}", name = "tool_b", args = Dict())]))
 
         used_tools = get_used_tools(history)
         @test used_tools == ["tool_a", "tool_b"]
@@ -204,4 +240,3 @@ using SwarmAgents: PrivateMessage
         history = [PT.UserMessage("test")]
         @test isempty(get_used_tools(history))
     end
-end

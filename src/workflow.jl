@@ -93,9 +93,6 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         # Get allowed tools based on rules and used tools
         allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
 
-        # Convert allowed tools to a vector for aitools
-        tools = [active_agent.tool_map[name] for name in allowed_names]
-
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)
         update_system_message!(filtered_history, active_agent)
@@ -103,7 +100,7 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         # Get AI response using filtered history
         response = PT.aitools(filtered_history;
             model = active_agent.model,
-            tools,
+            tools = allowed_names,
             name_user = "User",
             name_assistant = scrub_agent_name(active_agent),
             return_all = true,
