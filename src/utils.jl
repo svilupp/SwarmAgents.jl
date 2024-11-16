@@ -151,5 +151,38 @@ function tool_output(output::Any)
     return String(take!(io))
 end
 
-# Export the function
-export tool_output
+"""
+    get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
+
+Extract tool names from AIToolRequests in the message history.
+Only looks at AIToolRequests to avoid duplicates, preserves order of tool calls.
+
+# Arguments
+- `history::AbstractVector{<:PT.AbstractMessage}`: Message history to analyze
+
+# Returns
+- `Vector{String}`: Vector of tool names in order of usage
+
+# Example
+```julia
+history = [
+    PT.AIToolRequest(tool_calls=[ToolMessage(name="tool1")]),
+    PT.AIToolRequest(tool_calls=[ToolMessage(name="tool2")])
+]
+get_used_tools(history)  # Returns ["tool1", "tool2"]
+```
+"""
+function get_used_tools(history::AbstractVector{<:PT.AbstractMessage})
+    used_tools = String[]
+    for msg in history
+        if PT.isaitoolrequest(msg)
+            for tool in msg.tool_calls
+                push!(used_tools, tool.name)
+            end
+        end
+    end
+    return used_tools
+end
+
+# Export the functions
+export tool_output, get_used_tools
