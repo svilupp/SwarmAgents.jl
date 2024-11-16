@@ -96,6 +96,7 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
     history = deepcopy(messages)
     init_len = length(messages)
     used_tools = String[]
+    tools_used = Tool[]  # Track actual Tool objects used
 
     while (length(history) - init_len) < max_turns && !isnothing(active_agent)
         # Get all available tools from the agent's tool_map
@@ -142,6 +143,13 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         new_tools = get_used_tools(history)
         append!(used_tools, new_tools)  # No deduplication needed, preserve order and duplicates
 
+        # Track actual Tool objects used
+        for tool_name in new_tools
+            if haskey(active_agent.tool_map, tool_name)
+                push!(tools_used, active_agent.tool_map[tool_name])
+            end
+        end
+
         # Run termination checks
         termination_rules = filter(r -> r isa AbstractTerminationFlowRules, session.rules)
         active_agent = run_termination_checks(history, active_agent, session.io, termination_rules)
@@ -150,7 +158,8 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
     return Response(;
         messages = history[min(init_len + 2, end):end],
         agent = active_agent,
-        context = session.context
+        context = session.context,
+        tools_used = tools_used
     )
 end
 

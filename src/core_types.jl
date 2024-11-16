@@ -32,11 +32,13 @@ Container for the results of a workflow operation.
 - `messages::Vector{<:PT.AbstractMessage}`: New messages generated during the operation
 - `agent::Union{AbstractAgent, Nothing}`: The resulting agent state
 - `context::Dict{Symbol, Any}`: The resulting context state
+- `tools_used::Vector{AbstractTool}`: Tools used during the operation
 """
 Base.@kwdef struct Response
     messages::Vector{<:PT.AbstractMessage} = PT.AbstractMessage[]
     agent::Union{AbstractAgent, Nothing} = nothing
     context::Dict{Symbol, Any} = Dict{Symbol, Any}()
+    tools_used::Vector{AbstractTool} = AbstractTool[]
 end
 
 """

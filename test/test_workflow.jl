@@ -154,8 +154,9 @@ using JSON3
             @test response.messages[end].name == "func1"
             @test length(session.artifacts) == 1
             # Verify we're passing Tool objects
-            @test all(t -> t isa Tool, tools_passed)
-            @test tools_passed[1] === agent.tool_map["func1"]
+            @test !isempty(response.tools_used)
+            @test all(t -> t isa Tool, response.tools_used)
+            @test response.tools_used[1] === agent.tool_map["func1"]
         end
 
         # Test with custom io
