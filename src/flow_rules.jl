@@ -59,8 +59,8 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # Filter for tool rules only
     tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
 
-    # If no tool rules, return all_tools (but ensure they exist)
-    isempty(tool_rules) && return collect(String, intersect(Set(all_tools), Set(all_tools)))
+    # If no tool rules, return all_tools in their original order
+    isempty(tool_rules) && return copy(all_tools)
 
     # Get allowed tools from each rule
     rule_results = [
@@ -81,6 +81,8 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     if combine == intersect
         # For intersect, we want tools that appear in all results
         combined = collect(reduce(intersect, Set.(filtered_results)))
+        # Maintain original order from all_tools
+        combined = filter(t -> t ∈ combined, all_tools)
     else
         # For union/vcat, maintain order of first appearance while deduplicating
         seen = Set{String}()
@@ -96,7 +98,12 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     end
 
     # Finally, remove used tools from the combined result
-    return filter(t -> t ∉ used_tools, combined)
+    # But only if we have tool rules that care about used tools
+    if !isempty(tool_rules)
+        return filter(t -> t ∉ used_tools, combined)
+    else
+        return combined
+    end
 end
 
 """
