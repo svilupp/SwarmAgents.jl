@@ -20,7 +20,7 @@ function handle_tool_calls!(active_agent::Union{Agent, Nothing}, history::Abstra
         # Execute tool directly using agent's tool_map
         if !haskey(active_agent.tool_map, name)
             tool.content = "Tool `$name` not found in agent's tool_map"
-            output = PT.ToolNotFoundError("Tool `$name` not found")
+            output = "Tool `$name` not found"  # Changed from ToolNotFoundError to string
         else
             output = PT.execute_tool(active_agent.tool_map, tool, session.context)
         end

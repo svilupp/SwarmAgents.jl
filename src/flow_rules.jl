@@ -58,7 +58,7 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     isempty(tool_rules) && return all_tools
 
     # Get allowed tools from each rule and validate against all_tools
-    rule_results = [filter(t -> t ∈ all_tools, get_allowed_tools(rule, used_tools, all_tools)) for rule in tool_rules]
+    rule_results = [filter(t -> t ∈ all_tools, get_allowed_tools(rule, used_tools, all_tools; combine=combine)) for rule in tool_rules]
 
     # Filter out empty results
     valid_results = filter(!isempty, rule_results)
@@ -66,8 +66,9 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # For vcat, maintain exact order and duplicates
+    # For vcat, maintain exact order and duplicates from each rule
     if combine === vcat
+        # Concatenate results in order, preserving duplicates
         return reduce(vcat, valid_results)
     end
 
@@ -77,20 +78,17 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         for tools in valid_results[2:end]
             intersect!(result, tools)
         end
+        # Return deduplicated and sorted result
         return sort(collect(result))
     end
 
-    # For union (default)
-    if combine === union
-        result = Set{String}()
-        for tools in valid_results
-            union!(result, tools)
-        end
-        return sort(collect(result))
+    # For union (default) or any other combine function
+    # Use Set to deduplicate and sort for consistent ordering
+    result = Set{String}()
+    for tools in valid_results
+        union!(result, tools)
     end
-
-    # For other combine functions, use as provided
-    return collect(reduce(combine, valid_results))
+    return sort(collect(result))
 end
 
 """
@@ -144,6 +142,28 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
     valid_tools = filter(t -> t ∈ all_tools, rule.order)
     isempty(valid_tools) && return String[]
 
+    # For vcat, allow tools to be repeated in sequence
+    if combine === vcat
+        # If no tools used yet, return first tool
+        if isempty(used_tools)
+            return [valid_tools[1]]
+        end
+
+        # Get the last used tool and find its position in valid_tools
+        last_used = used_tools[end]
+        idx = findfirst(==(last_used), valid_tools)
+
+        if isnothing(idx)
+            # If last used tool not in sequence, start over
+            return [valid_tools[1]]
+        else
+            # If at end of sequence, start over, else return next tool
+            next_idx = (idx % length(valid_tools)) + 1
+            return [valid_tools[next_idx]]
+        end
+    end
+
+    # For other combine functions (union, intersect)
     # Get the next unused tool in sequence
     used_set = Set(used_tools)
     for tool in valid_tools
@@ -152,14 +172,8 @@ function get_allowed_tools(rule::FixedOrder, used_tools::Vector{String}, all_too
         end
     end
 
-    # If all tools have been used
-    if combine === vcat
-        # For vcat, start over from beginning
-        return [valid_tools[1]]
-    else
-        # For other combine functions (like union), return empty list
-        return String[]
-    end
+    # If all tools have been used, return empty list for non-vcat combines
+    return String[]
 end
 
 """
