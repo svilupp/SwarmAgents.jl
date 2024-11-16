@@ -17,10 +17,10 @@ using PromptingTools: ToolMessage, UserMessage, AIMessage, Tool, ToolNotFoundErr
             content="",
             raw=nothing,
             tool_call_id="test_id",
-            conversation_id="test_conv",
+            req_id="test_conv",
             args=Dict(),
             name="nonexistent_tool",
-            role=:default
+            _type=:default
         )
 
         # Test that execute_tool throws ToolNotFoundError
