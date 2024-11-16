@@ -417,24 +417,20 @@ and authentication state management.
 - `Vector{String}`: List of all tool names used in the message history
 
 # Notes
+- Only extracts tool names from AIToolRequest messages' tool_calls
 - Ignores PrivateMessage visibility, operates on underlying messages
 - Essential for flow control and authentication state management
-- Only extracts tool names from AIToolRequest messages
 """
 function get_used_tools(history::AbstractVector{<:PT.AbstractMessage}, agent::Union{AbstractAgent,Nothing}=nothing)
     tools = String[]
     for msg in history
         # First check if it's a PrivateMessage and get the underlying message
         actual_msg = msg isa PrivateMessage ? msg.object : msg
-        # Extract tool names from AIToolRequest, ToolMessage, and their wrapped versions
+        # Extract tool names only from AIToolRequest tool_calls
         if actual_msg isa PT.AIToolRequest
             for tool_call in actual_msg.tool_calls
-                if tool_call isa ToolMessage  # Handle direct ToolMessage in tool_calls
-                    push!(tools, tool_call.name)
-                end
+                push!(tools, tool_call.name)
             end
-        elseif PT.istoolmessage(actual_msg)  # Handle direct ToolMessage objects
-            push!(tools, actual_msg.name)
         end
     end
     unique!(tools)
