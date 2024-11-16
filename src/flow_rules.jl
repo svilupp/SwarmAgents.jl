@@ -497,19 +497,22 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
     used_set = Set(used_tools)
     allowed = String[]
 
-    # Check each tool in all_tools (not just those with prerequisites)
+    # Check each tool in all_tools
     for tool in all_tools
         # Get prerequisites for this tool (empty if none defined)
         prereqs = get(rule.prerequisites, tool, String[])
 
-        # Tool is allowed if either:
-        # 1. It has no prerequisites defined
-        # 2. All its prerequisites (that exist in all_tools) have been used
-        valid_prereqs = intersect(prereqs, all_tools)
-        if isempty(valid_prereqs) || all(p -> p ∈ used_set, valid_prereqs)
-            push!(allowed, tool)
+        # Only include tool if all its prerequisites are in all_tools
+        if all(prereq -> prereq ∈ all_tools, prereqs)
+            # Then check if all prerequisites have been used
+            if isempty(prereqs) || all(prereq -> prereq ∈ used_set, prereqs)
+                push!(allowed, tool)
+            end
         end
     end
+
+    return allowed
+end
 
     # Return the allowed tools (already strictly within all_tools)
     return allowed
