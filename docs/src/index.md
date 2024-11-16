@@ -68,16 +68,15 @@ Both `FixedOrder` and `FixedPrerequisites` are subtypes of `AbstractToolFlowRule
 You can control tool execution using either `FixedOrder` or `FixedPrerequisites`:
 
 ```julia
-# Make a single tool always available
+# Make a single tool always available (it will be first in cycle)
 agent = Agent(name="MyAgent", instructions="Test agent")
 add_tools!(agent, my_tool)
 session = Session(agent)
-add_rules!(session, FixedOrder([string(my_tool.name)]))  # Use tool name as string
+add_rules!(session, FixedOrder(string(my_tool.name)))  # Wrap single tool in FixedOrder
 
 # Control execution order of multiple tools
 tools = ["tool1", "tool2", "tool3"]
-rules = [FixedOrder(tools)]  # Specify complete tool sequence
-add_rules!(session, rules)
+add_rules!(session, [FixedOrder(tools)])  # Pass vector of rules directly
 
 # Use prerequisites to control tool availability
 prereqs = Dict("analyze" => ["search"], "summarize" => ["search", "analyze"])

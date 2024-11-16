@@ -93,23 +93,14 @@ function run_full_turn(agent::AbstractAgent, messages::AbstractVector{<:PT.Abstr
         # Get allowed tools based on rules and used tools
         allowed_names = get_allowed_tools(session.rules, used_tools, all_tools; combine=combine)
 
-        # Convert allowed tools to a vector for aitools, preserving duplicates when combine=vcat
-        tools = Tool[]
-        for (idx, name) in enumerate(allowed_names)
-            tool = get(active_agent.tool_map, name, nothing)
-            if !isnothing(tool)
-                # Create a new instance of the tool with a unique name if needed
-                tool_name = combine === vcat ? "$(name)_$(idx)" : name
-                new_tool = Tool(
-                    name=tool_name,
-                    parameters=copy(tool.parameters),
-                    description=tool.description,
-                    strict=tool.strict,
-                    callable=tool.callable
-                )
-                push!(tools, new_tool)
-            end
-        end
+        # Convert allowed tools to a vector for aitools
+        tools = [Tool(
+            name = combine === vcat ? "$(name)_$(idx)" : name,
+            parameters = active_agent.tool_map[name].parameters,
+            description = active_agent.tool_map[name].description,
+            strict = active_agent.tool_map[name].strict,
+            callable = active_agent.tool_map[name].callable
+        ) for (idx, name) in enumerate(allowed_names) if name in keys(active_agent.tool_map)]
 
         # Create a filtered copy of history for AI processing
         filtered_history = filter_history(history, active_agent)

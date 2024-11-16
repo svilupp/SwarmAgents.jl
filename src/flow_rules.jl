@@ -87,14 +87,13 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
             for tools in validated_results
                 union!(result, tools)
             end
-            return collect(sort(result))  # Sort for consistent ordering
+            return sort(collect(result))  # Convert to Vector before sorting
         else
             # For other combine functions, use as provided
             combined = reduce(combine, validated_results)
             return collect(combined)
         end
     end
-end
 
 """
     FixedOrder <: AbstractToolFlowRules
