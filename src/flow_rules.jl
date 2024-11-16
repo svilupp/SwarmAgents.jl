@@ -85,12 +85,11 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
         combined = filter(t -> t ∈ combined, all_tools)
     else
         # For union/vcat, maintain order of first appearance while deduplicating
-        # and respecting used_tools
         seen = Set{String}()
         combined = String[]
-        for result in valid_results
+        for result in filtered_results
             for tool in result
-                if tool ∉ seen && tool ∈ all_tools && tool ∉ used_tools
+                if tool ∉ seen && tool ∈ all_tools
                     push!(seen, tool)
                     push!(combined, tool)
                 end
