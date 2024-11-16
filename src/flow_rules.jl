@@ -477,7 +477,7 @@ function FixedPrerequisites(order::Vector{String})
     FixedPrerequisites(; prerequisites=prereqs)
 end
 
-function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String}, all_tools::Vector{String})
+function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String}, all_tools::Vector{String}; combine::Function=union)
     # If no prerequisites defined, return all available tools
     isempty(rule.prerequisites) && return all_tools
 
@@ -498,7 +498,8 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
         end
     end
 
-    return unique!(allowed)
+    # Only apply unique! for non-vcat combine functions
+    return combine === vcat ? allowed : unique!(allowed)
 end
 
 # Removed duplicate get_allowed_tools implementation
