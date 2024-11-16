@@ -59,14 +59,14 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # Filter for tool rules only
     tool_rules = filter(r -> r isa AbstractToolFlowRules, rules)
 
-    # If no tool rules, return all tools (passthrough)
-    isempty(tool_rules) && return all_tools
+    # If no tool rules, return intersection with all_tools
+    isempty(tool_rules) && return filter(t -> t ∈ all_tools, all_tools)
 
-    # Deduplicate all_tools first while preserving order
+    # Deduplicate all_tools while preserving order
     unique_tools = unique(all_tools)
 
     # Get allowed tools from each rule and validate against unique_tools
-    rule_results = [filter(t -> t ∈ unique_tools, get_allowed_tools(rule, used_tools, unique_tools; combine=combine)) for rule in tool_rules]
+    rule_results = [get_allowed_tools(rule, used_tools, unique_tools; combine=combine) for rule in tool_rules]
 
     # Filter out empty results
     valid_results = filter(!isempty, rule_results)
@@ -74,10 +74,10 @@ function get_allowed_tools(rules::Vector{<:AbstractFlowRules}, used_tools::Vecto
     # If no valid results, return empty list
     isempty(valid_results) && return String[]
 
-    # Combine results using the provided function and ensure uniqueness
-    # Convert to Vector{String} if needed (e.g., if combine returns a Set)
+    # Combine results using the provided function and ensure strict intersection with all_tools
     result = combine(valid_results...)
-    return result isa Vector{String} ? unique(result) : collect(String, unique(result))
+    # Ensure result is a Vector{String} and strictly intersects with all_tools
+    return filter(t -> t ∈ unique_tools, result isa Vector{String} ? result : collect(String, result))
 end
 
 """
@@ -483,7 +483,10 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
     # First, strictly intersect with all_tools to ensure only available tools are considered
     available_tools = intersect(keys(rule.prerequisites), all_tools)
 
-    # If no prerequisites defined or no available tools, return empty list
+    # If no prerequisites defined, return all_tools (passthrough)
+    isempty(rule.prerequisites) && return all_tools
+
+    # If no available tools after intersection, return empty list
     isempty(available_tools) && return String[]
 
     used_set = Set(used_tools)
@@ -495,6 +498,7 @@ function get_allowed_tools(rule::FixedPrerequisites, used_tools::Vector{String},
         prereqs = get(rule.prerequisites, tool, String[])
         # Only consider prerequisites that are in all_tools
         valid_prereqs = intersect(prereqs, all_tools)
+        # Tool is allowed if it has no valid prerequisites or all valid prerequisites are met
         if isempty(valid_prereqs) || all(p -> p ∈ used_set, valid_prereqs)
             push!(allowed, tool)
         end

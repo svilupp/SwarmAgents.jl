@@ -14,13 +14,13 @@ using PromptingTools: ToolMessage, UserMessage, AIMessage, Tool, ToolNotFoundErr
 
         # Create a tool message for a non-existent tool
         nonexistent_tool = ToolMessage(
-            content="",
-            raw=nothing,
-            tool_call_id="test_id",
-            req_id="test_conv",
-            args=Dict(),
-            name="nonexistent_tool",
-            _type=:default
+            "",  # content
+            1,   # index
+            "test_id",  # tool_call_id
+            "test_conv",  # req_id
+            Dict(),  # args
+            "nonexistent_tool",  # name
+            :default  # _type
         )
 
         # Test that execute_tool throws ToolNotFoundError
